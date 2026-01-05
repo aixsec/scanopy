@@ -22,8 +22,8 @@
 	const organizationQuery = useOrganizationQuery();
 	let organization = $derived(organizationQuery.data);
 
-	// Returning customers (have existing Stripe customer ID) shouldn't see trial offers
-	let isReturningCustomer = $derived(!!organization?.stripe_customer_id);
+	// Returning customers (have had a subscription) shouldn't see trial offers
+	let isReturningCustomer = $derived(!!organization?.plan_status);
 
 	// TanStack Query for config
 	const configQuery = useConfigQuery();

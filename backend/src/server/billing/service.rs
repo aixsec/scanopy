@@ -323,13 +323,13 @@ impl BillingService {
         cancel_url: String,
         authentication: AuthenticatedEntity,
     ) -> Result<CheckoutSession, Error> {
-        // Check if this is a returning customer (already has a Stripe customer ID)
+        // Check if this is a returning customer (has had a subscription)
         let is_returning_customer = if let Some(organization) = self
             .organization_service
             .get_by_id(&organization_id)
             .await?
         {
-            Ok(organization.base.stripe_customer_id.is_some())
+            Ok(organization.base.plan_status.is_some())
         } else {
             Err(anyhow!(
                 "Could not find an organization with id {}",
