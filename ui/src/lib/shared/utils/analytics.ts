@@ -85,6 +85,18 @@ export function resetIdentity() {
 }
 
 /**
+ * Get PostHog distinct ID if available.
+ * Safe to call even if PostHog hasn't loaded yet (e.g., with lazy loading).
+ * Uses window.posthog which is set by posthog-js when initialized.
+ */
+export function getPosthogDistinctId(): string | null {
+	if (typeof window !== 'undefined' && (window as { posthog?: typeof posthog }).posthog) {
+		return (window as { posthog?: typeof posthog }).posthog?.get_distinct_id?.() ?? null;
+	}
+	return null;
+}
+
+/**
  * Track a user event in Plunk for email marketing.
  * Uses the public key from server config.
  * Skips tracking in demo mode.
