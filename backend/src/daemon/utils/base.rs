@@ -62,7 +62,20 @@ pub trait DaemonUtils {
     fn get_fd_limit() -> Result<usize, Error>;
 
     fn get_own_ip_address(&self) -> Result<IpAddr, Error> {
-        local_ip().map_err(|e| anyhow!("Failed to get local IP address: {}", e))
+        match local_ip() {
+            Ok(ip) => {
+                tracing::info!(ip = %ip, "Detected local IP address");
+                Ok(ip)
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "Failed to detect local IP address. This may occur in MACVLAN containers \
+                     or environments without a default route."
+                );
+                Err(anyhow!("Failed to get local IP address: {}", e))
+            }
+        }
     }
 
     fn get_own_mac_address(&self) -> Result<Option<MacAddress>, Error> {
@@ -89,6 +102,25 @@ pub trait DaemonUtils {
         Error,
     > {
         let interfaces = pnet::datalink::interfaces();
+
+        tracing::info!(
+            interface_count = interfaces.len(),
+            "Enumerating network interfaces"
+        );
+
+        for interface in &interfaces {
+            tracing::debug!(
+                name = %interface.name,
+                index = interface.index,
+                is_up = interface.is_up(),
+                is_loopback = interface.is_loopback(),
+                is_running = interface.is_running(),
+                mac = ?interface.mac,
+                ips = ?interface.ips,
+                flags = interface.flags,
+                "Found interface"
+            );
+        }
 
         // First pass: collect all interface data and potential subnets
         let mut potential_subnets: Vec<(String, IpNetwork)> = Vec::new();
