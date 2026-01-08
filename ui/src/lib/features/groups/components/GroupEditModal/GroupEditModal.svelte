@@ -52,6 +52,7 @@
 	const subnetsQuery = useSubnetsQuery();
 
 	let servicesData = $derived(servicesQuery.data ?? []);
+	let isServicesLoading = $derived(servicesQuery.isLoading);
 	let networksData = $derived(networksQuery.data ?? []);
 	let hostsData = $derived(hostsQuery.data?.items ?? []);
 	let interfacesData = $derived(interfacesQuery.data ?? []);
@@ -92,8 +93,20 @@
 			const groupData: Group = {
 				...(value as Group),
 				name: value.name.trim(),
-				description: value.description?.trim() || ''
+				description: value.description?.trim() || '',
+				// Explicitly use local bindingIds state - form.setFieldValue doesn't reliably
+				// sync array fields back to form.state.values in TanStack Svelte Form
+				binding_ids: bindingIds
 			};
+
+			// Debug: log what we're submitting
+			console.log('[GroupEditModal] onSubmit:', {
+				isEditing,
+				groupId: group?.id,
+				bindingIdsFromLocalState: bindingIds,
+				bindingIdsFromFormValue: value.binding_ids,
+				finalBindingIds: groupData.binding_ids
+			});
 
 			loading = true;
 			try {
@@ -119,6 +132,17 @@
 		form.reset(defaults);
 		bindingIds = defaults.binding_ids ?? [];
 		selectedNetworkId = defaults.network_id ?? '';
+
+		// Debug: log what data we're loading
+		console.log('[GroupEditModal] handleOpen:', {
+			isEditing,
+			groupId: group?.id,
+			groupName: group?.name,
+			bindingIds,
+			servicesCount: servicesData.length,
+			servicesWithBindings: servicesData.filter((s) => s.bindings.length > 0).length,
+			allBindingIds: servicesData.flatMap((s) => s.bindings.map((b) => b.id))
+		});
 	}
 
 	// Available service bindings (exclude already selected ones)
@@ -286,7 +310,9 @@
 							<ListManager
 								label="Service Bindings"
 								helpText="Select service bindings for this group"
-								placeholder="Select a binding to add..."
+								placeholder={isServicesLoading
+									? 'Loading services...'
+									: 'Select a binding to add...'}
 								emptyMessage="No bindings in this group yet."
 								allowReorder={true}
 								allowItemEdit={() => false}

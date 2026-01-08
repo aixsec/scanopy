@@ -13,6 +13,7 @@
 
 	// Derived data
 	let servicesData = $derived(servicesQuery.data ?? []);
+	let isServicesLoading = $derived(servicesQuery.isLoading);
 
 	let {
 		group,
@@ -31,17 +32,44 @@
 	} = $props();
 
 	// Get services for this group via binding_ids
-	let groupServices = $derived(
-		(() => {
-			if (group.group_type === 'RequestPath' || group.group_type === 'HubAndSpoke') {
-				const serviceMap = new Map(servicesData.flatMap((s) => s.bindings.map((b) => [b.id, s])));
-				return group.binding_ids
-					.map((bindingId) => serviceMap.get(bindingId))
-					.filter((s): s is NonNullable<typeof s> => s !== null && s !== undefined);
+	// Using $derived.by() for proper reactivity with complex computation
+	let groupServices = $derived.by(() => {
+		if (group.group_type !== 'RequestPath' && group.group_type !== 'HubAndSpoke') {
+			return [];
+		}
+		if (servicesData.length === 0 || group.binding_ids.length === 0) {
+			// Debug: log why we're returning empty
+			if (group.binding_ids.length > 0) {
+				console.log('[GroupCard] No services data but group has binding_ids:', {
+					groupId: group.id,
+					groupName: group.name,
+					bindingIds: group.binding_ids,
+					servicesCount: servicesData.length
+				});
 			}
 			return [];
-		})()
-	);
+		}
+		// Build a map of binding.id -> service for lookup
+		const serviceMap = new Map(servicesData.flatMap((s) => s.bindings.map((b) => [b.id, s])));
+
+		// Debug: log binding lookup results
+		const allBindingIds = servicesData.flatMap((s) => s.bindings.map((b) => b.id));
+		const matchingIds = group.binding_ids.filter((id) => serviceMap.has(id));
+		if (matchingIds.length !== group.binding_ids.length) {
+			console.log('[GroupCard] Binding ID mismatch:', {
+				groupId: group.id,
+				groupName: group.name,
+				groupBindingIds: group.binding_ids,
+				availableBindingIds: allBindingIds,
+				matchingIds,
+				servicesWithBindings: servicesData.filter((s) => s.bindings.length > 0).length
+			});
+		}
+
+		return group.binding_ids
+			.map((bindingId) => serviceMap.get(bindingId))
+			.filter((s): s is NonNullable<typeof s> => s !== null && s !== undefined);
+	});
 
 	let groupServiceLabels = $derived(
 		groupServices.map((s) => {
@@ -105,7 +133,7 @@
 						color: entities.getColorString('Service')
 					};
 				}),
-				emptyText: 'No services in group'
+				emptyText: isServicesLoading ? 'Loading...' : 'No services in group'
 			},
 			{ label: 'Tags', snippet: tagsSnippet }
 		],

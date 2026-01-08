@@ -1879,7 +1879,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.13.1"
+         *       "server_version": "0.13.2"
          *     }
          */
         ApiMeta: {
@@ -1890,7 +1890,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.13.1
+             * @example 0.13.2
              */
             server_version: string;
         };
@@ -1904,14 +1904,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-01-07T18:51:34.754668Z",
-             *       "id": "cd90f6ad-f630-43f8-bc4f-9c61eceb1040",
+             *       "created_at": "2026-01-08T02:01:23.088531Z",
+             *       "id": "27ed41f2-18d5-4dc2-8c20-ba59ad9e94cf",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-01-07T18:51:34.754668Z"
+             *       "updated_at": "2026-01-08T02:01:23.088531Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2314,14 +2314,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-01-07T18:51:34.749647Z",
-             *           "id": "85c0b3ed-cf96-416b-9fff-6eb94495acc2",
+             *           "created_at": "2026-01-08T02:01:23.084656Z",
+             *           "id": "687b87ee-696d-46b6-adcf-8c5723dae743",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-01-07T18:51:34.749647Z"
+             *           "updated_at": "2026-01-08T02:01:23.084656Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -2330,7 +2330,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "AWX",
+             *       "service_definition": "Philips Hue Bridge",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -2613,14 +2613,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-01-07T18:51:34.738796Z",
-         *       "id": "c74fc8b3-b79c-4cbf-be29-34705d0a1d6d",
+         *       "created_at": "2026-01-08T02:01:23.075002Z",
+         *       "id": "aab718c7-6b44-4f39-ac72-d94d2b1b1116",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-01-07T18:51:34.738796Z"
+         *       "updated_at": "2026-01-08T02:01:23.075002Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -2784,7 +2784,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "AWX",
+         *           "service_definition": "Philips Hue Bridge",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3499,7 +3499,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.13.1"
+         *       "server_version": "0.13.2"
          *     }
          */
         PaginatedApiMeta: {
@@ -3512,37 +3512,9 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.13.1
+             * @example 0.13.2
              */
             server_version: string;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Binding: {
-            data: (components["schemas"]["BindingBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_DaemonApiKey: {
-            data: (components["schemas"]["DaemonApiKeyBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
         };
         /** @description Response type for paginated list endpoints (pagination is always present in meta) */
         PaginatedApiResponse_DaemonResponse: {
@@ -3555,34 +3527,6 @@ export interface components {
                 updated_at: string;
                 /** @description Computed version status including health and warnings */
                 version_status: components["schemas"]["DaemonVersionStatus"];
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Discovery: {
-            data: (components["schemas"]["DiscoveryBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Group: {
-            data: (components["schemas"]["GroupBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
             })[];
             error?: string | null;
             meta: components["schemas"]["PaginatedApiMeta"];
@@ -3615,92 +3559,8 @@ export interface components {
             success: boolean;
         };
         /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Interface: {
-            data: (components["schemas"]["InterfaceBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Network: {
-            data: (components["schemas"]["NetworkBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Port: {
-            data: (components["schemas"]["PortBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Service: {
-            data: (components["schemas"]["ServiceBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Share: {
-            data: (components["schemas"]["ShareBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
         PaginatedApiResponse_Subnet: {
             data: (components["schemas"]["SubnetBase"] & {
-                /** Format: date-time */
-                readonly created_at: string;
-                /** Format: uuid */
-                readonly id: string;
-                /** Format: date-time */
-                readonly updated_at: string;
-            })[];
-            error?: string | null;
-            meta: components["schemas"]["PaginatedApiMeta"];
-            success: boolean;
-        };
-        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
-        PaginatedApiResponse_Tag: {
-            data: (components["schemas"]["TagBase"] & {
                 /** Format: date-time */
                 readonly created_at: string;
                 /** Format: uuid */
@@ -3943,14 +3803,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-01-07T18:51:34.738689Z",
-         *           "id": "e3e17d16-9aee-4387-add9-40bfb6786def",
+         *           "created_at": "2026-01-08T02:01:23.074859Z",
+         *           "id": "4094b2e1-9b70-4f91-a2a2-937e99dbddfa",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-01-07T18:51:34.738689Z"
+         *           "updated_at": "2026-01-08T02:01:23.074859Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -3959,7 +3819,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "AWX",
+         *       "service_definition": "Philips Hue Bridge",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -4223,7 +4083,7 @@ export interface components {
         /**
          * @description Request type for updating a host with its children.
          *     Uses the same input types as CreateHostRequest.
-         *     Server will sync children (create new, update existing, delete removed).
+         *     Server will sync children (create new, update existing, delete removed) only if provided.
          */
         UpdateHostRequest: {
             description?: string | null;
@@ -4238,20 +4098,23 @@ export interface components {
             id: string;
             /**
              * @description Interfaces to sync with this host.
-             *     Server will create/update/delete to match this list.
+             *     If Some, server will create/update/delete to match this list.
+             *     If None, existing interfaces are preserved.
              */
-            interfaces?: components["schemas"]["InterfaceInput"][];
+            interfaces?: components["schemas"]["InterfaceInput"][] | null;
             name: string;
             /**
              * @description Ports to sync with this host.
-             *     Server will create/update/delete to match this list.
+             *     If Some, server will create/update/delete to match this list.
+             *     If None, existing ports are preserved.
              */
-            ports?: components["schemas"]["PortInput"][];
+            ports?: components["schemas"]["PortInput"][] | null;
             /**
              * @description Services to sync with this host.
-             *     Server will create/update/delete to match this list.
+             *     If Some, server will create/update/delete to match this list.
+             *     If None, existing services are preserved.
              */
-            services?: components["schemas"]["ServiceInput"][];
+            services?: components["schemas"]["ServiceInput"][] | null;
             tags: string[];
             virtualization?: null | components["schemas"]["HostVirtualization"];
         };
@@ -5083,7 +4946,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_DaemonApiKey"];
+                    "application/json": {
+                        data: components["schemas"]["DaemonApiKey"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };
@@ -5593,7 +5461,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Binding"];
+                    "application/json": {
+                        data: components["schemas"]["Binding"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };
@@ -5923,7 +5796,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Discovery"];
+                    "application/json": {
+                        data: components["schemas"]["Discovery"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };
@@ -6211,7 +6089,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Group"];
+                    "application/json": {
+                        data: components["schemas"]["Group"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };
@@ -6706,7 +6589,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Interface"];
+                    "application/json": {
+                        data: components["schemas"]["Interface"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };
@@ -7041,7 +6929,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Network"];
+                    "application/json": {
+                        data: components["schemas"]["Network"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };
@@ -7402,7 +7295,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Port"];
+                    "application/json": {
+                        data: components["schemas"]["Port"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };
@@ -7598,7 +7496,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Service"];
+                    "application/json": {
+                        data: components["schemas"]["Service"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };
@@ -7794,7 +7697,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Share"];
+                    "application/json": {
+                        data: components["schemas"]["Share"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };
@@ -8248,7 +8156,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedApiResponse_Tag"];
+                    "application/json": {
+                        data: components["schemas"]["Tag"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
                 };
             };
         };

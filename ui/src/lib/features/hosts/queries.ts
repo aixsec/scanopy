@@ -260,35 +260,41 @@ export function useUpdateHostMutation() {
 				hidden: data.host.hidden,
 				tags: data.host.tags,
 				expected_updated_at: data.host.updated_at,
-				// Always send arrays (empty = no changes to sync)
-				interfaces: (data.interfaces ?? []).map(
-					(iface, index): InterfaceInput => ({
-						id: iface.id,
-						subnet_id: iface.subnet_id,
-						ip_address: iface.ip_address,
-						mac_address: iface.mac_address,
-						name: iface.name,
-						position: index
-					})
-				),
-				ports: (data.ports ?? []).map(
-					(port): PortInput => ({
-						id: port.id,
-						number: port.number,
-						protocol: port.protocol
-					})
-				),
-				services: (data.services ?? []).map(
-					(service, index): ServiceInput => ({
-						id: service.id,
-						service_definition: service.service_definition,
-						name: service.name,
-						bindings: service.bindings.map(toBindingInput),
-						virtualization: service.virtualization,
-						tags: service.tags,
-						position: index
-					})
-				)
+				// Only send arrays if provided (undefined = preserve existing)
+				interfaces: data.interfaces
+					? data.interfaces.map(
+							(iface, index): InterfaceInput => ({
+								id: iface.id,
+								subnet_id: iface.subnet_id,
+								ip_address: iface.ip_address,
+								mac_address: iface.mac_address,
+								name: iface.name,
+								position: index
+							})
+						)
+					: undefined,
+				ports: data.ports
+					? data.ports.map(
+							(port): PortInput => ({
+								id: port.id,
+								number: port.number,
+								protocol: port.protocol
+							})
+						)
+					: undefined,
+				services: data.services
+					? data.services.map(
+							(service, index): ServiceInput => ({
+								id: service.id,
+								service_definition: service.service_definition,
+								name: service.name,
+								bindings: service.bindings.map(toBindingInput),
+								virtualization: service.virtualization,
+								tags: service.tags,
+								position: index
+							})
+						)
+					: undefined
 			};
 
 			const { data: result } = await apiClient.PUT('/api/v1/hosts/{id}', {
