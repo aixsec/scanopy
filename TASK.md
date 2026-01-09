@@ -1,567 +1,264 @@
 > **First:** Read `CLAUDE.md` (project instructions) — you are a **worker**.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Task: Disable Daemon Network Field After Key Generation (#436)
+# Task: Storable/Entity Trait Refactor
 
 ## Objective
 
-Prevent users from changing a daemon's network assignment in the UI once an API key has been generated, to avoid authorization mismatches.
+Refactor the `StorableEntity` trait into two separate traits:
+1. **`Storable`** - Base trait for anything stored in the database (including junction tables)
+2. **`Entity`** - Extended trait for user-facing domain entities (excludes junction tables)
+
+Additionally, consolidate entity naming and add taggability validation.
 
 ## Background
 
-Issue #436 reports that users can change a daemon's network in the UI after an API key is generated. The API key remains scoped to the original network, causing the daemon to fail with "Cannot access daemon on a different network" errors. This is confusing because users think it's a connectivity issue.
-
-## Scope
-
-**Frontend only** - disable the network field in the daemon edit form when API keys exist. No backend validation changes needed.
-
-## Requirements
-
-1. In the daemon edit form/modal, check if the daemon has any associated API keys
-2. If API keys exist, disable the network dropdown/selector
-3. Show a tooltip or helper text explaining why the field is disabled (e.g., "Network cannot be changed after API keys are generated")
-
-## Implementation Approach
-
-1. Find the daemon edit form component
-2. Check how API keys are associated with daemons (likely via `daemon_api_keys` query)
-3. Add a query or check to see if current daemon has API keys
-4. Conditionally disable the network field based on this check
-5. Add explanatory UI text
-
-## Acceptance Criteria
-
-- [ ] Network field is disabled in daemon edit form when API keys exist for that daemon
-- [ ] Network field remains editable for daemons without API keys
-- [ ] Clear UI indication of why field is disabled (tooltip or helper text)
-=======
-# Task: Fix Browser RAM Leak (#424)
-
-## Objective
-
-Fix excessive RAM consumption (6GB+) in the Scanopy web UI, particularly during discovery sessions.
-
-## Background
-
-Users report a single browser tab consuming 6GB+ RAM, especially during discovery. One user reported Chrome using 16GB and eventually crashing with SIGILL.
-
-## Root Causes Identified
-
-Investigation identified these issues (prioritized):
-
-### CRITICAL
-
-1. **Unbounded query invalidation during discovery** (`ui/src/lib/features/discovery/queries.ts:374-378`)
-   - `DiscoverySSEManager` invalidates ALL hosts/services/subnets/daemons on EVERY progress update
-   - Each invalidation triggers full refetch of all data with nested entities
-   - During active discovery, this happens many times per second
-
-2. **Host tab fetches unlimited data** (`ui/src/lib/features/hosts/components/HostTab.svelte:37`)
-   - Uses `limit: 0` fetching ALL hosts with nested interfaces, ports, services
-   - Data duplicated across 4 separate caches (hosts + interfaces + ports + services)
-
-3. **Request cache accumulates** (`ui/src/lib/api/client.ts:57-78`)
-   - 250ms debounce window insufficient during rapid discovery invalidations
-   - Cloned Response objects pile up faster than cleanup
-
-### HIGH
-
-4. **No debounce on SSE message handler** (`ui/src/lib/features/discovery/queries.ts:364-445`)
-   - Query invalidations run synchronously on every SSE event
-   - No throttling before invalidating queries
-
-5. **DataControls re-processes full dataset** (`ui/src/lib/shared/components/data/DataControls.svelte:295-419`)
-   - `processedItems` derived state re-runs expensive filter/sort/group on every update
-   - With 10,000+ hosts, each invalidation re-processes entire list
-
-### MEDIUM
-
-6. **LastProgress map not cleaned** (`ui/src/lib/features/discovery/queries.ts:361,417`)
-   - Map entries persist if session doesn't reach terminal phase
+Currently, `StorableEntity` is used for both domain entities (Host, Service, Network) and junction tables (GroupBinding, EntityTag, UserNetworkAccess). This leads to:
+- Junction tables implementing stub methods (`network_id() -> None`, `set_updated_at()` as no-op)
+- Junction tables being technically taggable via the tag API (even though they shouldn't be)
+- Inconsistent entity naming across `table_name()`, OpenAPI macros, and `EntityDiscriminants`
 
 ## Requirements
 
-1. Debounce/throttle discovery SSE invalidations - batch instead of firing on every progress update
-2. Add pagination or limits to host queries - don't fetch unlimited data
-3. Clear discovery-related caches when sessions complete
-4. Clean up lastProgress map on SSE disconnect
-5. Consider memoization for DataControls filter/sort operations
+### 1. Split StorableEntity into Storable + Entity
 
-## Acceptance Criteria
+**`Storable` trait** (base, for all DB-stored types):
+```rust
+pub trait Storable: Sized + Clone + Send + Sync + 'static + Default {
+    type BaseData;
 
-- [ ] Discovery session with 1000+ hosts doesn't cause unbounded memory growth
-- [ ] Memory usage stays under ~500MB for typical usage
-- [ ] Query invalidations are debounced (e.g., max 1 per second during discovery)
-- [ ] Host tab uses pagination or reasonable limits
-- [ ] All existing functionality preserved
->>>>>>> fix/ram-leak-424
-- [ ] `cd ui && npm test` passes
-=======
-# Task: Investigate and Fix Subnet Race Condition
+    fn new(base: Self::BaseData) -> Self;
+    fn get_base(&self) -> Self::BaseData;
 
-## Objective
+    fn table_name() -> &'static str;
+    fn id(&self) -> Uuid;
+    fn created_at(&self) -> DateTime<Utc>;
+    fn set_id(&mut self, id: Uuid);
+    fn set_created_at(&mut self, time: DateTime<Utc>);
 
-Investigate and fix the issue where newly installed daemons randomly have no subnets detected after running their first self-report discovery. Running self-report manually usually fixes it.
+    fn to_params(&self) -> Result<(Vec<&'static str>, Vec<SqlValue>), anyhow::Error>;
+    fn from_row(row: &PgRow) -> Result<Self, anyhow::Error>;
+}
+```
 
-## Background
+**`Entity` trait** (extends Storable, for domain entities only):
+```rust
+pub trait Entity: Storable {
+    fn entity_type() -> EntityDiscriminants;
+    fn entity_name_singular() -> &'static str;
+    fn entity_name_plural() -> &'static str;
 
-The symptom is intermittent: sometimes first self-report works, sometimes it doesn't detect any subnets. Manual retry usually succeeds. This suggests a race condition or timing issue rather than a logic bug.
+    fn network_id(&self) -> Option<Uuid>;
+    fn organization_id(&self) -> Option<Uuid>;
+    fn is_network_keyed() -> bool;
+    fn is_organization_keyed() -> bool;
 
-## Root Causes Identified (from triage)
+    fn updated_at(&self) -> DateTime<Utc>;
+    fn set_updated_at(&mut self, time: DateTime<Utc>);
 
-Investigation found these potential issues:
+    // Tags - default implementations
+    fn is_taggable() -> bool { is_entity_taggable(Self::entity_type()) }
+    fn get_tags(&self) -> Option<&Vec<Uuid>> { None }
+    fn set_tags(&mut self, _tags: Vec<Uuid>) {}
 
-### HIGH PRIORITY
+    // Optional overrides
+    fn set_source(&mut self, _source: EntitySource) {}
+    fn preserve_immutable_fields(&mut self, _existing: &Self) {}
+}
+```
 
-1. **Handler returns before discovery completes** (`backend/src/daemon/discovery/handlers.rs:27-31`)
-   - Discovery handler spawns background task and returns 200 OK immediately
-   - Server may think discovery is complete when it's still running
-   - Subnet IDs not yet sent to server when handler returns
+### 2. Implement Taggability as Single Source of Truth
 
-2. **Subnet creation failures silently drop interfaces** (`backend/src/daemon/discovery/service/self_report.rs:142-173`)
-   - If creating ANY subnet fails, interfaces for that subnet are filtered out
-   - No logging indicates which interfaces were dropped or why
-   - `try_join_all` means one failure affects all
+Create a centralized function in `backend/src/server/shared/entities.rs`:
 
-3. **Docker client creation blocks without timeout** (`backend/src/daemon/discovery/service/self_report.rs:110-126`)
-   - Docker socket connection can hang if Docker is slow/missing
-   - This blocks ALL subnet detection, not just Docker subnets
-   - No explicit timeout configured
+```rust
+/// Single source of truth for which entity types support tagging
+pub fn is_entity_taggable(entity_type: EntityDiscriminants) -> bool {
+    matches!(entity_type,
+        EntityDiscriminants::Host |
+        EntityDiscriminants::Service |
+        EntityDiscriminants::Subnet |
+        EntityDiscriminants::Group |
+        EntityDiscriminants::Network |
+        EntityDiscriminants::Discovery |
+        EntityDiscriminants::Daemon |
+        EntityDiscriminants::DaemonApiKey |
+        EntityDiscriminants::UserApiKey
+    )
+}
+```
 
-### MEDIUM PRIORITY
+- `Entity::is_taggable()` has a default impl that calls `is_entity_taggable(Self::entity_type())`
+- Tag API handlers (`/tags/assign/*`) must validate `is_entity_taggable(request.entity_type)` before processing
+- ServiceFactory injects `entity_tag_service` only for entities where `T::is_taggable()` is true
 
-4. **Capability update may fail after subnets created** (`backend/src/daemon/discovery/service/self_report.rs:156-157`)
-   - Subnets created but `update_capabilities` fails
-   - Server doesn't know which subnets are interfaced
+### 3. Add Entity Naming Methods
 
-5. **pnet::datalink::interfaces() is synchronous** (`backend/src/daemon/utils/base.rs:104`)
-   - Blocking call in async context
-   - Can take 100-500ms on systems with many interfaces
+Add to `Entity` trait:
+- `fn entity_name_singular() -> &'static str` (e.g., "host")
+- `fn entity_name_plural() -> &'static str` (e.g., "hosts")
 
-## Requirements
+Update OpenAPI macros to use these instead of string parameters where possible.
 
-1. **First:** Add detailed logging to confirm root cause:
-   - Log when discovery handler receives request and when it returns
-   - Log Docker client creation timing (start/success/failure/timeout)
-   - Log each subnet creation attempt and result
-   - Log which interfaces are kept vs dropped and why
-   - Log capability update success/failure
+**Fix Topology inconsistency:** Currently uses `"topology"` for both singular and plural in OpenAPI macros - should use `"topologies"` for plural.
 
-2. **Then:** Based on logs, implement fix:
-   - If Docker blocking: add explicit timeout for Docker operations
-   - If silent failures: make subnet creation failures more visible, don't drop interfaces silently
-   - If timing issue: consider making discovery completion more explicit
+### 4. Update All Implementations
 
-## Acceptance Criteria
+**Junction tables (impl Storable only):**
+- `GroupBinding`
+- `EntityTag`
+- `UserNetworkAccess`
+- `UserApiKeyNetworkAccess`
 
-- [ ] Detailed logging added to self-report discovery flow
-- [ ] Root cause confirmed via logs
-- [ ] Fix implemented based on confirmed root cause
-- [ ] First self-report reliably detects subnets (test multiple times)
-- [ ] `cd backend && cargo test` passes
->>>>>>> fix/subnet-race-condition
-- [ ] `make format && make lint` passes
+**Domain entities (impl Entity, which requires Storable):**
+- All other entities: Host, Subnet, Service, Interface, Port, Binding, Network, Organization, User, Tag, Group, Discovery, Daemon, Topology, Invite, Share, UserApiKey, DaemonApiKey
 
 ## Files Likely Involved
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-- `ui/src/lib/features/daemons/components/` - Daemon form components
-- `ui/src/lib/features/daemon-api-keys/queries.ts` - API key queries
-
-## Notes
-
-- Keep it simple - just disable the field with explanation
-- Don't add backend validation, that's out of scope for this task
-- Match existing patterns for disabled form fields in the codebase
-=======
-- `ui/src/lib/features/discovery/queries.ts` - SSE manager, query invalidation
-- `ui/src/lib/features/hosts/components/HostTab.svelte` - Host query limits
-- `ui/src/lib/features/hosts/queries.ts` - Host query configuration
-- `ui/src/lib/api/client.ts` - Request cache cleanup
-- `ui/src/lib/shared/components/data/DataControls.svelte` - Data processing
-
-## Notes
-
-- Focus on the CRITICAL issues first - they likely account for most of the memory bloat
-- Test with browser dev tools Memory tab to verify improvements
-- Don't over-engineer - simple debouncing and limits should fix the worst issues
->>>>>>> fix/ram-leak-424
-=======
-- `backend/src/daemon/discovery/handlers.rs` - Discovery endpoint handler
-- `backend/src/daemon/discovery/manager.rs` - Discovery session management
-- `backend/src/daemon/discovery/service/self_report.rs` - Self-report implementation
-- `backend/src/daemon/utils/base.rs` - Interface detection (`get_own_interfaces`)
-
-## Testing Approach
-
-1. Add logging first
-2. Test by starting daemon fresh multiple times
-3. Check logs to see timing and any failures
-4. Implement fix based on what logs reveal
-5. Verify fix by testing first self-report multiple times
-
-## Notes
-
-- This is daemon code, not server code
-- The fix should not change the fundamental async architecture unless necessary
-- Prefer adding timeouts and better error handling over synchronous blocking
->>>>>>> fix/subnet-race-condition
-=======
-# Task: Implement Prometheus Metrics Endpoint
-
-## Objective
-
-Add a `/metrics` endpoint to Scanopy that exposes Prometheus-format metrics for monitoring request rates, latencies, error rates, and system events.
-
-## Design Summary
-
-### Architecture
-- Prometheus pull model - Scanopy maintains in-memory counters, Prometheus scrapes `/metrics`
-- Token-based auth via `SCANOPY_METRICS_TOKEN` environment variable
-- Hook into existing request_logging_middleware for HTTP metrics
-- Hook into existing EventBus for system event metrics
-
-### Metrics to Expose
-
-| Metric | Type | Labels | Source |
-|--------|------|--------|--------|
-| `http_requests_total` | Counter | method, path, status, entity_type | request_logging_middleware |
-| `http_request_duration_seconds` | Histogram | method, path | request_logging_middleware |
-| `scanopy_events_total` | Counter | entity, operation | MetricsService (EventBus subscriber) |
-
-### Authentication
-- If `SCANOPY_METRICS_TOKEN` not set: `/metrics` returns 404 (disabled)
-- If token invalid/missing in request: 401 Unauthorized
-- If valid: 200 + metrics text
-
-### Dependencies to Add
-```toml
-metrics = "0.24"
-metrics-exporter-prometheus = "0.16"
-```
-
-## Requirements
-
-1. Add `metrics` and `metrics-exporter-prometheus` dependencies
-2. Create `backend/src/server/metrics/` module with:
-   - `mod.rs` - module exports
-   - `service.rs` - MetricsService struct holding PrometheusHandle
-   - `subscriber.rs` - EventSubscriber impl for event metrics
-   - `handlers.rs` - `/metrics` endpoint handler
-3. Add `metrics_token: Option<String>` to server config
-4. Modify `request_logging_middleware` to record HTTP metrics
-5. Register MetricsService as EventBus subscriber in service factory
-6. Add `/metrics` route to server
-
-## Implementation Details
-
-### MetricsService Pattern
-Follow the exact pattern of LoggingService:
-```rust
-pub struct MetricsService {
-    pub handle: PrometheusHandle,
-}
-
-impl EventSubscriber for MetricsService {
-    fn event_filter(&self) -> EventFilter {
-        EventFilter::all()
-    }
-
-    async fn handle_events(&self, events: Vec<Event>) -> Result<()> {
-        for event in events {
-            metrics::counter!(
-                "scanopy_events_total",
-                "entity" => event.entity_discriminant(),
-                "operation" => event.operation().to_string()
-            ).increment(1);
-        }
-        Ok(())
-    }
-
-    fn name(&self) -> &str { "metrics" }
-}
-```
-
-### Request Middleware Metrics
-In request_logging_middleware, add:
-```rust
-metrics::counter!(
-    "http_requests_total",
-    "method" => method,
-    "path" => matched_path,  // Route pattern, not actual path
-    "status" => status_code,
-    "entity_type" => entity_type
-).increment(1);
-
-metrics::histogram!("http_request_duration_seconds", "method" => method, "path" => matched_path)
-    .record(duration_secs);
-```
-
-### Handler
-```rust
-pub async fn get_metrics(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> impl IntoResponse {
-    let Some(expected_token) = &state.config.metrics_token else {
-        return (StatusCode::NOT_FOUND, "Metrics not enabled").into_response();
-    };
-
-    let provided = headers.get("Authorization")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer "));
-
-    match provided {
-        Some(token) if token == expected_token => {
-            let metrics = state.services.metrics_service.handle.render();
-            (StatusCode::OK, [(header::CONTENT_TYPE, "text/plain")], metrics).into_response()
-        }
-        _ => (StatusCode::UNAUTHORIZED, "Invalid or missing token").into_response()
-    }
-}
-```
-
-## Files to Create/Modify
-
-| File | Change |
-|------|--------|
-| `backend/Cargo.toml` | Add dependencies |
-| `backend/src/server/mod.rs` | Add `pub mod metrics` |
-| `backend/src/server/config.rs` | Add `metrics_token: Option<String>` |
-| `backend/src/server/metrics/mod.rs` | New module |
-| `backend/src/server/metrics/service.rs` | MetricsService struct |
-| `backend/src/server/metrics/subscriber.rs` | EventSubscriber impl |
-| `backend/src/server/metrics/handlers.rs` | `/metrics` endpoint |
-| `backend/src/server/auth/middleware/logging.rs` | Add HTTP metrics |
-| `backend/src/server/shared/services/factory.rs` | Init recorder, register subscriber |
-| `backend/src/bin/server.rs` | Add `/metrics` route |
+- `backend/src/server/shared/storage/traits.rs` - Main trait definitions
+- `backend/src/server/shared/entities.rs` - EntityDiscriminants, add `is_entity_taggable()`
+- `backend/src/server/shared/storage/generic.rs` - GenericPostgresStorage (update trait bounds)
+- `backend/src/server/shared/handlers/traits.rs` - Handler traits (update bounds)
+- `backend/src/server/shared/handlers/openapi_macros.rs` - Consider using trait methods
+- `backend/src/server/shared/services/traits.rs` - CrudService (update bounds)
+- `backend/src/server/shared/services/factory.rs` - ServiceFactory (taggable injection logic)
+- `backend/src/server/tags/handlers.rs` - Add taggability validation
+- `backend/src/server/*/impl/*.rs` - All entity implementations (split trait impls)
+- `backend/src/server/group_bindings/impl/base.rs` - Junction table impl
+- `backend/src/server/shared/storage/entity_tags.rs` - Junction table impl
+- `backend/src/server/topology/handlers.rs` - Fix naming inconsistency
 
 ## Acceptance Criteria
 
-- [ ] `/metrics` returns 404 when `SCANOPY_METRICS_TOKEN` not set
-- [ ] `/metrics` returns 401 without valid Bearer token
-- [ ] `/metrics` returns Prometheus text format with valid token
-- [ ] `http_requests_total` increments on each request
-- [ ] `http_request_duration_seconds` records request durations
-- [ ] `scanopy_events_total` increments on entity CRUD operations
-- [ ] `cd backend && cargo test` passes
+- [ ] `Storable` trait defined with base storage methods
+- [ ] `Entity` trait extends `Storable` with domain-specific methods
+- [ ] Junction tables implement only `Storable`
+- [ ] Domain entities implement `Entity` (and thus `Storable`)
+- [ ] `is_entity_taggable()` function is single source of truth
+- [ ] Tag API handlers validate taggability before operations
+- [ ] `entity_name_singular()` and `entity_name_plural()` added to Entity
+- [ ] Topology naming fixed to use "topologies" plural
+- [ ] All existing tests pass
+- [ ] `cargo test` passes
 - [ ] `make format && make lint` passes
-
-## Testing
-
-```bash
-# Set token and start server
-SCANOPY_METRICS_TOKEN=test-token cargo run --bin server
-
-# Test disabled (no token)
-curl http://localhost:60072/metrics  # Should 404
-
-# Test unauthorized
-curl http://localhost:60072/metrics  # Should 401
-
-# Test authorized
-curl -H "Authorization: Bearer test-token" http://localhost:60072/metrics
-# Should return prometheus format metrics
-```
 
 ## Notes
 
-- Keep label cardinality bounded - use route patterns not actual paths
-- Don't add database metrics (Phase 2)
-- Don't add business metrics like host counts (Phase 2)
->>>>>>> feature/prometheus-metrics
-
----
+- This is a large refactor touching many files - work incrementally
+- Ensure backward compatibility - no behavior changes, just better organization
+- The `ChildStorableEntity` trait in `storage/child.rs` may need similar treatment
+- Watch for trait bounds in generic functions - update `StorableEntity` to `Entity` or `Storable` as appropriate
 
 ## Work Summary
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-### What was implemented
+### Completed Tasks
 
-Disabled the network selector in the daemon creation modal when an API key has been generated. Added a `disabledReason` prop to the `SelectNetwork` component to display explanatory text when the field is disabled.
+1. **Split `StorableEntity` into `Storable` + `Entity` traits** (`storage/traits.rs`)
+   - `Storable`: Base trait with `new()`, `get_base()`, `table_name()`, `id()`, `created_at()`, `set_id()`, `set_created_at()`, `to_params()`, `from_row()`
+   - `Entity`: Extends `Storable` with `entity_type()`, `entity_name_singular()`, `entity_name_plural()`, `network_id()`, `organization_id()`, `updated_at()`, `set_updated_at()`, tagging methods, and optional overrides
+   - Removed `StorableEntity` entirely (no backwards compatibility alias)
 
-### Files changed
+2. **Added `is_entity_taggable()` function** (`entities.rs`)
+   - Single source of truth for taggable entity types
+   - Used by `Entity::is_taggable()` default implementation
 
-1. **`ui/src/lib/features/networks/components/SelectNetwork.svelte`**
-   - Added `disabledReason` prop to the component interface
-   - Added derived `helpText` that shows the disabled reason when disabled, otherwise shows default "Select network"
-   - Updated the help text paragraph to use the derived value
+3. **Updated storage layer bounds** to use `Storable` (`generic.rs`, `child.rs`)
 
-2. **`ui/src/lib/features/daemons/components/CreateDaemonModal.svelte`**
-   - Added `disabled={!!key}` to disable network selector when API key has been generated
-   - Added `disabledReason="Network cannot be changed after API key is generated"` to explain why
+4. **Converted junction tables to `Storable`-only** (4 files):
+   - `group_bindings/impl/base.rs`
+   - `shared/storage/entity_tags.rs`
+   - `users/impl/network_access.rs`
+   - `user_api_keys/impl/network_access.rs`
 
-### How it works
+5. **Converted domain entities to `Storable` + `Entity`** (18 files):
+   - Added `entity_name_singular()` and `entity_name_plural()` methods to all domain entities
+   - Split existing `impl StorableEntity` into separate `impl Storable` and `impl Entity` blocks
 
-When creating a new daemon:
-1. User can select a network before generating an API key
-2. Once the user generates (or inputs) an API key, the network selector becomes disabled
-3. The help text changes from "Select network" to "Network cannot be changed after API key is generated"
-4. This prevents the mismatch where the daemon's network differs from the API key's network
+6. **Updated service/handler layer bounds**:
+   - `CrudService<T: Entity>`
+   - `ChildCrudService<T: ChildStorableEntity + Entity>`
+   - `EventBusService<T: Into<EntityEnum>>`
+   - `CrudHandlers: Entity`
+   - Used `Entity as EntityEnum` aliasing to resolve naming conflict between the enum and trait
 
-### Deviations from plan
+7. **Fixed Topology OpenAPI tag** (`topology/handlers.rs`)
+   - Changed from "topology" to "topologies" for plural
 
-None - implementation follows the task requirements exactly.
+8. **Added taggability validation** (`tags/handlers.rs`)
+   - Added validation to `bulk_add_tag`, `bulk_remove_tag`, and `set_entity_tags` handlers
+   - Returns 400 Bad Request for non-taggable entity types
 
-### Verification
+9. **Removed junction table variants from Entity enum** (`entities.rs`)
+   - Removed `GroupBinding`, `EntityTag`, `UserApiKeyNetworkAccess`, `UserNetworkAccess` variants
+   - Removed associated imports, `From` implementations, and color/icon mappings
 
-- `make format && make lint` - Passed
-- `svelte-check` - 0 errors and 0 warnings
-=======
-### Changes Implemented
-
-**Backend:**
-- Added `ids` query parameter to `NetworkFilterQuery` and `HostChildQuery` in `backend/src/server/shared/handlers/query.rs` to enable selective entity loading
-
-**Frontend - SSE Throttling:**
-- Added 1-second throttle to `DiscoverySSEManager` query invalidations in `ui/src/lib/features/discovery/queries.ts`
-- Added cleanup of pending invalidation timer and lastProgress map on disconnect
-
-**Frontend - Host/Service Pagination and Selective Loading:**
-- Added `useHostsByIds` hook in `ui/src/lib/features/hosts/queries.ts` for selective host loading
-- Added `useServicesByIds` hook in `ui/src/lib/features/services/queries.ts` for selective service loading
-- Added pagination support to `useServicesQuery` with `ServicesQueryParams` interface
-- Changed `HostTab.svelte` to use `limit: 25` and selective service lookup for "Virtualized By" field
-- Changed `ServiceTab.svelte` to use `limit: 25` and selective host lookup for host name display
-
-**Frontend - Remove Expensive Card Computations:**
-- Removed `hostGroups` computation from `HostTab.svelte`
-- Removed `useHostsQuery`, VMs field, and Groups field from `HostCard.svelte`
-- Removed hosts display from `NetworkCard.svelte` and hosts query from `NetworksTab.svelte`
-- Removed services display from `SubnetCard.svelte` and hosts/services queries from `SubnetTab.svelte`
-
-**Frontend - Request Cache Improvements:**
-- Increased `DEBOUNCE_MS` from 250 to 500 in `ui/src/lib/api/client.ts`
-- Added `MAX_CACHE_SIZE = 50` with enforcement in cleanup to prevent unbounded cache growth
-
-### Files Modified
-
-| File | Changes |
-|------|---------|
-| `backend/src/server/shared/handlers/query.rs` | Added `ids` param to `NetworkFilterQuery` and `HostChildQuery` |
-| `ui/src/lib/features/discovery/queries.ts` | Throttled SSE invalidations, cleanup on disconnect |
-| `ui/src/lib/features/hosts/queries.ts` | Added `useHostsByIds` hook |
-| `ui/src/lib/features/services/queries.ts` | Added `useServicesByIds` hook, pagination support |
-| `ui/src/lib/features/hosts/components/HostTab.svelte` | Paginate to 25, remove hostGroups, selective service lookup |
-| `ui/src/lib/features/hosts/components/HostCard.svelte` | Remove hosts query, VMs field, Groups field |
-| `ui/src/lib/features/services/components/ServiceTab.svelte` | Paginate to 25, selective host lookup |
-| `ui/src/lib/features/networks/components/NetworkCard.svelte` | Remove hosts display |
-| `ui/src/lib/features/networks/components/NetworksTab.svelte` | Remove hosts query |
-| `ui/src/lib/features/subnets/components/SubnetCard.svelte` | Remove services display |
-| `ui/src/lib/features/subnets/components/SubnetTab.svelte` | Remove hosts/services queries |
-| `ui/src/lib/api/client.ts` | Improved cache cleanup with size limit |
-
-### Verification
-
-- Backend tests: PASS (3 passed, 0 failed)
-- Frontend type check: PASS (0 errors, 0 warnings)
-- Lint: PASS (format + eslint + svelte-check all clean)
-
-### Components That Still Load All Data (Acceptable)
-
-The following load on-demand when opened:
-- **Modals:** HostConsolidationModal, GroupEditModal, VirtualizationForm, VmManagerConfigPanel
-- **TopologyTab:** Needs complete graph data (future optimization candidate)
->>>>>>> fix/ram-leak-424
-=======
-### What Was Implemented
-
-Added comprehensive logging and fixes to address the subnet race condition issue:
-
-#### 1. Docker Client Timeout (`backend/src/daemon/utils/base.rs`)
-- Added 5-second timeout to Docker ping operation to prevent indefinite blocking
-- Added timing logs for Docker connection attempts
-- Docker connection failures now log elapsed time and specific error
-
-#### 2. Subnet Creation Made Non-Fatal (`backend/src/daemon/discovery/service/self_report.rs`)
-- Changed from `try_join_all` to `join_all` for subnet creation
-- Individual subnet creation failures no longer cause all subnets to fail
-- Each subnet creation logs success or failure with CIDR
-- Summary log shows how many subnets were created vs requested
-
-#### 3. Interface Filtering Visibility (`backend/src/daemon/discovery/service/self_report.rs`)
-- Added logging when interfaces are dropped due to missing subnets
-- Logs warn with interface name and IP when dropped
-- Summary log shows count of kept vs dropped interfaces
-
-#### 4. Capability Update Logging (`backend/src/daemon/discovery/service/self_report.rs`)
-- Added debug log before capability update with subnet count
-- Added success/error logs after capability update
-
-#### 5. Discovery Flow Timing (`backend/src/daemon/discovery/service/self_report.rs`)
-- Added start log with session_id and host_id
-- Added interface gathering timing log
-- Added completion log with total elapsed time
+10. **Fixed test imports** across unit and integration tests
+    - Updated `StorableEntity` imports to `Storable` or `Entity` as appropriate
 
 ### Files Changed
 
-1. `backend/src/daemon/utils/base.rs` - Docker client timeout
-2. `backend/src/daemon/discovery/service/self_report.rs` - Logging and non-fatal subnet creation
+**Core trait definitions:**
+- `backend/src/server/shared/storage/traits.rs`
+- `backend/src/server/shared/entities.rs`
+- `backend/src/server/shared/storage/child.rs`
+- `backend/src/server/shared/storage/generic.rs`
 
-### Deviations from Plan
+**Service/Handler layer:**
+- `backend/src/server/shared/services/traits.rs`
+- `backend/src/server/shared/services/entity_tags.rs`
+- `backend/src/server/shared/handlers/traits.rs`
+- `backend/src/server/tags/handlers.rs`
+- `backend/src/server/topology/handlers.rs`
 
-None. Implemented all required logging and fixes as specified.
+**Junction tables (Storable-only):**
+- `backend/src/server/group_bindings/impl/base.rs`
+- `backend/src/server/shared/storage/entity_tags.rs`
+- `backend/src/server/users/impl/network_access.rs`
+- `backend/src/server/user_api_keys/impl/network_access.rs`
 
-### Testing Results
+**Domain entities (Storable + Entity):**
+- All 18 storage implementation files in `backend/src/server/*/impl/storage.rs`
 
-- `cargo fmt` and `cargo clippy` pass with no warnings
-- All 84 unit tests pass
-- Integration test failure unrelated to changes (Docker container health check issue)
+**Other service/handler files with import updates:**
+- `backend/src/server/auth/service.rs`, `auth/handlers.rs`
+- `backend/src/server/daemons/handlers.rs`, `daemon_api_keys/handlers.rs`
+- `backend/src/server/discovery/service.rs`, `groups/service.rs`, `hosts/service.rs`
+- `backend/src/server/organizations/handlers.rs`, `services/service.rs`
+- `backend/src/server/subnets/service.rs`, `subnets/impl/base.rs`
+- `backend/src/server/topology/service/main.rs`, `users/service.rs`
 
-### Notes for Coordinator
+**Test files:**
+- `backend/src/tests/mod.rs`
+- `backend/src/server/services/tests.rs`
+- `backend/src/server/shared/storage/tests.rs`
+- `backend/tests/integration/*.rs` (6 files)
 
-1. The changes address HIGH PRIORITY issues #2 (silent subnet failures) and #3 (Docker blocking) directly
-2. Issue #1 (handler returning before completion) was not modified - the async spawning pattern is intentional; the new logging will help confirm if this is a problem in practice
-3. The new logging should make it easy to diagnose remaining issues if they occur - check daemon logs for:
-   - "Starting self-report discovery" / "Self-report discovery completed successfully"
-   - "Docker ping timed out" or "Docker ping failed"
-   - "Failed to create subnet" warnings
-   - "Dropping interface" warnings
->>>>>>> fix/subnet-race-condition
-=======
-### What was implemented
+### 11. File Reorganization (completed)
 
-Implemented Prometheus metrics endpoint as specified. All acceptance criteria met.
+Moved junction table implementations into their parent entity directories:
 
-### Files changed
+**entity_tags → tags/entity_tags.rs:**
+- Combined `shared/storage/entity_tags.rs` (EntityTag, EntityTagBase, EntityTagStorage) and `shared/services/entity_tags.rs` (EntityTagService) into single file `tags/entity_tags.rs`
+- Updated exports in `tags/mod.rs`
+- Updated 15+ files with new import paths
 
-| File | Change |
-|------|--------|
-| `backend/Cargo.toml` | Added `metrics = "0.24"` and `metrics-exporter-prometheus = "0.16"` dependencies |
-| `backend/src/server/mod.rs` | Added `pub mod metrics` |
-| `backend/src/server/config.rs` | Added `metrics_token: Option<String>` field to `ServerConfig` |
-| `backend/src/server/metrics/mod.rs` | **New** - Module exports |
-| `backend/src/server/metrics/service.rs` | **New** - `MetricsService` struct holding `PrometheusHandle` |
-| `backend/src/server/metrics/subscriber.rs` | **New** - `EventSubscriber` impl for event metrics |
-| `backend/src/server/metrics/handlers.rs` | **New** - `/metrics` endpoint handler with token auth |
-| `backend/src/server/auth/middleware/logging.rs` | Added HTTP metrics recording (`http_requests_total`, `http_request_duration_seconds`) |
-| `backend/src/server/shared/services/factory.rs` | Initialize Prometheus recorder (using `OnceLock` for test compatibility), create and register `MetricsService` |
-| `backend/src/bin/server.rs` | Added `/metrics` route outside protected middleware |
+**group_bindings → groups/group_bindings.rs:**
+- Combined `group_bindings/impl/base.rs` (GroupBinding, GroupBindingBase) and `group_bindings/impl/storage.rs` (GroupBindingStorage) into single file `groups/group_bindings.rs`
+- Deleted entire `group_bindings/` directory
+- Removed `pub mod group_bindings` from `server/mod.rs`
+- Updated exports in `groups/mod.rs`
+- Updated 3 files with new import paths
 
-### Deviations and rationale
+**Files deleted:**
+- `backend/src/server/shared/storage/entity_tags.rs`
+- `backend/src/server/shared/services/entity_tags.rs`
+- `backend/src/server/group_bindings/` (entire directory)
 
-1. **Global `OnceLock` for Prometheus handle**: The Prometheus recorder can only be installed once per process. Tests create multiple `ServiceFactory` instances, which caused failures. Used `OnceLock` to ensure the recorder is installed exactly once and the handle is shared.
-
-2. **Event entity label**: The task specified `event.entity_discriminant()` but `Event` doesn't have that method directly. Implemented by matching on event type:
-   - `Event::Entity(e)` → uses `e.entity_type.discriminant().to_string()`
-   - `Event::Auth(_)` → uses `"auth"`
-   - `Event::Telemetry(_)` → uses `"telemetry"`
-
-3. **Content-Type header**: Set to `text/plain; version=0.0.4` per Prometheus exposition format spec.
+**Files created:**
+- `backend/src/server/tags/entity_tags.rs`
+- `backend/src/server/groups/group_bindings.rs`
 
 ### Verification
 
-- `cd backend && cargo test` - All 72 tests pass (69 passed, 3 integration, 5 doc-tests ignored)
-- `cargo fmt && cargo clippy` - No warnings or errors
-
-### Notes for coordinator
-
-- The `/metrics` endpoint is exposed outside the protected middleware stack (like `/api/health`) since it uses its own Bearer token authentication via `SCANOPY_METRICS_TOKEN` env var
-- No permissions middleware needed - endpoint handles its own auth
-- No tenant isolation concerns - metrics are global server metrics, not user-specific data
->>>>>>> feature/prometheus-metrics
+- `cargo test --lib`: 84 passed, 0 failed
+- `cargo fmt`: No changes needed
+- `cargo clippy -- -D warnings`: No warnings
