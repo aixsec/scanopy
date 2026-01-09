@@ -43,7 +43,7 @@
 	}: Props = $props();
 
 	// TanStack Query hooks
-	const servicesQuery = useServicesQuery();
+	const servicesQuery = useServicesQuery({ limit: 0 });
 	const networksQuery = useNetworksQuery();
 	// Use limit: 0 to get all hosts for group edit modal
 	const hostsQuery = useHostsQuery({ limit: 0 });
