@@ -108,6 +108,8 @@ lint:
 	cd backend && cargo fmt -- --check && cargo clippy --bin server -- -D warnings
 	@echo "Linting Daemon..."
 	cd backend && cargo clippy --bin daemon -- -D warnings
+	@echo "Generating paraglide i18n..."
+	cd ui && npx paraglide-js compile --outdir ./src/lib/paraglide --silent
 	@echo "Linting UI..."
 	cd ui && npm run lint && npm run format -- --check && npm run check
 
