@@ -9,7 +9,7 @@
 	export let label: string = '';
 	export let selectedValue: string | null = '';
 	export let options: V[] = [];
-	export let placeholder: string = m.common_selectOption();
+	export let placeholder: string | undefined = undefined;
 	export let required: boolean = false;
 	export let disabled: boolean = false;
 	export let error: string | null = null;
@@ -220,7 +220,9 @@
 				<ListSelectItem {context} item={selectedItem} {displayComponent} />
 			{:else}
 				<span class="text-secondary"
-					>{options.length == 0 ? m.common_noOptionsAvailable() : placeholder}</span
+					>{options.length == 0
+						? m.common_noOptionsAvailable()
+						: (placeholder ?? m.common_selectOption())}</span
 				>
 			{/if}
 		</div>
