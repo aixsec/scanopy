@@ -181,7 +181,22 @@ Resources are scoped to your **organization** and **network(s)**:
         (name = "subnets", description = "IP subnets within networks. Define address ranges and organize hosts by subnet."),
         (name = "system", description = "System information endpoints. Version and compatibility checking."),
         (name = "tags", description = "Custom tags for categorization. Apply labels to entities for filtering and organization."),
-        (name = "user_api_keys", description = "User API keys for programmatic access. Create and manage personal API keys with scoped permissions for automation and integrations."),
+        (name = "user_api_keys", description = "
+            User API keys for programmatic access. Create and manage personal API keys with scoped permissions for automation and integrations.
+            
+            ## Permissions
+            
+            API keys inherit the permission level assigned at creation. Each level determines what resources the key can access:
+
+            | Permission | Network Resources | Tags       | Users                      |
+            | ---------- | ----------------- | ---------- | -------------------------- |
+            | **Viewer** | Read              | Read       | —                          |
+            | **Member** | Read/Write        | Read       | —                          |
+            | **Admin**  | Read/Write        | Read/Write | Read/Write (Member, Viewer)|
+            | **Owner**  | Read/Write        | Read/Write | Read/Write (all levels)    |
+
+            Network resources include hosts, subnets, services, and groups. Organization settings (name, billing) require a user session and are not accessible via API keys.
+        "),
         (name = "users", description = "User account management. Manage user profiles and permissions within organizations."),
     )
 )]

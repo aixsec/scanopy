@@ -6,6 +6,7 @@
 	import 'prismjs/components/prism-json';
 	import 'prismjs/components/prism-bash';
 	import 'prismjs/themes/prism-twilight.css';
+	import * as m from '$lib/paraglide/messages';
 
 	export let code: string;
 	export let expandable: boolean = true;
@@ -17,9 +18,9 @@
 	async function copyJson() {
 		try {
 			await navigator.clipboard.writeText(code);
-			pushSuccess('Copied to clipboard!');
+			pushSuccess(m.common_copied());
 		} catch (error) {
-			pushWarning('Failed to copy to clipboard: ' + error);
+			pushWarning(m.common_failedToCopy({ error: String(error) }));
 		}
 	}
 
@@ -49,8 +50,8 @@
 		<div class="relative">
 			{#if isSecureContext}
 				<div class="absolute right-2 top-2 z-10">
-					<button type="button" class="btn-icon" title="Copy JSON to clipboard" on:click={copyJson}>
-						Copy
+					<button type="button" class="btn-icon" title={m.common_copy()} on:click={copyJson}>
+						{m.common_copy()}
 					</button>
 				</div>
 			{/if}

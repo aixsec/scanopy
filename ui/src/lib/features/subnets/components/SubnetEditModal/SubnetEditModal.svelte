@@ -14,6 +14,7 @@
 	import TextArea from '$lib/shared/components/forms/input/TextArea.svelte';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
+	import * as m from '$lib/paraglide/messages';
 
 	// TanStack Query hooks
 	const networksQuery = useNetworksQuery();
@@ -42,8 +43,10 @@
 	let deleting = $state(false);
 
 	let isEditing = $derived(subnet !== null);
-	let title = $derived(isEditing ? `Edit ${subnet?.name}` : 'Create Subnet');
-	let saveLabel = $derived(isEditing ? 'Update Subnet' : 'Create Subnet');
+	let title = $derived(
+		isEditing ? m.common_editName({ name: subnet?.name ?? '' }) : m.subnets_createSubnet()
+	);
+	let saveLabel = $derived(isEditing ? m.common_update() : m.common_create());
 
 	function getDefaultValues(): Subnet {
 		return subnet ? { ...subnet } : createEmptySubnetFormData(defaultNetworkId);
@@ -127,7 +130,7 @@
 			<div class="space-y-8">
 				<!-- Subnet Details Section -->
 				<div class="space-y-4">
-					<h3 class="text-primary text-lg font-medium">Subnet Details</h3>
+					<h3 class="text-primary text-lg font-medium">{m.common_details()}</h3>
 
 					<!-- Name Field -->
 					<form.Field
@@ -138,10 +141,10 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label="Name"
+								label={m.common_name()}
 								id="name"
 								{field}
-								placeholder="e.g., Home LAN, VPN Network"
+								placeholder={m.subnets_namePlaceholder()}
 								required
 							/>
 						{/snippet}
@@ -156,12 +159,12 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label="CIDR"
+								label={m.common_cidr()}
 								id="cidr"
 								{field}
 								placeholder="192.168.1.0/24"
 								disabled={getIsCidrDisabled()}
-								helpText="Network address and prefix length (e.g., 192.168.1.0/24)"
+								helpText={m.subnets_cidrHelp()}
 								required
 							/>
 						{/snippet}
@@ -181,7 +184,7 @@
 					<form.Field name="subnet_type">
 						{#snippet children(field)}
 							<SelectInput
-								label="Subnet Type"
+								label={m.subnets_subnetType()}
 								id="subnet_type"
 								{field}
 								options={subnetTypeOptions}
@@ -198,10 +201,10 @@
 					>
 						{#snippet children(field)}
 							<TextArea
-								label="Description"
+								label={m.common_description()}
 								id="description"
 								{field}
-								placeholder="Describe the purpose of this subnet..."
+								placeholder={m.subnets_descriptionPlaceholder()}
 								rows={3}
 							/>
 						{/snippet}
@@ -235,7 +238,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? 'Deleting...' : 'Delete'}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -246,10 +249,10 @@
 						onclick={onClose}
 						class="btn-secondary"
 					>
-						Cancel
+						{m.common_cancel()}
 					</button>
 					<button type="submit" disabled={loading || deleting} class="btn-primary">
-						{loading ? 'Saving...' : saveLabel}
+						{loading ? m.common_saving() : saveLabel}
 					</button>
 				</div>
 			</div>

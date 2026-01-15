@@ -18,6 +18,7 @@
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import type { TabProps } from '$lib/shared/types';
+	import * as m from '$lib/paraglide/messages';
 
 	let { isReadOnly = false }: TabProps = $props();
 
@@ -43,7 +44,7 @@
 	let editingApiKey = $state<ApiKey | null>(null);
 
 	async function handleDeleteApiKey(apiKey: ApiKey) {
-		if (confirm(`Are you sure you want to delete api key "${apiKey.name}"?`)) {
+		if (confirm(m.daemonApiKeys_confirmDelete({ name: apiKey.name }))) {
 			deleteApiKeyMutation.mutate(apiKey.id);
 		}
 	}
@@ -70,7 +71,7 @@
 	}
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(`Are you sure you want to delete ${ids.length} Api Keys?`)) {
+		if (confirm(m.daemonApiKeys_confirmBulkDelete({ count: ids.length }))) {
 			await bulkDeleteApiKeysMutation.mutateAsync(ids);
 		}
 	}
@@ -82,22 +83,22 @@
 	const apiKeyFields: FieldConfig<ApiKey>[] = [
 		{
 			key: 'name',
-			label: 'Name',
+			label: m.common_name(),
 			type: 'string',
 			searchable: true
 		},
 		{
 			key: 'network_id',
 			type: 'string',
-			label: 'Network',
+			label: m.common_network(),
 			filterable: true,
 			getValue(item) {
-				return networksData.find((n) => n.id == item.network_id)?.name || 'Unknown Network';
+				return networksData.find((n) => n.id == item.network_id)?.name || m.common_unknownNetwork();
 			}
 		},
 		{
 			key: 'tags',
-			label: 'Tags',
+			label: m.common_tags(),
 			type: 'array',
 			searchable: true,
 			filterable: true,
@@ -113,11 +114,11 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Daemon API Keys">
+	<TabHeader title={m.daemonApiKeys_title()}>
 		<svelte:fragment slot="actions">
 			{#if !isReadOnly}
 				<button class="btn-primary flex items-center" onclick={handleCreateApiKey}
-					><Plus class="h-5 w-5" />Create Daemon API Key</button
+					><Plus class="h-5 w-5" />{m.common_create()}</button
 				>
 			{/if}
 		</svelte:fragment>
@@ -128,10 +129,10 @@
 	{:else if apiKeysData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
-			title="No Daemon API Keys configured yet"
+			title={m.daemonApiKeys_noApiKeysYet()}
 			subtitle=""
 			onClick={handleCreateApiKey}
-			cta="Create your first Daemon API Key"
+			cta={m.common_create()}
 		/>
 	{:else}
 		<DataControls

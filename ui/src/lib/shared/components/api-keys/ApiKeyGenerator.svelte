@@ -6,6 +6,7 @@
 	import CodeContainer from '$lib/shared/components/data/CodeContainer.svelte';
 	import InlineWarning from '$lib/shared/components/feedback/InlineWarning.svelte';
 	import { RotateCcwKey } from 'lucide-svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	interface Props {
 		/** The generated key string to display (null if not yet generated) */
@@ -30,22 +31,18 @@
 		}
 	}
 
-	let buttonText = $derived(loading ? 'Generating...' : isEditing ? 'Rotate Key' : 'Generate Key');
+	let buttonText = $derived(
+		loading ? m.common_generating() : isEditing ? m.apiKeys_rotateKey() : m.common_generateKey()
+	);
 </script>
 
 <div class="space-y-3">
 	{#if !generatedKey && isEditing}
-		<InlineWarning
-			title="Generating a new key will invalidate your old key"
-			body="Click the button below to generate a new API key. You'll only see it once, so make sure to copy it."
-		/>
+		<InlineWarning title={m.apiKeys_rotateWarningTitle()} body={m.apiKeys_rotateWarningBody()} />
 	{/if}
 
 	{#if generatedKey}
-		<InlineWarning
-			title="Save this key now"
-			body="This key will not be shown again. Copy it now and store it securely."
-		/>
+		<InlineWarning title={m.apiKeys_saveKeyNowTitle()} body={m.apiKeys_saveKeyNowBody()} />
 	{/if}
 
 	<div class="flex items-start gap-2">
@@ -63,7 +60,7 @@
 			<CodeContainer
 				language="bash"
 				expandable={false}
-				code={generatedKey ? generatedKey : 'Press Generate Key...'}
+				code={generatedKey ? generatedKey : m.common_pressGenerateKey()}
 			/>
 		</div>
 	</div>

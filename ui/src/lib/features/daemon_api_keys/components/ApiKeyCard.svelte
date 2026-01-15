@@ -5,6 +5,7 @@
 	import { Edit, Trash2 } from 'lucide-svelte';
 	import type { ApiKey } from '../types/base';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let {
 		apiKey,
@@ -29,36 +30,36 @@
 		Icon: entities.getIconComponent('DaemonApiKey'),
 		fields: [
 			{
-				label: 'Created',
+				label: m.common_created(),
 				value: formatTimestamp(apiKey.created_at)
 			},
 			{
-				label: 'Last Used',
-				value: apiKey.last_used ? formatTimestamp(apiKey.last_used) : 'Never'
+				label: m.daemonApiKeys_lastUsed(),
+				value: apiKey.last_used ? formatTimestamp(apiKey.last_used) : m.common_never()
 			},
 			{
-				label: 'Expires',
+				label: m.common_expires(),
 				value: apiKey.expires_at
 					? new Date(apiKey.expires_at) < new Date()
-						? 'Expired'
+						? m.common_expired()
 						: formatTimestamp(apiKey.expires_at)
-					: 'Never'
+					: m.common_never()
 			},
 			{
-				label: 'Enabled',
-				value: apiKey.is_enabled ? 'Yes' : 'No'
+				label: m.common_enabled(),
+				value: apiKey.is_enabled ? m.common_yes() : m.common_no()
 			},
-			{ label: 'Tags', snippet: tagsSnippet }
+			{ label: m.common_tags(), snippet: tagsSnippet }
 		],
 		actions: [
 			{
-				label: 'Delete',
+				label: m.common_delete(),
 				icon: Trash2,
 				class: 'btn-icon-danger',
 				onClick: () => onDelete(apiKey)
 			},
 			{
-				label: 'Edit',
+				label: m.common_edit(),
 				icon: Edit,
 				class: 'btn-icon',
 				onClick: () => onEdit(apiKey)
@@ -69,7 +70,7 @@
 
 {#snippet tagsSnippet()}
 	<div class="flex items-center gap-2">
-		<span class="text-secondary text-sm">Tags:</span>
+		<span class="text-secondary text-sm">{m.common_tags()}:</span>
 		<TagPickerInline selectedTagIds={apiKey.tags} entityId={apiKey.id} entityType="DaemonApiKey" />
 	</div>
 {/snippet}

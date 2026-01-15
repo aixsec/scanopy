@@ -11,6 +11,8 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
+use axum::http::StatusCode;
+
 use crate::server::{
     auth::{
         middleware::permissions::{Authorized, Member},
@@ -18,16 +20,22 @@ use crate::server::{
     },
     billing::types::base::BillingPlan,
     config::AppState,
+    networks::r#impl::Network,
+    organizations::r#impl::base::Organization,
     shared::{
         handlers::traits::{CrudHandlers, create_handler, update_handler},
         services::traits::CrudService,
         storage::traits::Storage,
-        types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult},
+        types::{
+            api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult},
+            error_codes::ErrorCode,
+        },
     },
     shares::r#impl::{
         api::{CreateUpdateShareRequest, PublicShareMetadata, ShareWithTopology},
         base::Share,
     },
+    topology::types::base::Topology,
 };
 
 // Generated handlers for generic CRUD operations
@@ -103,9 +111,7 @@ async fn create_share(
             Some(hash_password(&password).map_err(|e| ApiError::internal_error(&e.to_string()))?);
     }
 
-    share.base.created_by = auth
-        .user_id()
-        .ok_or_else(|| ApiError::forbidden("User context required"))?;
+    share.base.created_by = auth.user_id().ok_or_else(ApiError::user_required)?;
 
     create_handler::<Share>(State(state), auth, Json(share)).await
 }
@@ -136,7 +142,7 @@ async fn update_share(
     let existing = Share::get_service(&state)
         .get_by_id(&id)
         .await?
-        .ok_or_else(|| ApiError::not_found(format!("Share '{}' not found", id)))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Share>(id))?;
 
     // Handle password field:
     // - None: preserve existing password_hash
@@ -177,7 +183,7 @@ async fn get_share_org_plan(state: &AppState, share: &Share) -> Result<BillingPl
         .get_by_id(&share.base.network_id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found("Network not found".to_string()))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Network>(share.base.network_id))?;
 
     // Get organization to find plan
     let org = state
@@ -186,7 +192,7 @@ async fn get_share_org_plan(state: &AppState, share: &Share) -> Result<BillingPl
         .get_by_id(&network.base.organization_id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found("Organization not found".to_string()))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Organization>(network.base.organization_id))?;
 
     Ok(org.base.plan.unwrap_or_default())
 }
@@ -214,12 +220,10 @@ async fn get_public_share_metadata(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found("Share not found".to_string()))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Share>(id))?;
 
     if !share.is_valid() {
-        return Err(ApiError::not_found(
-            "Share not found or expired".to_string(),
-        ));
+        return Err(ApiError::entity_disabled::<Share>());
     }
 
     Ok(Json(ApiResponse::success(PublicShareMetadata::from(
@@ -251,12 +255,10 @@ async fn verify_share_password(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found("Share not found".to_string()))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Share>(id))?;
 
     if !share.is_valid() {
-        return Err(ApiError::not_found(
-            "Share not found or expired".to_string(),
-        ));
+        return Err(ApiError::entity_disabled::<Share>());
     }
 
     if !share.requires_password() {
@@ -268,7 +270,7 @@ async fn verify_share_password(
         .services
         .share_service
         .verify_share_password(&share, &password)
-        .map_err(|_| ApiError::unauthorized("Invalid password".to_string()))?;
+        .map_err(|_| ApiError::share_password_incorrect())?;
 
     Ok(Json(ApiResponse::success(true)))
 }
@@ -287,10 +289,10 @@ async fn get_share_topology(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found("Share not found".to_string()))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Share>(id))?;
 
     if !share.is_valid() {
-        return Err(ApiError::not_found("Share disabled or expired".to_string()));
+        return Err(ApiError::entity_disabled::<Share>());
     }
 
     // Get org's plan to check embed feature
@@ -312,10 +314,10 @@ async fn get_share_topology(
                     .services
                     .share_service
                     .verify_share_password(&share, password)
-                    .map_err(|_| ApiError::unauthorized("Invalid password".to_string()))?;
+                    .map_err(|_| ApiError::share_password_incorrect())?;
             }
             None => {
-                return Err(ApiError::unauthorized("Password required".to_string()));
+                return Err(ApiError::share_password_required());
             }
         }
     }
@@ -331,7 +333,11 @@ async fn get_share_topology(
             .share_service
             .validate_allowed_domains(&share, referer)
         {
-            return Err(ApiError::forbidden("Domain not allowed"));
+            let domain = referer.unwrap_or("unknown").to_string();
+            return Err(ApiError::coded(
+                StatusCode::FORBIDDEN,
+                ErrorCode::ShareDomainNotAllowed { domain },
+            ));
         }
     }
 
@@ -343,7 +349,7 @@ async fn get_share_topology(
         .get_by_id(&share.base.topology_id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found("Topology not found".to_string()))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Topology>(share.base.topology_id))?;
 
     let response_data = ShareWithTopology {
         share: PublicShareMetadata::from(&share),

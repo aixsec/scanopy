@@ -6,6 +6,7 @@
 	import { ArrowBigUpDash } from 'lucide-svelte';
 	import type { Daemon } from '../types/base';
 	import { VERSION } from '$lib/version';
+	import * as m from '$lib/paraglide/messages';
 
 	interface Props {
 		isOpen?: boolean;
@@ -26,7 +27,7 @@ docker compose up -d`;
 	let colorHelper = entities.getColorHelper('Daemon');
 </script>
 
-<GenericModal {isOpen} title="Upgrade Daemon" size="lg" {onClose}>
+<GenericModal {isOpen} title={m.daemons_upgradeDaemon()} size="lg" {onClose}>
 	{#snippet headerIcon()}
 		<ModalHeaderIcon Icon={ArrowBigUpDash} color={colorHelper.color} />
 	{/snippet}
@@ -35,48 +36,45 @@ docker compose up -d`;
 		<div class="flex-1 overflow-auto p-6">
 			<div class="space-y-6">
 				<p class="text-secondary">
-					An update is available for daemon <span class="text-primary font-medium"
-						>{daemon.name}</span
-					>.
+					{m.daemons_updateAvailable()} <span class="text-primary font-medium">{daemon.name}</span>.
 					{#if daemon.version_status.version}
-						Current version: <span class="font-mono">{daemon.version_status.version}.</span>
+						{m.daemons_currentVersion()}
+						<span class="font-mono">{daemon.version_status.version}.</span>
 					{/if}
-					Latest version: <span class="font-mono">{VERSION}.</span>
+					{m.daemons_latestVersion()} <span class="font-mono">{VERSION}.</span>
 				</p>
 
 				<!-- Binary Installation -->
 				<div class="space-y-3">
-					<h3 class="text-primary font-medium">Binary Installation</h3>
+					<h3 class="text-primary font-medium">{m.daemons_binaryInstallation()}</h3>
 					<p class="text-secondary text-sm">
-						Run the install script to upgrade to the latest version. This will replace the existing
-						binary.
+						{m.daemons_binaryInstallationHelp()}
 					</p>
 					<CodeContainer language="bash" expandable={false} code={binaryUpgradeCommand} />
 					<p class="text-secondary text-sm">
-						After updating, restart the daemon service for changes to take effect.
+						{m.daemons_restartDaemon()}
 					</p>
 				</div>
 
 				<!-- Docker Compose Installation -->
 				<div class="space-y-3">
-					<h3 class="text-primary font-medium">Docker Compose Installation</h3>
+					<h3 class="text-primary font-medium">{m.daemons_dockerComposeInstallation()}</h3>
 
 					<div class="space-y-2">
 						<p class="text-secondary text-sm">
-							If you're using the <span class="font-mono">:latest</span> tag, pull the new image and
-							restart:
+							{m.daemons_dockerLatestTag()}
 						</p>
 						<CodeContainer language="bash" expandable={false} code={dockerComposeLatestPull} />
 					</div>
 
 					<div class="space-y-2">
 						<p class="text-secondary text-sm">
-							If you're pinned to a specific version, update the image line in your
+							{m.daemons_dockerPinnedVersion()}
 							<span class="font-mono">docker-compose.yml</span>:
 						</p>
 						<CodeContainer language="yaml" expandable={false} code={dockerComposeImageLine} />
 						<p class="text-secondary text-sm">
-							Then run <span class="font-mono">docker compose up -d</span> to apply the changes.
+							{m.daemons_dockerApplyChanges()}
 						</p>
 					</div>
 				</div>
@@ -86,7 +84,7 @@ docker compose up -d`;
 		<!-- Footer -->
 		<div class="modal-footer">
 			<div class="flex items-center justify-end">
-				<button type="button" class="btn-secondary" onclick={onClose}>Close</button>
+				<button type="button" class="btn-secondary" onclick={onClose}>{m.common_close()}</button>
 			</div>
 		</div>
 	</div>

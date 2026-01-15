@@ -5,6 +5,7 @@
 	import InlineDanger from '$lib/shared/components/feedback/InlineDanger.svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import EntityList from '$lib/shared/components/data/EntityList.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	export let isOpen: boolean;
 	export let topology: Topology;
@@ -57,49 +58,49 @@
 		if (removedHosts.length > 0) {
 			items.push({
 				id: 'hosts-header',
-				name: `Hosts: ${removedHosts.map((h) => h.name).join(', ')}`
+				name: `${m.common_hosts()}: ${removedHosts.map((h) => h.name).join(', ')}`
 			});
 		}
 
 		if (removedServices.length > 0) {
 			items.push({
 				id: 'services-header',
-				name: `Services: ${removedServices.map((s) => s.name).join(', ')}`
+				name: `${m.common_services()}: ${removedServices.map((s) => s.name).join(', ')}`
 			});
 		}
 
 		if (removedSubnets.length > 0) {
 			items.push({
 				id: 'subnets-header',
-				name: `Subnets: ${removedSubnets.map((s) => s.name).join(', ')}`
+				name: `${m.common_subnets()}: ${removedSubnets.map((s) => s.name).join(', ')}`
 			});
 		}
 
 		if (removedGroups.length > 0) {
 			items.push({
 				id: 'groups-header',
-				name: `Groups: ${removedGroups.map((g) => g.name).join(', ')}`
+				name: `${m.common_groupsLabel()}: ${removedGroups.map((g) => g.name).join(', ')}`
 			});
 		}
 
 		if (removedInterfaces.length > 0) {
 			items.push({
 				id: 'interfaces-header',
-				name: `Interfaces: ${removedInterfaces.map((i) => i.ip_address).join(', ')}`
+				name: `${m.common_interfaces()}: ${removedInterfaces.map((i) => i.ip_address).join(', ')}`
 			});
 		}
 
 		if (removedPorts.length > 0) {
 			items.push({
 				id: 'ports-header',
-				name: `Ports: ${removedPorts.map((p) => `${p.number}/${p.protocol}`).join(', ')}`
+				name: `${m.common_ports()}: ${removedPorts.map((p) => `${p.number}/${p.protocol}`).join(', ')}`
 			});
 		}
 
 		if (removedBindings.length > 0) {
 			items.push({
 				id: 'bindings-header',
-				name: `Bindings: ${removedBindings.length} removed`
+				name: m.topology_bindingsRemoved({ count: removedBindings.length })
 			});
 		}
 
@@ -107,7 +108,7 @@
 	})();
 </script>
 
-<GenericModal {isOpen} onClose={onCancel} title="Review Refresh Conflicts" size="lg">
+<GenericModal {isOpen} onClose={onCancel} title={m.topology_reviewConflicts()} size="lg">
 	{#snippet headerIcon()}
 		<AlertTriangle class="h-6 w-6 text-red-600 dark:text-red-400" />
 	{/snippet}
@@ -115,32 +116,32 @@
 	<div class="space-y-4 p-6">
 		<!-- Warning header -->
 		<InlineDanger
-			title={`${totalRemoved} ${totalRemoved === 1 ? 'entity' : 'entities'} will be removed`}
-			body="These entities no longer exist in the network and will be removed from this diagram if you rebuild."
+			title={m.topology_entitiesRemoved({
+				count: totalRemoved,
+				entity: totalRemoved === 1 ? m.common_entity() : m.common_entities()
+			})}
+			body={m.topology_removedWarning()}
 		/>
 
 		<!-- List removed entities -->
 		<EntityList title="" items={allRemovedEntities} />
 
 		<!-- Info box -->
-		<InlineInfo
-			title="Tip:"
-			body="If you want to preserve this network state as a historical record, click 'Lock' to freeze this topology without refreshing."
-		/>
+		<InlineInfo title={m.common_tip()} body={m.topology_lockTipBody()} />
 	</div>
 
 	{#snippet footer()}
 		<div class="modal-footer">
 			<div class="flex w-full items-center justify-between">
-				<button class="btn-secondary" on:click={onCancel}> Cancel </button>
+				<button class="btn-secondary" on:click={onCancel}> {m.common_cancel()} </button>
 				<div class="flex gap-3">
 					<button class="btn-primary flex items-center gap-2" on:click={onLock}>
 						<Lock class="h-4 w-4" />
-						Lock
+						{m.common_lock()}
 					</button>
 					<button class="btn-danger flex items-center gap-2" on:click={onConfirm}>
 						<RefreshCcw class="h-4 w-4" />
-						Rebulid
+						{m.common_rebuild()}
 					</button>
 				</div>
 			</div>

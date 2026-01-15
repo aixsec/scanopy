@@ -21,6 +21,7 @@
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import { useHostsQuery } from '$lib/features/hosts/queries';
 	import type { TabProps } from '$lib/shared/types';
+	import * as m from '$lib/paraglide/messages';
 
 	let { isReadOnly = false }: TabProps = $props();
 
@@ -61,7 +62,7 @@
 	}
 
 	function handleDeleteDiscovery(discovery: Discovery) {
-		if (confirm(`Are you sure you want to delete "${discovery.name}"?`)) {
+		if (confirm(m.common_confirmDeleteName({ name: discovery.name }))) {
 			deleteDiscoveryMutation.mutate(discovery.id);
 		}
 	}
@@ -88,7 +89,7 @@
 	}
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(`Are you sure you want to delete ${ids.length} Scheduled Discoveries?`)) {
+		if (confirm(m.discovery_confirmDeleteScheduled({ count: ids.length }))) {
 			await bulkDeleteDiscoveriesMutation.mutateAsync(ids);
 		}
 	}
@@ -97,7 +98,7 @@
 		...discoveryFields(daemonsData),
 		{
 			key: 'run_type',
-			label: 'Run Type',
+			label: m.discovery_runType(),
 			type: 'string',
 			searchable: true,
 			filterable: true,
@@ -105,7 +106,7 @@
 		},
 		{
 			key: 'tags',
-			label: 'Tags',
+			label: m.common_tags(),
 			type: 'array',
 			searchable: true,
 			filterable: true,
@@ -121,11 +122,11 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Scheduled Discovery Sessions">
+	<TabHeader title={m.discovery_scheduledTitle()}>
 		<svelte:fragment slot="actions">
 			{#if !isReadOnly}
 				<button class="btn-primary flex items-center" onclick={handleCreateDiscovery}
-					><Plus class="h-5 w-5" />Schedule Discovery</button
+					><Plus class="h-5 w-5" />{m.common_schedule()}</button
 				>
 			{/if}
 		</svelte:fragment>
@@ -136,10 +137,10 @@
 	{:else if discoveriesData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
-			title="No discovery sessions are scheduled"
+			title={m.discovery_noScheduledSessions()}
 			subtitle=""
 			onClick={isReadOnly ? undefined : handleCreateDiscovery}
-			cta={isReadOnly ? undefined : 'Schedule a discovery session'}
+			cta={isReadOnly ? undefined : m.common_schedule()}
 		/>
 	{:else}
 		<DataControls

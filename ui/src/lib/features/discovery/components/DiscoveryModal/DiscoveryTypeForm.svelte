@@ -10,6 +10,7 @@
 	import { generateCronSchedule } from '../../queries';
 	import type { AnyFieldApi } from '@tanstack/svelte-form';
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	// Props
 	interface Props {
@@ -31,24 +32,24 @@
 
 	// Discovery type options
 	let discoveryTypeOptions = $derived([
-		{ value: 'Network', label: 'Network Scan', disabled: false },
+		{ value: 'Network', label: m.discovery_networkScan(), disabled: false },
 		{
 			value: 'Docker',
-			label: 'Docker Scan',
+			label: m.discovery_dockerScan(),
 			disabled: daemonHostId == null || !daemon.capabilities.has_docker_socket
 		},
-		{ value: 'SelfReport', label: 'Self Report', disabled: daemonHostId == null }
+		{ value: 'SelfReport', label: m.discovery_selfReport(), disabled: daemonHostId == null }
 	]);
 
-	const hostNameFallbackOptions = [
-		{ value: 'Ip', label: 'IP Address' },
-		{ value: 'BestService', label: 'Best Service' }
-	];
+	let hostNameFallbackOptions = $derived([
+		{ value: 'Ip', label: m.common_ipAddress() },
+		{ value: 'BestService', label: m.discovery_bestService() }
+	]);
 
-	const runTypeOptions = [
-		{ value: 'AdHoc', label: 'AdHoc (Run on Demand)' },
-		{ value: 'Scheduled', label: 'Scheduled (Automatic)' }
-	];
+	let runTypeOptions = $derived([
+		{ value: 'AdHoc', label: m.discovery_adHoc() },
+		{ value: 'Scheduled', label: m.discovery_scheduled() }
+	]);
 
 	// Handle run type changes - update formData when form field changes
 	function handleRunTypeChange(value: string) {
@@ -163,20 +164,34 @@
 	}
 
 	// Day and hour options for schedule
-	const dayOptions = Array.from({ length: 31 }, (_, i) => ({
-		value: String(i),
-		label: i === 0 ? 'No days' : i === 1 ? '1 day' : `${i} days`
-	}));
+	let dayOptions = $derived(
+		Array.from({ length: 31 }, (_, i) => ({
+			value: String(i),
+			label:
+				i === 0
+					? m.discovery_noDays()
+					: i === 1
+						? m.discovery_oneDay()
+						: m.discovery_xDays({ count: i })
+		}))
+	);
 
-	const hourOptions = Array.from({ length: 24 }, (_, i) => ({
-		value: String(i),
-		label: i === 0 ? 'No hours' : i === 1 ? '1 hour' : `${i} hours`
-	}));
+	let hourOptions = $derived(
+		Array.from({ length: 24 }, (_, i) => ({
+			value: String(i),
+			label:
+				i === 0
+					? m.discovery_noHours()
+					: i === 1
+						? m.discovery_oneHour()
+						: m.discovery_xHours({ count: i })
+		}))
+	);
 </script>
 
 <div class="space-y-6">
 	<div class="border-t border-gray-700 pt-6">
-		<h3 class="text-primary mb-4 text-lg font-medium">Discovery Configuration</h3>
+		<h3 class="text-primary mb-4 text-lg font-medium">{m.discovery_configuration()}</h3>
 
 		<div class="space-y-4">
 			<!-- Run Type Selection -->
@@ -188,7 +203,7 @@
 			>
 				{#snippet children(field: AnyFieldApi)}
 					<SelectInput
-						label="Run Type"
+						label={m.discovery_runType()}
 						id="run_type"
 						options={runTypeOptions}
 						{field}
@@ -196,8 +211,8 @@
 					/>
 					<p class="text-tertiary mt-1 text-xs">
 						{field.state.value === 'AdHoc'
-							? 'This discovery will only run when manually triggered'
-							: 'This discovery will run automatically on a schedule'}
+							? m.discovery_adHocDescription()
+							: m.discovery_scheduledDescription()}
 					</p>
 				{/snippet}
 			</form.Field>
@@ -211,7 +226,7 @@
 			>
 				{#snippet children(field: AnyFieldApi)}
 					<SelectInput
-						label="Discovery Type"
+						label={m.discovery_discoveryType()}
 						id="discovery_type"
 						options={discoveryTypeOptions}
 						{field}
@@ -225,8 +240,8 @@
 
 			{#if daemonHostId == null}
 				<InlineWarning
-					title="Daemon host is missing"
-					body="Could not find a host associated to the selected daemon. It may have been deleted or corrupted. Please recreate the daemon."
+					title={m.discovery_daemonHostMissing()}
+					body={m.discovery_daemonHostMissingHelp()}
 				/>
 			{/if}
 
@@ -240,12 +255,12 @@
 				>
 					{#snippet children(field: AnyFieldApi)}
 						<SelectInput
-							label="Host Name Fallback"
+							label={m.discovery_hostNameFallback()}
 							id="host_name_fallback"
 							options={hostNameFallbackOptions}
 							{field}
 							disabled={readOnly}
-							helpText="In the event that hostname can't be resolved, what name should be set for discovered hosts? IP Address, or best service (the highest confidence service match)?"
+							helpText={m.discovery_hostNameFallbackHelp()}
 						/>
 					{/snippet}
 				</form.Field>
@@ -254,10 +269,10 @@
 			{#if formData.discovery_type.type === 'Network'}
 				<div class="rounded-lg bg-gray-800/50 p-4">
 					<ListManager
-						label="Target Subnets"
-						helpText="Select specific subnets to scan, or leave empty to scan all subnets that the daemon has an interface with."
-						placeholder="Select a subnet..."
-						emptyMessage="All subnets in network will be scanned"
+						label={m.discovery_targetSubnets()}
+						helpText={m.discovery_targetSubnetsHelp()}
+						placeholder={m.discovery_selectSubnet()}
+						emptyMessage={m.discovery_allSubnetsScanned()}
 						allowReorder={false}
 						allowItemEdit={() => false}
 						showSearch={true}
@@ -271,8 +286,10 @@
 				</div>
 				{#if nonInterfacedSubnets.length > 0}
 					<InlineWarning
-						title="Non-Interfaced Subnet Added"
-						body={`The selected daemon does not have a direct network interface with the following subnets: \n${nonInterfacedSubnets.join('\n')}. \nYou can still include them, but hostnames and MAC addresses will not be available for any discovered hosts.`}
+						title={m.discovery_nonInterfacedSubnet()}
+						body={m.discovery_nonInterfacedSubnetWarning({
+							subnets: nonInterfacedSubnets.join('\n')
+						})}
 					/>
 				{/if}
 			{/if}
@@ -282,11 +299,11 @@
 	<!-- Frequency Configuration (only for scheduled runs) -->
 	{#if formData.run_type.type === 'Scheduled'}
 		<div class="border-t border-gray-700 pt-6">
-			<h3 class="text-primary mb-4 text-lg font-medium">Schedule Configuration</h3>
+			<h3 class="text-primary mb-4 text-lg font-medium">{m.discovery_scheduleConfiguration()}</h3>
 
 			<div class="space-y-4">
 				<p class="text-tertiary text-sm">
-					Configure how often this discovery should run automatically
+					{m.discovery_scheduleHelp()}
 				</p>
 
 				<div class="grid grid-cols-2 gap-4">
@@ -301,7 +318,7 @@
 					>
 						{#snippet children(field: AnyFieldApi)}
 							<SelectInput
-								label="Days"
+								label={m.common_days()}
 								id="frequency_days"
 								options={dayOptions}
 								{field}
@@ -321,7 +338,7 @@
 					>
 						{#snippet children(field: AnyFieldApi)}
 							<SelectInput
-								label="Hours"
+								label={m.common_hours()}
 								id="frequency_hours"
 								options={hourOptions}
 								{field}
@@ -350,10 +367,9 @@
 						/>
 					</svg>
 					<div>
-						<h4 class="mb-1 text-sm font-medium text-gray-300">Manual Discovery</h4>
+						<h4 class="mb-1 text-sm font-medium text-gray-300">{m.discovery_manualDiscovery()}</h4>
 						<p class="text-sm text-gray-400">
-							This discovery will only run when you manually trigger it from the discoveries page.
-							No automatic scheduling is configured.
+							{m.discovery_manualDiscoveryHelp()}
 						</p>
 					</div>
 				</div>

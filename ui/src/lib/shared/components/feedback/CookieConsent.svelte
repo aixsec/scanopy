@@ -2,6 +2,7 @@
 	import posthog from 'posthog-js';
 	import { dev } from '$app/environment';
 	import { onMount } from 'svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	const COOKIE_NAME = 'scanopy_gdpr';
 	const COOKIE_DOMAIN = dev ? '' : '.scanopy.net';
@@ -101,8 +102,8 @@
 			{#if showSettings}
 				<div class="settings-panel">
 					<div class="settings-header">
-						<h3 class="title">Cookie Preferences</h3>
-						<button class="close-btn" onclick={closeSettings} aria-label="Close">
+						<h3 class="title">{m.cookies_preferences()}</h3>
+						<button class="close-btn" onclick={closeSettings} aria-label={m.common_close()}>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								width="20"
@@ -120,8 +121,8 @@
 						</button>
 					</div>
 					<p class="settings-description">
-						Manage your cookie preferences below. You can enable or disable different types of
-						cookies. See our <a href="https://scanopy.net/privacy">privacy policy</a> for more details.
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted i18n content -->
+						{@html m.cookies_preferencesDesc()}
 					</p>
 
 					<div class="cookie-options">
@@ -130,12 +131,12 @@
 								<label class="option-label">
 									<input type="checkbox" checked disabled />
 									<span class="checkbox disabled"></span>
-									<span class="option-title">Necessary</span>
+									<span class="option-title">{m.common_necessary()}</span>
 								</label>
-								<span class="always-on">Always on</span>
+								<span class="always-on">{m.cookies_alwaysOn()}</span>
 							</div>
 							<p class="option-description">
-								Essential cookies required for the website to function. These cannot be disabled.
+								{m.cookies_necessaryDesc()}
 							</p>
 						</div>
 
@@ -144,42 +145,42 @@
 								<label class="option-label">
 									<input type="checkbox" bind:checked={preferences.analytics} />
 									<span class="checkbox"></span>
-									<span class="option-title">Analytics</span>
+									<span class="option-title">{m.common_analytics()}</span>
 								</label>
 							</div>
 							<p class="option-description">
-								Help us understand how visitors interact with our website by collecting anonymous
-								usage data.
+								{m.cookies_analyticsDesc()}
 							</p>
 						</div>
 					</div>
 
 					<div class="settings-buttons">
-						<button class="btn btn-secondary" onclick={rejectAll}>Reject All</button>
-						<button class="btn btn-secondary" onclick={acceptAll}>Accept All</button>
-						<button class="btn btn-primary" onclick={savePreferences}>Save Preferences</button>
+						<button class="btn btn-secondary" onclick={rejectAll}>{m.cookies_rejectAll()}</button>
+						<button class="btn btn-secondary" onclick={acceptAll}>{m.cookies_acceptAll()}</button>
+						<button class="btn btn-primary" onclick={savePreferences}
+							>{m.cookies_savePreferences()}</button
+						>
 					</div>
 				</div>
 			{:else}
 				<div class="content">
 					<div class="text-content">
-						<h3 class="title">Cookie Settings</h3>
+						<h3 class="title">{m.cookies_settings()}</h3>
 						<p class="description">
-							We use cookies to improve your experience and analyze site traffic. See our <a
-								href="https://scanopy.net/privacy">privacy policy</a
-							> for details.
+							<!-- eslint-disable-next-line svelte/no-at-html-tags -- trusted i18n content -->
+							{@html m.cookies_settingsDesc()}
 						</p>
 					</div>
 					<div class="buttons">
-						<button class="btn btn-link" onclick={openSettings}>Customize</button>
-						<button class="btn btn-secondary" onclick={rejectAll}>Reject All</button>
-						<button class="btn btn-primary" onclick={acceptAll}>Accept All</button>
+						<button class="btn btn-link" onclick={openSettings}>{m.common_customize()}</button>
+						<button class="btn btn-secondary" onclick={rejectAll}>{m.cookies_rejectAll()}</button>
+						<button class="btn btn-primary" onclick={acceptAll}>{m.cookies_acceptAll()}</button>
 					</div>
 				</div>
 			{/if}
 		</div>
 	{:else if hasConsented}
-		<button class="toggle" onclick={openSettings} aria-label="Cookie settings">
+		<button class="toggle" onclick={openSettings} aria-label={m.cookies_settings()}>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				width="20"
@@ -285,14 +286,15 @@
 		margin: 0;
 	}
 
-	.description a,
-	.settings-description a {
+	/* :global() needed because links come from @html i18n content */
+	.description :global(a),
+	.settings-description :global(a) {
 		color: #60a5fa;
 		text-decoration: underline;
 	}
 
-	.description a:hover,
-	.settings-description a:hover {
+	.description :global(a:hover),
+	.settings-description :global(a:hover) {
 		color: #93c5fd;
 	}
 

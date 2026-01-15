@@ -1924,14 +1924,22 @@ export interface components {
     schemas: {
         /** @description Error response type for API errors (no data field) */
         ApiErrorResponse: {
+            /** @description Machine-readable error code for i18n translation */
+            code?: string | null;
             error?: string | null;
+            /** @description API metadata (version info) */
+            meta: components["schemas"]["ApiMeta"];
+            /** @description Parameters for interpolating into the translated error message */
+            params?: {
+                [key: string]: unknown;
+            } | null;
             success: boolean;
         };
         /**
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.13.3"
+         *       "server_version": "0.13.5"
          *     }
          */
         ApiMeta: {
@@ -1942,7 +1950,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.13.3
+             * @example 0.13.5
              */
             server_version: string;
         };
@@ -1956,14 +1964,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-01-10T23:04:42.635661Z",
-             *       "id": "b1651c99-6b52-4f02-87b5-86a839f975e4",
+             *       "created_at": "2026-01-13T22:33:31.255874Z",
+             *       "id": "0af52bdb-4f50-4c41-a558-3f62c024af16",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-01-10T23:04:42.635661Z"
+             *       "updated_at": "2026-01-13T22:33:31.255874Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2366,14 +2374,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-01-10T23:04:42.631462Z",
-             *           "id": "03dc9d87-1e10-4958-990b-2a81cef6c416",
+             *           "created_at": "2026-01-13T22:33:31.251337Z",
+             *           "id": "2adaa4fc-d1a9-4b4b-ae39-c59e23107fab",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-01-10T23:04:42.631462Z"
+             *           "updated_at": "2026-01-13T22:33:31.251337Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -2382,7 +2390,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Switch",
+             *       "service_definition": "Veeam",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -2665,14 +2673,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-01-10T23:04:42.621931Z",
-         *       "id": "393ef68a-5f82-45c1-9d23-7e97285b1f2e",
+         *       "created_at": "2026-01-13T22:33:31.241489Z",
+         *       "id": "e95ed47c-ed9d-4252-a7a3-e47f27d1c8fc",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-01-10T23:04:42.621931Z"
+         *       "updated_at": "2026-01-13T22:33:31.241489Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -2836,7 +2844,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Switch",
+         *           "service_definition": "Veeam",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3571,7 +3579,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.13.3"
+         *       "server_version": "0.13.5"
          *     }
          */
         PaginatedApiMeta: {
@@ -3584,7 +3592,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.13.3
+             * @example 0.13.5
              */
             server_version: string;
         };
@@ -3922,14 +3930,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-01-10T23:04:42.621834Z",
-         *           "id": "504e786d-c77f-45f8-986b-55e69c761d0f",
+         *           "created_at": "2026-01-13T22:33:31.241392Z",
+         *           "id": "276d1c1c-f8e2-452f-80b6-30703f2a043e",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-01-10T23:04:42.621834Z"
+         *           "updated_at": "2026-01-13T22:33:31.241392Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -3938,7 +3946,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Switch",
+         *       "service_definition": "Veeam",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -4105,7 +4113,7 @@ export interface components {
          */
         SubnetOrderField: "created_at" | "name" | "cidr" | "subnet_type" | "updated_at" | "network_id";
         /** @enum {string} */
-        SubnetType: "Internet" | "Remote" | "Gateway" | "VpnTunnel" | "Dmz" | "Lan" | "WiFi" | "IoT" | "Guest" | "DockerBridge" | "Management" | "Storage" | "Unknown" | "None";
+        SubnetType: "Internet" | "Remote" | "Gateway" | "VpnTunnel" | "Dmz" | "Lan" | "WiFi" | "IoT" | "Guest" | "DockerBridge" | "MacVlan" | "IpVlan" | "Management" | "Storage" | "Unknown" | "None";
         /**
          * @example {
          *       "color": "Green",

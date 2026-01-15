@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { AnyFieldApi } from '@tanstack/svelte-form';
 	import { AlertCircle } from 'lucide-svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	interface Props {
 		passwordField: AnyFieldApi;
@@ -13,10 +14,13 @@
 	let {
 		passwordField,
 		confirmPasswordField,
-		label = 'Password',
-		confirmLabel = 'Confirm Password',
+		label,
+		confirmLabel,
 		required = true
 	}: Props = $props();
+
+	let passwordLabel = $derived(label ?? m.common_password());
+	let confirmPasswordLabel = $derived(confirmLabel ?? m.common_passwordConfirm());
 
 	// Password requirements derived from field value
 	let value = $derived(passwordField.state.value as string);
@@ -41,7 +45,7 @@
 <div class="space-y-4">
 	<div class="space-y-2">
 		<label for="password" class="text-secondary block text-sm font-medium">
-			{label}
+			{passwordLabel}
 			{#if required}<span class="text-red-400">*</span>{/if}
 		</label>
 		<input
@@ -50,7 +54,7 @@
 			value={passwordField.state.value}
 			onblur={() => passwordField.handleBlur()}
 			oninput={(e) => passwordField.handleChange(e.currentTarget.value)}
-			placeholder="Create a strong password"
+			placeholder={m.common_passwordCreatePlaceholder()}
 			class="input-field"
 			class:input-field-error={showPasswordErrors}
 		/>
@@ -58,18 +62,22 @@
 		<!-- Password Requirements -->
 		{#if value}
 			<div class="space-y-1 rounded-md bg-gray-700 p-3">
-				<p class="text-xs font-medium text-gray-300">Password Requirements:</p>
+				<p class="text-xs font-medium text-gray-300">{m.common_passwordRequirements()}</p>
 				<p class="text-xs {passwordLongEnough ? 'text-green-400' : 'text-gray-400'}">
-					{passwordLongEnough ? '✓' : '○'} At least 10 characters
+					{passwordLongEnough ? '✓' : '○'}
+					{m.common_passwordMinChars()}
 				</p>
 				<p class="text-xs {hasUppercase ? 'text-green-400' : 'text-gray-400'}">
-					{hasUppercase ? '✓' : '○'} Contains uppercase letter
+					{hasUppercase ? '✓' : '○'}
+					{m.common_passwordContainsUppercase()}
 				</p>
 				<p class="text-xs {hasLowercase ? 'text-green-400' : 'text-gray-400'}">
-					{hasLowercase ? '✓' : '○'} Contains lowercase letter
+					{hasLowercase ? '✓' : '○'}
+					{m.common_passwordContainsLowercase()}
 				</p>
 				<p class="text-xs {hasNumber ? 'text-green-400' : 'text-gray-400'}">
-					{hasNumber ? '✓' : '○'} Contains number
+					{hasNumber ? '✓' : '○'}
+					{m.common_passwordContainsNumber()}
 				</p>
 			</div>
 		{/if}
@@ -85,7 +93,7 @@
 	{#if confirmPasswordField}
 		<div class="space-y-2">
 			<label for="confirmPassword" class="text-secondary block text-sm font-medium">
-				{confirmLabel}
+				{confirmPasswordLabel}
 				{#if required}<span class="text-red-400">*</span>{/if}
 			</label>
 			<input
@@ -94,7 +102,7 @@
 				value={confirmPasswordField.state.value}
 				onblur={() => confirmPasswordField.handleBlur()}
 				oninput={(e) => confirmPasswordField.handleChange(e.currentTarget.value)}
-				placeholder="Re-enter your password"
+				placeholder={m.common_passwordReenterPlaceholder()}
 				class="input-field"
 				class:input-field-error={showConfirmErrors}
 			/>

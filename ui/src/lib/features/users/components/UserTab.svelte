@@ -15,6 +15,7 @@
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useUsersQuery, useBulkDeleteUsersMutation } from '../queries';
 	import type { TabProps } from '$lib/shared/types';
+	import * as m from '$lib/paraglide/messages';
 
 	let { isReadOnly = false }: TabProps = $props();
 
@@ -63,7 +64,7 @@
 	);
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(`Are you sure you want to delete ${ids.length} Users?`)) {
+		if (confirm(m.users_confirmBulkDelete({ count: ids.length }))) {
 			await bulkDeleteUsersMutation.mutateAsync(ids);
 		}
 	}
@@ -82,7 +83,7 @@
 	const userFields: FieldConfig<UserOrInvite>[] = [
 		{
 			key: 'email',
-			label: 'Email',
+			label: m.common_email(),
 			type: 'string',
 			searchable: true,
 			getValue(item) {
@@ -91,7 +92,7 @@
 		},
 		{
 			key: 'permissions',
-			label: 'Role',
+			label: m.common_role(),
 			type: 'string',
 			filterable: true,
 			getValue(item) {
@@ -100,11 +101,11 @@
 		},
 		{
 			key: 'oidc_provider',
-			label: 'Auth Method',
+			label: m.users_authMethod(),
 			type: 'string',
 			filterable: true,
 			getValue(item) {
-				return isUser(item) ? item.data.oidc_provider || 'Email & Password' : '';
+				return isUser(item) ? item.data.oidc_provider || m.common_emailAndPassword() : '';
 			}
 		}
 	];
@@ -112,12 +113,12 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Users" subtitle="Manage users in your organization">
+	<TabHeader title={m.common_users()} subtitle={m.users_subtitle()}>
 		<svelte:fragment slot="actions">
 			{#if canInviteUsers}
 				<button class="btn-primary flex items-center" onclick={handleCreateInvite}>
 					<UserPlus class="mr-2 h-5 w-5" />
-					Invite User
+					{m.users_inviteUser()}
 				</button>
 			{/if}
 		</svelte:fragment>
@@ -128,7 +129,7 @@
 		<Loading />
 	{:else if combinedItems.length === 0}
 		<!-- Empty state -->
-		<EmptyState title="No users found" subtitle="Users will appear here once added" />
+		<EmptyState title={m.users_noUsersFound()} subtitle={m.users_noUsersSubtitle()} />
 	{:else}
 		<DataControls
 			items={combinedItems}

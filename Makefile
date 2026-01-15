@@ -87,7 +87,10 @@ dev-down:
 	docker compose -f docker-compose.dev.yml down --volumes --rmi local
 
 test:
-	cd ui && npx vite-node scripts/export-daemon-field-defs.ts > ../backend/src/tests/daemon-config-frontend-fields.json
+	cd ui && npx vite-node scripts/export-daemon-field-defs.ts 2>/dev/null | grep -v 'paraglide-js' > ../backend/src/tests/daemon-config-frontend-fields.json
+	@echo "Running frontend tests..."
+	cd ui && npm test
+	@echo "Running backend tests..."
 	make dev-down
 	rm -rf ./data/daemon_config/*
 	@export DATABASE_URL="postgresql://postgres:password@localhost:5432/scanopy_test" && \
@@ -105,15 +108,27 @@ lint:
 	cd backend && cargo fmt -- --check && cargo clippy --bin server -- -D warnings
 	@echo "Linting Daemon..."
 	cd backend && cargo clippy --bin daemon -- -D warnings
+	@echo "Generating paraglide i18n..."
+	cd ui && npx paraglide-js compile --outdir ./src/lib/paraglide --silent
 	@echo "Linting UI..."
 	cd ui && npm run lint && npm run format -- --check && npm run check
 
-generate-types:
+generate-types: generate-api-types generate-error-codes
+	@echo "All types generated successfully"
+
+generate-api-types:
 	@echo "Exporting OpenAPI spec from backend..."
 	cd backend && cargo test generate_openapi_spec -- --nocapture
 	@echo "Generating TypeScript types from OpenAPI spec..."
 	cd ui && npm run generate:api
 	@echo "TypeScript types exported to ui/src/lib/api/schema.d.ts"
+
+generate-error-codes:
+	@echo "Generating error codes from Rust enum..."
+	cd backend && cargo run --bin generate-error-codes
+	@echo "Merging error messages into en.json..."
+	cd ui && node scripts/merge-error-messages.js
+	@echo "Error codes generated and merged"
 
 generate-schema:
 	@command -v tbls >/dev/null 2>&1 || { echo "Install tbls: brew install k1low/tap/tbls"; exit 1; }

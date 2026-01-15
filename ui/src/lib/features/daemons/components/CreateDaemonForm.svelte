@@ -13,6 +13,7 @@
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { fieldDefs } from '../config';
 	import type { Daemon } from '../types/base';
+	import * as m from '$lib/paraglide/messages';
 
 	interface Props {
 		daemon?: Daemon | null;
@@ -307,12 +308,14 @@
 				<form.Field name={def.id} validators={getValidators(def.id)}>
 					{#snippet children(field)}
 						<TextInput
-							label={def.label}
+							label={def.label()}
 							{field}
 							id={def.id}
-							placeholder={String(def.placeholder ?? '')}
+							placeholder={String(
+								typeof def.placeholder === 'function' ? def.placeholder() : (def.placeholder ?? '')
+							)}
 							required={def.required ?? false}
-							helpText={def.helpText}
+							helpText={def.helpText()}
 						/>
 					{/snippet}
 				</form.Field>
@@ -320,11 +323,11 @@
 				<form.Field name={def.id}>
 					{#snippet children(field)}
 						<SelectInput
-							label={def.label}
+							label={def.label()}
 							{field}
 							id={def.id}
-							options={def.options ?? []}
-							helpText={def.helpText}
+							options={(def.options ?? []).map((opt) => ({ value: opt.value, label: opt.label() }))}
+							helpText={def.helpText()}
 							disabled={def.disabled?.(isNewDaemon) ?? false}
 						/>
 					{/snippet}
@@ -346,25 +349,29 @@
 				{:else}
 					<ChevronRight class="h-4 w-4" />
 				{/if}
-				Advanced Configuration
+				{m.daemons_advancedConfiguration()}
 			</button>
 
 			{#if advancedExpanded}
 				<div class="mt-4 space-y-6">
 					{#each advancedSections as section (section.name)}
 						<div class="card card-static">
-							<div class="text-secondary text-m mb-3 font-medium">{section.name}</div>
+							<div class="text-secondary text-m mb-3 font-medium">{section.name()}</div>
 							<div class="grid grid-cols-2 gap-4">
 								{#each section.fields as def (def.id)}
 									{#if def.type === 'string'}
 										<form.Field name={def.id} validators={getValidators(def.id)}>
 											{#snippet children(field)}
 												<TextInput
-													label={def.label}
+													label={def.label()}
 													{field}
 													id={def.id}
-													placeholder={String(def.placeholder ?? '')}
-													helpText={def.helpText}
+													placeholder={String(
+														typeof def.placeholder === 'function'
+															? def.placeholder()
+															: (def.placeholder ?? '')
+													)}
+													helpText={def.helpText()}
 												/>
 											{/snippet}
 										</form.Field>
@@ -372,12 +379,16 @@
 										<form.Field name={def.id} validators={getValidators(def.id)}>
 											{#snippet children(field)}
 												<TextInput
-													label={def.label}
+													label={def.label()}
 													{field}
 													id={def.id}
 													type="number"
-													placeholder={String(def.placeholder ?? '')}
-													helpText={def.helpText}
+													placeholder={String(
+														typeof def.placeholder === 'function'
+															? def.placeholder()
+															: (def.placeholder ?? '')
+													)}
+													helpText={def.helpText()}
 												/>
 											{/snippet}
 										</form.Field>
@@ -385,18 +396,26 @@
 										<form.Field name={def.id}>
 											{#snippet children(field)}
 												<SelectInput
-													label={def.label}
+													label={def.label()}
 													{field}
 													id={def.id}
-													options={def.options ?? []}
-													helpText={def.helpText}
+													options={(def.options ?? []).map((opt) => ({
+														value: opt.value,
+														label: opt.label()
+													}))}
+													helpText={def.helpText()}
 												/>
 											{/snippet}
 										</form.Field>
 									{:else if def.type === 'boolean'}
 										<form.Field name={def.id}>
 											{#snippet children(field)}
-												<Checkbox label={def.label} {field} id={def.id} helpText={def.helpText} />
+												<Checkbox
+													label={def.label()}
+													{field}
+													id={def.id}
+													helpText={def.helpText()}
+												/>
 											{/snippet}
 										</form.Field>
 									{/if}
@@ -415,20 +434,19 @@
 			<form.Field name="keySource">
 				{#snippet children(field)}
 					<RadioGroup
-						label="API Key"
+						label={m.common_apiKey()}
 						id="key-source"
 						{field}
 						options={[
 							{
 								value: 'generate',
-								label: 'Generate new API key',
-								helpText: 'Generate a new key if this is a fresh daemon setup.'
+								label: m.daemons_generateNewKey(),
+								helpText: m.daemons_generateNewKeyHelp()
 							},
 							{
 								value: 'existing',
-								label: 'Use existing API key',
-								helpText:
-									"Use an existing key if your organization manages API keys centrally or you've already generated one."
+								label: m.daemons_useExistingKey(),
+								helpText: m.daemons_useExistingKeyHelp()
 							}
 						]}
 						disabled={keySet}
@@ -446,20 +464,20 @@
 						onclick={() => onGenerateKey?.()}
 					>
 						<RotateCcwKey />
-						<span>Generate Key</span>
+						<span>{m.common_generateKey()}</span>
 					</button>
 
 					<div class="flex-1">
 						<CodeContainer
 							language="bash"
 							expandable={false}
-							code={apiKey ? apiKey : 'Press Generate Key...'}
+							code={apiKey ? apiKey : m.common_pressGenerateKey()}
 						/>
 					</div>
 				</div>
 				{#if !apiKey}
 					<div class="text-tertiary mt-1 text-xs">
-						This will create a new API key, which you can manage later in the API Keys tab.
+						{m.daemons_apiKeyHelp()}
 					</div>
 				{/if}
 			{:else}
@@ -472,7 +490,7 @@
 									label=""
 									{field}
 									id="existing-key-input"
-									placeholder="Paste your API key here"
+									placeholder={m.daemons_pasteApiKey()}
 									disabled={keySet}
 								/>
 							</div>
@@ -482,7 +500,7 @@
 								type="button"
 								onclick={() => onUseExistingKey?.()}
 							>
-								<span>Use Key</span>
+								<span>{m.daemons_useKey()}</span>
 							</button>
 						</div>
 					{/snippet}
@@ -500,20 +518,22 @@
 	{#if apiKey}
 		{#if hasErrors}
 			<InlineWarning
-				title="Please fix validation errors"
-				body="Correct the field validation issues above before using the installation commands."
+				title={m.daemons_fixValidationErrors()}
+				body={m.daemons_fixValidationErrorsBody()}
 			/>
 		{:else}
 			<div class="space-y-4">
 				<div class="text-secondary">
-					<b>Option 1.</b> Run the install script, then start the daemon
+					<b>{m.daemons_option1()}</b>
+					{m.daemons_option1Text()}
 				</div>
 				<CodeContainer language="bash" expandable={false} code={installScript} />
 				<CodeContainer language="bash" expandable={false} code={runCommand} />
 
 				<div class="text-secondary">
-					<b>Option 2.</b> Run with Docker Compose
-					<span class="text-tertiary">(Linux only)</span>
+					<b>{m.daemons_option2()}</b>
+					{m.daemons_option2Text()}
+					<span class="text-tertiary">{m.daemons_linuxOnly()}</span>
 				</div>
 				<CodeContainer language="yaml" expandable={false} code={dockerCompose} />
 			</div>

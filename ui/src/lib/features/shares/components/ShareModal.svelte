@@ -24,6 +24,7 @@
 	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
 	import CodeContainer from '$lib/shared/components/data/CodeContainer.svelte';
 	import { generateShareUrl, generateEmbedCode } from '../queries';
+	import * as m from '$lib/paraglide/messages';
 
 	let {
 		isOpen = false,
@@ -67,8 +68,10 @@
 	});
 
 	let isEditing = $derived(share !== null);
-	let title = $derived(isEditing ? `Edit ${share?.name || 'Share'}` : 'Share Topology');
-	let saveLabel = $derived(isEditing ? 'Save' : 'Create');
+	let title = $derived(
+		isEditing ? m.common_editName({ name: share?.name || '' }) : m.shares_shareTopology()
+	);
+	let saveLabel = $derived(isEditing ? m.common_save() : m.common_create());
 
 	let hasEmbedsFeature = $derived(
 		organization?.plan ? billingPlans.getMetadata(organization.plan.type).features.embeds : true
@@ -137,7 +140,7 @@
 					createdShare = result;
 				}
 			} catch (error) {
-				pushError(error instanceof Error ? error.message : 'Failed to save share');
+				pushError(error instanceof Error ? error.message : m.common_failedToSave());
 			} finally {
 				loading = false;
 			}
@@ -167,7 +170,7 @@
 			await deleteShareMutation.mutateAsync(share.id);
 			handleClose();
 		} catch (error) {
-			pushError(error instanceof Error ? error.message : 'Failed to delete share');
+			pushError(error instanceof Error ? error.message : m.common_failedToDelete());
 		} finally {
 			deleting = false;
 		}
@@ -205,8 +208,8 @@
 			<div class="space-y-6">
 				{#if isEditing}
 					<InlineInfo
-						title="Changes may take up to 5 minutes to appear"
-						body="Share links and embeds are cached. Any updates you make won't be visible immediately."
+						title={m.shares_cacheInfoTitle()}
+						body={m.shares_cacheInfoBody()}
 						dismissableKey="share-cache-info"
 					/>
 				{/if}
@@ -221,10 +224,10 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label="Name"
+								label={m.common_name()}
 								id="share-name"
 								{field}
-								placeholder="My shared topology"
+								placeholder={m.shares_namePlaceholder()}
 								required
 								disabled={!!createdShare}
 							/>
@@ -233,21 +236,19 @@
 				</div>
 
 				<div class="card card-static space-y-3">
-					<span class="text-secondary text-m">Access Control</span>
+					<span class="text-secondary text-m">{m.shares_accessControl()}</span>
 
 					<!-- Password -->
 					<form.Field name="password">
 						{#snippet children(field)}
 							<TextInput
-								label="Password"
+								label={m.common_password()}
 								id="share-password"
 								type="password"
 								{field}
-								placeholder="Enter password"
+								placeholder={m.shares_passwordPlaceholder()}
 								disabled={!!createdShare}
-								helpText={isEditing
-									? 'Leave empty to keep the current password'
-									: 'Leave empty to allow public access with no password'}
+								helpText={isEditing ? m.shares_passwordHelpEdit() : m.shares_passwordHelpCreate()}
 							/>
 						{/snippet}
 					</form.Field>
@@ -258,10 +259,10 @@
 							{#snippet children(field)}
 								<DateInput
 									{field}
-									label="Expiration Date"
+									label={m.shares_expirationDate()}
 									id="expires-at"
 									disabled={!!createdShare}
-									helpText="Leave empty to never expire"
+									helpText={m.shares_expirationHelp()}
 								/>
 							{/snippet}
 						</form.Field>
@@ -269,11 +270,11 @@
 							<form.Field name="is_enabled">
 								{#snippet children(field)}
 									<Checkbox
-										label="Enabled"
+										label={m.common_enabled()}
 										id="is-enabled"
 										{field}
 										disabled={!!createdShare}
-										helpText="Disable to temporarily prevent access"
+										helpText={m.shares_enabledHelp()}
 									/>
 								{/snippet}
 							</form.Field>
@@ -284,23 +285,23 @@
 					<form.Field name="allowed_domains">
 						{#snippet children(field)}
 							<TextInput
-								label="Allowed Embed Domains"
+								label={m.shares_allowedEmbedDomains()}
 								id="allowed-domains"
 								{field}
-								placeholder="example.com, *.mysite.com"
+								placeholder={m.shares_allowedDomainsPlaceholder()}
 								disabled={!!createdShare}
-								helpText="Restrict which domains can embed this share. Leave empty to allow all domains."
+								helpText={m.shares_allowedDomainsHelp()}
 							/>
 						{/snippet}
 					</form.Field>
 				</div>
 
 				<div class="card card-static space-y-3">
-					<span class="text-secondary text-m">Display Options</span>
+					<span class="text-secondary text-m">{m.shares_displayOptions()}</span>
 					<form.Field name="show_zoom_controls">
 						{#snippet children(field)}
 							<Checkbox
-								label="Show zoom controls"
+								label={m.shares_showZoomControls()}
 								id="show-zoom-controls"
 								{field}
 								disabled={!!createdShare}
@@ -310,7 +311,7 @@
 					<form.Field name="show_inspect_panel">
 						{#snippet children(field)}
 							<Checkbox
-								label="Show inspect panel"
+								label={m.shares_showInspectPanel()}
 								id="show-inspect-panel"
 								{field}
 								disabled={!!createdShare}
@@ -320,24 +321,30 @@
 					<form.Field name="show_export_button">
 						{#snippet children(field)}
 							<Checkbox
-								label="Show export button"
+								label={m.shares_showExportButton()}
 								id="show-export-button"
 								{field}
 								disabled={!!createdShare}
 							/>
 						{/snippet}
 					</form.Field>
-					<span class="block text-sm font-medium text-gray-300">Embed Dimensions</span>
+					<span class="block text-sm font-medium text-gray-300">{m.shares_embedDimensions()}</span>
 					<div class="grid grid-cols-2 gap-4">
 						<form.Field name="embed_width">
 							{#snippet children(field)}
-								<TextInput label="Width" id="embed-width" type="number" {field} placeholder="800" />
+								<TextInput
+									label={m.common_width()}
+									id="embed-width"
+									type="number"
+									{field}
+									placeholder="800"
+								/>
 							{/snippet}
 						</form.Field>
 						<form.Field name="embed_height">
 							{#snippet children(field)}
 								<TextInput
-									label="Height"
+									label={m.common_height()}
 									id="embed-height"
 									type="number"
 									{field}
@@ -352,21 +359,21 @@
 				{#if createdShare || isEditing}
 					<div class="space-y-4">
 						{#if createdShare}
-							<InlineSuccess
-								title="Share created"
-								body="To edit this share's settings, go to the Sharing tab."
-							/>
+							<InlineSuccess title={m.shares_created()} body={m.shares_createdHelp()} />
 						{/if}
 						<div>
-							<span class="mb-1 block text-sm font-medium text-gray-300">Share URL</span>
+							<span class="mb-1 block text-sm font-medium text-gray-300">{m.shares_shareUrl()}</span
+							>
 							<CodeContainer language="bash" expandable={false} code={generateShareUrl(shareId)} />
 						</div>
 						<div class="space-y-2">
-							<span class="mb-1 block text-sm font-medium text-gray-300">Embed Code</span>
+							<span class="mb-1 block text-sm font-medium text-gray-300"
+								>{m.shares_embedCode()}</span
+							>
 							{#if !hasEmbedsFeature}
 								<InlineInfo
-									title="Embeds require an upgraded plan"
-									body="Upgrade your plan to embed this share on external websites."
+									title={m.shares_embedsRequirePlan()}
+									body={m.shares_upgradeForEmbeds()}
 								/>
 							{:else}
 								<CodeContainer
@@ -392,7 +399,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? 'Deleting...' : 'Delete'}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -403,11 +410,11 @@
 						onclick={handleClose}
 						class="btn-secondary"
 					>
-						{createdShare ? 'Done' : 'Cancel'}
+						{createdShare ? m.common_done() : m.common_cancel()}
 					</button>
 					{#if !createdShare}
 						<button type="submit" disabled={loading || deleting} class="btn-primary">
-							{loading ? 'Saving...' : saveLabel}
+							{loading ? m.common_saving() : saveLabel}
 						</button>
 					{/if}
 				</div>

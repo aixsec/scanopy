@@ -13,6 +13,7 @@
 	import { pushError } from '$lib/shared/stores/feedback';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import TextArea from '$lib/shared/components/forms/input/TextArea.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let {
 		tag = null,
@@ -38,8 +39,10 @@
 	let deleting = $state(false);
 
 	let isEditing = $derived(tag !== null);
-	let title = $derived(isEditing ? `Edit ${tag?.name}` : 'Create Tag');
-	let saveLabel = $derived(isEditing ? 'Update Tag' : 'Create Tag');
+	let title = $derived(
+		isEditing ? m.common_editName({ name: tag?.name ?? '' }) : m.tags_createTag()
+	);
+	let saveLabel = $derived(isEditing ? m.common_update() : m.common_create());
 
 	function getDefaultValues(): Tag {
 		if (tag) return { ...tag };
@@ -52,7 +55,7 @@
 		defaultValues: createDefaultTag(''),
 		onSubmit: async ({ value }) => {
 			if (!organization) {
-				pushError('Could not load organization');
+				pushError(m.common_couldNotLoadOrganization());
 				onClose();
 				return;
 			}
@@ -118,7 +121,7 @@
 			<div class="space-y-8">
 				<!-- Tag Details Section -->
 				<div class="space-y-4">
-					<h3 class="text-primary text-lg font-medium">Tag Details</h3>
+					<h3 class="text-primary text-lg font-medium">{m.common_details()}</h3>
 
 					<form.Field
 						name="name"
@@ -128,10 +131,10 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label="Tag Name"
+								label={m.common_name()}
 								id="name"
 								{field}
-								placeholder="e.g., Production, Critical, Staging"
+								placeholder={m.tags_tagNamePlaceholder()}
 								required
 							/>
 						{/snippet}
@@ -145,10 +148,10 @@
 					>
 						{#snippet children(field)}
 							<TextArea
-								label="Description"
+								label={m.common_description()}
 								id="description"
 								{field}
-								placeholder="Describe what this tag represents..."
+								placeholder={m.tags_descriptionPlaceholder()}
 							/>
 						{/snippet}
 					</form.Field>
@@ -157,7 +160,7 @@
 					<form.Field name="color">
 						{#snippet children(field)}
 							<div class="space-y-3">
-								<div class="text-secondary block text-sm font-medium">Color</div>
+								<div class="text-secondary block text-sm font-medium">{m.common_color()}</div>
 								<div class="grid grid-cols-7 gap-2">
 									{#each AVAILABLE_COLORS as color (color)}
 										{@const ch = createColorHelper(color)}
@@ -196,7 +199,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? 'Deleting...' : 'Delete'}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -207,10 +210,10 @@
 						onclick={onClose}
 						class="btn-secondary"
 					>
-						Cancel
+						{m.common_cancel()}
 					</button>
 					<button type="submit" disabled={loading || deleting} class="btn-primary">
-						{loading ? 'Saving...' : saveLabel}
+						{loading ? m.common_saving() : saveLabel}
 					</button>
 				</div>
 			</div>

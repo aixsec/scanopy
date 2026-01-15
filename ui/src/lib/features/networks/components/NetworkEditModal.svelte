@@ -12,6 +12,7 @@
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let {
 		network = null,
@@ -37,8 +38,10 @@
 	let deleting = $state(false);
 
 	let isEditing = $derived(network !== null);
-	let title = $derived(isEditing ? `Edit ${network?.name}` : 'Create Network');
-	let saveLabel = $derived(isEditing ? 'Update Network' : 'Create Network');
+	let title = $derived(
+		isEditing ? m.common_editName({ name: network?.name ?? '' }) : m.networks_createNetwork()
+	);
+	let saveLabel = $derived(isEditing ? m.common_update() : m.common_create());
 
 	function getDefaultValues() {
 		return network
@@ -51,7 +54,7 @@
 		defaultValues: { ...createEmptyNetworkFormData(), seedData: true },
 		onSubmit: async ({ value }) => {
 			if (!organization) {
-				pushError('Could not load ID for current user');
+				pushError(m.common_couldNotLoadUser());
 				onClose();
 				return;
 			}
@@ -116,7 +119,7 @@
 			<div class="space-y-8">
 				<!-- Network Details Section -->
 				<div class="space-y-4">
-					<h3 class="text-primary text-lg font-medium">Network Details</h3>
+					<h3 class="text-primary text-lg font-medium">{m.common_details()}</h3>
 
 					<form.Field
 						name="name"
@@ -126,10 +129,10 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label="Network Name"
+								label={m.common_name()}
 								id="name"
 								{field}
-								placeholder="e.g Home Network"
+								placeholder={m.networks_networkNamePlaceholder()}
 								required
 							/>
 						{/snippet}
@@ -162,7 +165,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? 'Deleting...' : 'Delete'}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -173,10 +176,10 @@
 						onclick={onClose}
 						class="btn-secondary"
 					>
-						Cancel
+						{m.common_cancel()}
 					</button>
 					<button type="submit" disabled={loading || deleting} class="btn-primary">
-						{loading ? 'Saving...' : saveLabel}
+						{loading ? m.common_saving() : saveLabel}
 					</button>
 				</div>
 			</div>

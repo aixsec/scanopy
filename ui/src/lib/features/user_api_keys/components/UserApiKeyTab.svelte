@@ -17,6 +17,8 @@
 		type UserApiKey
 	} from '../queries';
 	import type { TabProps } from '$lib/shared/types';
+	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let { isReadOnly = false }: TabProps = $props();
 
@@ -40,7 +42,7 @@
 	let editingApiKey = $state<UserApiKey | null>(null);
 
 	async function handleDelete(apiKey: UserApiKey) {
-		if (confirm(`Are you sure you want to delete API key "${apiKey.name}"?`)) {
+		if (confirm(m.userApiKeys_confirmDelete({ name: apiKey.name }))) {
 			deleteMutation.mutate(apiKey.id);
 		}
 	}
@@ -67,7 +69,7 @@
 	}
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(`Are you sure you want to delete ${ids.length} API keys?`)) {
+		if (confirm(m.userApiKeys_confirmBulkDelete({ count: ids.length }))) {
 			await bulkDeleteMutation.mutateAsync(ids);
 		}
 	}
@@ -79,20 +81,20 @@
 	const apiKeyFields: FieldConfig<UserApiKey>[] = [
 		{
 			key: 'name',
-			label: 'Name',
+			label: m.common_name(),
 			type: 'string',
 			searchable: true
 		},
 		{
 			key: 'permissions',
 			type: 'string',
-			label: 'Permissions',
+			label: m.common_permissions(),
 			filterable: true
 		},
 		{
 			key: 'network_ids',
 			type: 'array',
-			label: 'Networks',
+			label: m.common_networks(),
 			getValue(item) {
 				const ids = item.network_ids ?? [];
 				return ids
@@ -102,7 +104,7 @@
 		},
 		{
 			key: 'tags',
-			label: 'Tags',
+			label: m.common_tags(),
 			type: 'array',
 			searchable: true,
 			filterable: true,
@@ -116,11 +118,16 @@
 </script>
 
 <div class="space-y-6">
-	<TabHeader title="API Keys" subtitle="Manage your personal API keys for programmatic access">
+	<TabHeader title={m.common_apiKeys()} subtitle={m.userApiKeys_subtitle()}>
 		<svelte:fragment slot="actions">
+			<InlineSuccess
+				title="Share your integration with the community!"
+				dismissableKey="share-integration"
+				body="Creating an integration that you think others might benefit from? Scanopy will be adding an integration library in an upcoming release. Go to the <a class='underline hover:no-underline' target='_blank' href='https://github.com/scanopy/integrations'>Scanopy integrations GitHub</a> and create a PR to get started."
+			></InlineSuccess>
 			{#if !isReadOnly}
 				<button class="btn-primary flex items-center" onclick={handleCreate}>
-					<Plus class="h-5 w-5" />Create API Key
+					<Plus class="h-5 w-5" />{m.common_create()}
 				</button>
 			{/if}
 		</svelte:fragment>
@@ -130,10 +137,10 @@
 		<Loading />
 	{:else if userApiKeysData.length === 0}
 		<EmptyState
-			title="No API Keys yet"
-			subtitle="Create API keys to access the API programmatically"
+			title={m.userApiKeys_noApiKeysYet()}
+			subtitle={m.userApiKeys_noApiKeysSubtitle()}
 			onClick={handleCreate}
-			cta="Create your first API Key"
+			cta={m.common_create()}
 		/>
 	{:else}
 		<DataControls

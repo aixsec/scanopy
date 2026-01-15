@@ -6,6 +6,7 @@
 	import { useTopologiesQuery } from '$lib/features/topology/queries';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import { entities } from '$lib/shared/stores/metadata';
+	import * as m from '$lib/paraglide/messages';
 
 	let {
 		share,
@@ -46,7 +47,7 @@
 	}
 
 	function formatExpiry(date: string | null): string {
-		if (!date) return 'Never';
+		if (!date) return m.common_never();
 		const d = new Date(date);
 		return d.toLocaleDateString();
 	}
@@ -61,7 +62,7 @@
 			Icon: Link,
 			fields: [
 				{
-					label: 'Topology',
+					label: m.common_topology(),
 					value: topology
 						? [
 								{
@@ -70,10 +71,10 @@
 									color: entities.getColorHelper('Topology').color
 								}
 							]
-						: 'Unknown Topology'
+						: m.shares_unknownTopology()
 				},
 				{
-					label: 'Network',
+					label: m.common_network(),
 					value: network
 						? [
 								{
@@ -82,25 +83,25 @@
 									color: entities.getColorHelper('Network').color
 								}
 							]
-						: 'Unknown Network'
+						: m.common_unknownNetwork()
 				},
 				{
-					label: 'Status',
-					value: share.is_enabled ? 'Enabled' : 'Disabled'
+					label: m.common_status(),
+					value: share.is_enabled ? m.common_enabled() : m.common_disabled()
 				},
 				{
-					label: 'Expires',
+					label: m.common_expires(),
 					value: formatExpiry(share.expires_at)
 				},
 				...(share.allowed_domains && share.allowed_domains.length > 0
-					? [{ label: 'Allowed Domains', value: share.allowed_domains.join(', ') }]
+					? [{ label: m.shares_allowedDomains(), value: share.allowed_domains.join(', ') }]
 					: [])
 			],
 			actions: [
 				...(onDelete
 					? [
 							{
-								label: 'Delete',
+								label: m.common_delete(),
 								icon: Trash2,
 								class: 'btn-icon-danger',
 								onClick: () => onDelete(share)
@@ -108,17 +109,17 @@
 						]
 					: []),
 				{
-					label: copied ? 'Copied!' : 'Copy URL',
+					label: copied ? m.common_copied() : m.shares_copyUrl(),
 					icon: copied ? Check : Copy,
 					class: copied ? 'text-green-400' : '',
 					onClick: copyUrl
 				},
 				{
-					label: 'Open',
+					label: m.common_open(),
 					icon: ExternalLink,
 					onClick: openUrl
 				},
-				...(onEdit ? [{ label: 'Edit', icon: Edit, onClick: () => onEdit(share) }] : [])
+				...(onEdit ? [{ label: m.common_edit(), icon: Edit, onClick: () => onEdit(share) }] : [])
 			]
 		};
 	});

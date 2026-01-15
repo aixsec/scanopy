@@ -8,6 +8,7 @@
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useDeleteUserMutation } from '$lib/features/users/queries';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
+	import * as m from '$lib/paraglide/messages';
 
 	let {
 		user,
@@ -40,7 +41,7 @@
 	});
 
 	function handleDeleteUser() {
-		if (confirm(`Are you sure you want to delete this user?`)) {
+		if (confirm(m.users_confirmDeleteUser())) {
 			deleteUserMutation.mutate(user.id);
 		}
 	}
@@ -64,13 +65,13 @@
 		status:
 			user.id == currentUser?.id
 				? {
-						label: 'You',
+						label: m.common_you(),
 						color: 'Yellow' as Color
 					}
 				: null,
 		fields: [
 			{
-				label: 'Role',
+				label: m.common_role(),
 				value: [
 					{
 						id: user.id,
@@ -80,49 +81,42 @@
 				]
 			},
 			{
-				label: 'Authentication',
-				value: user.oidc_provider || 'Email & Password'
+				label: m.common_authentication(),
+				value: user.oidc_provider || m.common_emailAndPassword()
 			},
 			{
-				label: 'Joined',
+				label: m.common_joined(),
 				value: formatTimestamp(user.created_at)
 			},
 			{
-				label: 'Networks',
+				label: m.common_networks(),
 				value:
 					user.permissions == 'Admin' || user.permissions == 'Owner'
 						? [
 								{
 									id: user.id,
-									label: 'All',
+									label: m.common_all(),
 									color: entities.getColorHelper('Network').color
 								}
 							]
 						: user.network_ids.map((n) => ({
 								id: n,
-								label: networksData.find((net) => net.id == n)?.name ?? 'Unknown Network',
+								label: networksData.find((net) => net.id == n)?.name ?? m.common_unknownNetwork(),
 								color: entities.getColorHelper('Network').color
 							}))
 			}
-			// {
-			// 	label: 'Tags',
-			// 	value: user.tags.map(t => {
-			// 		const tag = $tags.find(tag => tag.id == t)
-			// 		return tag ? { id: tag.id, color: tag.color, label: tag.name} : { id: t, color: "gray", label: "Unknown Tag"}
-			// 	})
-			// },
 		],
 		actions:
 			canManage && user.id != currentUser?.id
 				? [
 						{
-							label: 'Delete',
+							label: m.common_delete(),
 							icon: Trash2,
 							onClick: () => handleDeleteUser(),
 							class: 'btn-icon-danger'
 						},
 						{
-							label: 'Edit',
+							label: m.common_edit(),
 							icon: Edit,
 							onClick: () => handleEditUser(),
 							class: 'btn-icon'

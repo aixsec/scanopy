@@ -18,6 +18,7 @@
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import { useHostsQuery } from '$lib/features/hosts/queries';
 	import type { TabProps } from '$lib/shared/types';
+	import * as m from '$lib/paraglide/messages';
 
 	let { isReadOnly = false }: TabProps = $props();
 
@@ -66,7 +67,7 @@
 	}
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(`Are you sure you want to delete ${ids.length} Historical Discoveries?`)) {
+		if (confirm(m.discovery_confirmDeleteHistorical({ count: ids.length }))) {
 			await bulkDeleteDiscoveriesMutation.mutateAsync(ids);
 		}
 	}
@@ -75,27 +76,31 @@
 		...discoveryFields(daemonsData),
 		{
 			key: 'started_at',
-			label: 'Started At',
+			label: m.discovery_startedAt(),
 			type: 'string',
 			searchable: true,
 			getValue: (item) => {
 				const results = item.run_type.type == 'Historical' ? item.run_type.results : null;
-				return results && results.started_at ? formatTimestamp(results.started_at) : 'Unknown';
+				return results && results.started_at
+					? formatTimestamp(results.started_at)
+					: m.common_unknown();
 			}
 		},
 		{
 			key: 'finished_at',
-			label: 'Finished At',
+			label: m.discovery_finishedAt(),
 			type: 'string',
 			searchable: true,
 			getValue: (item) => {
 				const results = item.run_type.type == 'Historical' ? item.run_type.results : null;
-				return results && results.finished_at ? formatTimestamp(results.finished_at) : 'Unknown';
+				return results && results.finished_at
+					? formatTimestamp(results.finished_at)
+					: m.common_unknown();
 			}
 		},
 		{
 			key: 'duration',
-			label: 'Duration',
+			label: m.common_duration(),
 			type: 'string',
 			searchable: true,
 			getValue: (item) => {
@@ -103,7 +108,7 @@
 				if (results && results.finished_at && results.started_at) {
 					return formatDuration(results.started_at, results.finished_at);
 				}
-				return 'Unknown';
+				return m.common_unknown();
 			}
 		}
 	]);
@@ -111,13 +116,13 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Discovery History" />
+	<TabHeader title={m.discovery_historyTitle()} />
 
 	{#if isLoading}
 		<Loading />
 	{:else if discoveriesData.length === 0}
 		<!-- Empty state -->
-		<EmptyState title="No discovery sessions have been run" subtitle="" />
+		<EmptyState title={m.discovery_noHistorySessions()} subtitle="" />
 	{:else}
 		<DataControls
 			items={discoveriesData.filter((d) => d.run_type.type == 'Historical')}

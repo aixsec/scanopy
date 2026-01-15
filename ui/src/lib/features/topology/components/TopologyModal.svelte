@@ -20,6 +20,7 @@
 	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
 	import RadioGroup from '$lib/shared/components/forms/input/RadioGroup.svelte';
 	import { TopologyDisplay } from '$lib/shared/components/forms/selection/display/TopologyDisplay.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	// TanStack Query hooks
 	const networksQuery = useNetworksQuery();
@@ -44,7 +45,9 @@
 	} = $props();
 
 	let isEditing = $derived(topo != null);
-	let title = $derived(isEditing ? `Edit ${topo?.name}` : 'Create Topology');
+	let title = $derived(
+		isEditing ? m.common_editName({ name: topo?.name ?? '' }) : m.topology_createTopology()
+	);
 
 	let loading = $state(false);
 
@@ -152,8 +155,8 @@
 
 	// Creation mode options
 	const creationModeOptions = [
-		{ value: 'branch', label: 'Branch from existing' },
-		{ value: 'fresh', label: 'Start fresh' }
+		{ value: 'branch', label: m.topology_branchFromExisting() },
+		{ value: 'fresh', label: m.topology_startFresh() }
 	];
 
 	// Available topologies for parent selection (exclude current and filter by network)
@@ -196,7 +199,7 @@
 					<form.Field name="creation_mode">
 						{#snippet children(field)}
 							<RadioGroup
-								label="Creation Mode"
+								label={m.topology_creationMode()}
 								id="creation_mode"
 								{field}
 								options={creationModeOptions}
@@ -211,7 +214,7 @@
 						{#snippet children(field)}
 							<div>
 								<RichSelect
-									label={isEditing ? 'Parent' : 'Select a parent to branch off of'}
+									label={isEditing ? m.common_parent() : m.topology_selectParent()}
 									displayComponent={TopologyDisplay}
 									required={false}
 									disabled={isEditing}
@@ -231,7 +234,13 @@
 					}}
 				>
 					{#snippet children(field)}
-						<TextInput label="Name" id="name" {field} placeholder="Enter topology name" required />
+						<TextInput
+							label={m.common_name()}
+							id="name"
+							{field}
+							placeholder={m.topology_namePlaceholder()}
+							required
+						/>
 					{/snippet}
 				</form.Field>
 			</div>
@@ -241,10 +250,10 @@
 		<div class="modal-footer">
 			<div class="flex items-center justify-end gap-3">
 				<button type="button" disabled={loading} onclick={onClose} class="btn-secondary">
-					Cancel
+					{m.common_cancel()}
 				</button>
 				<button type="submit" disabled={loading} class="btn-primary">
-					{loading ? 'Saving...' : 'Save'}
+					{loading ? m.common_saving() : m.common_save()}
 				</button>
 			</div>
 		</div>

@@ -19,6 +19,7 @@
 	import { permissions } from '$lib/shared/stores/metadata';
 	import type { TabProps } from '$lib/shared/types';
 	import type { components } from '$lib/api/schema';
+	import * as m from '$lib/paraglide/messages';
 
 	type TagOrderField = components['schemas']['TagOrderField'];
 
@@ -64,7 +65,7 @@
 	}
 
 	async function handleDeleteTag(tag: Tag) {
-		if (confirm(`Are you sure you want to delete "${tag.name}"?`)) {
+		if (confirm(m.common_confirmDeleteName({ name: tag.name }))) {
 			await deleteTagMutation.mutateAsync(tag.id);
 		}
 	}
@@ -87,7 +88,7 @@
 	}
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(`Are you sure you want to delete ${ids.length} tags?`)) {
+		if (confirm(m.tags_confirmBulkDelete({ count: ids.length }))) {
 			await bulkDeleteTagsMutation.mutateAsync(ids);
 		}
 	}
@@ -96,21 +97,21 @@
 	// Uses defineFields to ensure all TagOrderField values are covered
 	const tagFields = defineFields<Tag, TagOrderField>(
 		{
-			name: { label: 'Name', type: 'string', searchable: true },
-			color: { label: 'Color', type: 'string', filterable: true },
-			created_at: { label: 'Created', type: 'date' },
-			updated_at: { label: 'Updated', type: 'date' }
+			name: { label: m.common_name(), type: 'string', searchable: true },
+			color: { label: m.common_color(), type: 'string', filterable: true },
+			created_at: { label: m.common_created(), type: 'date' },
+			updated_at: { label: m.common_updated(), type: 'date' }
 		},
-		[{ key: 'description', label: 'Description', type: 'string', searchable: true }]
+		[{ key: 'description', label: m.common_description(), type: 'string', searchable: true }]
 	);
 </script>
 
 <div class="space-y-6">
-	<TabHeader title="Tags" subtitle="Manage organization-wide tags for categorizing entities">
+	<TabHeader title={m.common_tags()} subtitle={m.tags_subtitle()}>
 		<svelte:fragment slot="actions">
 			{#if canManageNetworks}
 				<button class="btn-primary flex items-center" onclick={handleCreateTag}>
-					<Plus class="h-5 w-5" />Create Tag
+					<Plus class="h-5 w-5" />{m.common_create()}
 				</button>
 			{/if}
 		</svelte:fragment>
@@ -120,10 +121,10 @@
 		<Loading />
 	{:else if tags.length === 0}
 		<EmptyState
-			title="No tags configured yet"
-			subtitle="Tags help you organize and filter hosts, services, and other entities"
+			title={m.tags_noTagsYet()}
+			subtitle={m.tags_noTagsHelp()}
 			onClick={handleCreateTag}
-			cta="Create your first tag"
+			cta={m.common_create()}
 		/>
 	{:else}
 		<DataControls

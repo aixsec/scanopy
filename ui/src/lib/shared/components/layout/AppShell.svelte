@@ -16,6 +16,7 @@
 	import type { PostHog } from 'posthog-js';
 	import { browser } from '$app/environment';
 	import CookieConsent from '$lib/shared/components/feedback/CookieConsent.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -93,7 +94,7 @@
 			);
 
 			if (orgData && isBillingPlanActive(orgData)) {
-				pushSuccess('Subscription activated successfully!');
+				pushSuccess(m.billing_subscriptionActivated());
 				return true;
 			}
 
@@ -101,7 +102,7 @@
 			await new Promise((r) => setTimeout(r, 2000));
 		}
 
-		pushError('Subscription is taking longer than expected to activate. Please refresh the page.');
+		pushError(m.billing_subscriptionDelayed());
 		return false;
 	}
 

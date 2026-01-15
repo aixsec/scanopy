@@ -19,6 +19,7 @@
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	// Shared components
 	import ApiKeyGenerator from '$lib/shared/components/api-keys/ApiKeyGenerator.svelte';
@@ -46,7 +47,11 @@
 	let generatedKey = $state<string | null>(null);
 
 	let isEditing = $derived(apiKey !== null);
-	let title = $derived(isEditing ? `Edit ${apiKey?.name || 'API Key'}` : 'Create API Key');
+	let title = $derived(
+		isEditing
+			? m.common_editName({ name: apiKey?.name || 'API Key' })
+			: m.daemonApiKeys_createApiKey()
+	);
 
 	// Get minimum date (now) in local time format for datetime-local input
 	function getLocalDateTimeMin(): string {
@@ -104,7 +109,7 @@
 			if (defaultNetworkId) {
 				formData.network_id = defaultNetworkId;
 			} else {
-				pushError('No network available. Please create a network first.');
+				pushError(m.daemonApiKeys_noNetworkAvailable());
 				return;
 			}
 		}
@@ -114,7 +119,7 @@
 			const result = await createApiKeyMutation.mutateAsync(formData);
 			generatedKey = result.keyString;
 		} catch {
-			pushError('Failed to generate API key');
+			pushError(m.common_failedGenerateApiKey());
 		} finally {
 			loading = false;
 		}
@@ -127,7 +132,7 @@
 			const newKey = await rotateApiKeyMutation.mutateAsync(formData.id);
 			generatedKey = newKey;
 		} catch {
-			pushError('Failed to rotate API key');
+			pushError(m.common_failedRotateApiKey());
 		} finally {
 			loading = false;
 		}
@@ -175,7 +180,7 @@
 			<div class="space-y-6">
 				<!-- Key Details Section -->
 				<div class="space-y-4">
-					<h3 class="text-primary text-lg font-medium">Key Details</h3>
+					<h3 class="text-primary text-lg font-medium">{m.common_keyDetails()}</h3>
 
 					<form.Field
 						name="name"
@@ -185,11 +190,11 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label="Name"
+								label={m.common_name()}
 								id="name"
 								{field}
-								placeholder="e.g., Production Daemon Key, Terraform Deployment"
-								helpText="A friendly name to help you identify this key"
+								placeholder={m.daemonApiKeys_namePlaceholder()}
+								helpText={m.common_apiKeyNameHelp()}
 								required
 							/>
 						{/snippet}
@@ -217,10 +222,10 @@
 					<form.Field name="expires_at">
 						{#snippet children(field)}
 							<DateInput
-								label="Expiration Date (Optional)"
+								label={m.common_expirationDateOptional()}
 								id="expires_at"
 								{field}
-								helpText="Leave empty for keys that never expire"
+								helpText={m.common_expirationNeverHelp()}
 								min={today}
 							/>
 						{/snippet}
@@ -230,8 +235,8 @@
 						{#snippet children(field)}
 							<Checkbox
 								{field}
-								label="Enable API Key"
-								helpText="Manually enable or disable API Key. Will be auto-disabled if used in a request after expiry date passes."
+								label={m.common_enableApiKey()}
+								helpText={m.daemonApiKeys_enableApiKeyHelp()}
 								id="enableApiKey"
 							/>
 						{/snippet}
@@ -265,7 +270,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? 'Deleting...' : 'Delete'}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -276,11 +281,11 @@
 						onclick={handleOnClose}
 						class="btn-secondary"
 					>
-						Close
+						{m.common_close()}
 					</button>
 					{#if isEditing}
 						<button type="submit" disabled={loading || deleting} class="btn-primary">
-							{loading ? 'Saving...' : 'Save'}
+							{loading ? m.common_saving() : m.common_save()}
 						</button>
 					{/if}
 				</div>

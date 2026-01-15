@@ -16,6 +16,7 @@
 	import { useConfigQuery } from '$lib/shared/stores/config-query';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import CreateDaemonForm from './CreateDaemonForm.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	interface Props {
 		isOpen?: boolean;
@@ -81,7 +82,7 @@
 
 		const trimmedKey = daemonFormRef?.getExistingKeyInput()?.trim() ?? '';
 		if (!trimmedKey) {
-			pushError('Please enter an API key');
+			pushError(m.daemons_enterApiKey());
 			return;
 		}
 
@@ -103,7 +104,7 @@
 			const result = await createApiKeyMutation.mutateAsync(newApiKey);
 			keyState = result.keyString;
 		} catch {
-			pushError('Failed to generate API key');
+			pushError(m.common_failedGenerateApiKey());
 		}
 	}
 
@@ -113,7 +114,7 @@
 	);
 
 	let colorHelper = entities.getColorHelper('Daemon');
-	let title = $derived(onboardingMode ? 'Set up network scanning' : 'Create Daemon');
+	let title = $derived(onboardingMode ? m.daemons_setupScanning() : m.daemons_createDaemon());
 </script>
 
 <GenericModal
@@ -138,14 +139,14 @@
 				{#if onboardingMode}
 					<!-- Onboarding mode: show info banner -->
 					<InlineInfo
-						title="Your daemon will activate after account creation"
-						body="To visualize your network, Scanopy needs to discover what's on it. Install the daemon below—after registration, it'll connect and start mapping automatically."
+						title={m.daemons_activateAfterCreation()}
+						body={m.daemons_activateAfterCreationBody()}
 					/>
 				{:else if !daemon}
 					<SelectNetwork
 						bind:selectedNetworkId
 						disabled={!!key}
-						disabledReason="Network cannot be changed after API key is generated"
+						disabledReason={m.daemons_networkCannotChange()}
 					/>
 				{/if}
 
@@ -164,16 +165,16 @@
 
 				<!-- Existing daemon with new key warning -->
 				{#if daemon && key && selectedNetworkId}
-					<InlineWarning
-						title="This API key will not be available once you close this modal. Please use the provided run command or update your docker compose with the API key as depicted below."
-					/>
+					<InlineWarning title={m.daemons_keyNotAvailableWarning()} />
 
 					<div class="text-secondary mt-3">
-						<b>Option 1.</b> Stop the daemon process, and use this command to start it
+						<b>{m.daemons_option1()}</b>
+						{m.daemons_stopDaemonProcess()}
 					</div>
 					<CodeContainer language="bash" expandable={false} code={existingDaemonRunCommand} />
 					<div class="text-secondary mt-3">
-						<b>Option 2.</b> Stop the daemon container, and add this environment variable
+						<b>{m.daemons_option2()}</b>
+						{m.daemons_stopDaemonContainer()}
 					</div>
 					<CodeContainer
 						language="bash"
@@ -190,16 +191,18 @@
 				<div class="flex w-full items-center justify-between gap-4">
 					{#if onSkip}
 						<button type="button" class="btn-secondary" onclick={onSkip}>
-							I'll do this later
+							{m.daemons_doThisLater()}
 						</button>
 					{/if}
 					<button type="button" class="btn-primary ml-auto" onclick={onContinue ?? handleOnClose}>
-						Continue
+						{m.common_continue()}
 					</button>
 				</div>
 			{:else}
 				<div class="flex items-center justify-end">
-					<button type="button" class="btn-secondary" onclick={handleOnClose}> Close </button>
+					<button type="button" class="btn-secondary" onclick={handleOnClose}>
+						{m.common_close()}
+					</button>
 				</div>
 			{/if}
 		</div>

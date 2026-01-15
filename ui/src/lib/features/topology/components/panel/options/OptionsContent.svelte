@@ -2,6 +2,7 @@
 	import { topologyOptions } from '../../../queries';
 	import { edgeTypes, serviceDefinitions } from '$lib/shared/stores/metadata';
 	import { ChevronDown, ChevronRight } from 'lucide-svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	// Dynamic options loaded on mount
 	let serviceCategories: { value: string; label: string }[] = $derived.by(() => {
@@ -20,131 +21,135 @@
 
 	interface TopologyFieldDef {
 		id: string;
-		label: string;
+		label: () => string;
 		type: 'boolean' | 'string' | 'multiselect';
 		path: 'local' | 'request';
 		key: string;
-		helpText: string;
-		section: string;
+		helpText: () => string;
+		section: () => string;
 		getOptions?: () => { value: string; label: string }[];
-		placeholder?: string;
+		placeholder?: () => string;
 	}
 
 	const fieldDefs: TopologyFieldDef[] = [
 		// Visual section
 		{
 			id: 'no_fade_edges',
-			label: "Don't Fade Edges",
+			label: () => m.topology_dontFadeEdges(),
 			type: 'boolean',
 			path: 'local',
 			key: 'no_fade_edges',
-			helpText: 'Show edges at full opacity at all times',
-			section: 'Visual'
+			helpText: () => m.topology_dontFadeEdgesHelp(),
+			section: () => m.common_visual()
 		},
 		{
 			id: 'hide_resize_handles',
-			label: 'Hide Resize Handles',
+			label: () => m.topology_hideResizeHandles(),
 			type: 'boolean',
 			path: 'local',
 			key: 'hide_resize_handles',
-			helpText: 'Hide subnet resize handles',
-			section: 'Visual'
+			helpText: () => m.topology_hideResizeHandlesHelp(),
+			section: () => m.common_visual()
 		},
 		// Docker section
 		{
 			id: 'group_docker_bridges_by_host',
-			label: 'Group Docker Bridges',
+			label: () => m.topology_groupDockerBridges(),
 			type: 'boolean',
 			path: 'request',
 			key: 'group_docker_bridges_by_host',
-			helpText: 'Display Docker containers running on a single host in a single subnet grouping',
-			section: 'Docker'
+			helpText: () => m.topology_groupDockerBridgesHelp(),
+			section: () => m.common_docker()
 		},
 		{
 			id: 'hide_vm_title_on_docker_container',
-			label: 'Hide VM provider on containers',
+			label: () => m.topology_hideVmOnContainer(),
 			type: 'boolean',
 			path: 'request',
 			key: 'hide_vm_title_on_docker_container',
-			helpText:
-				"If a docker container is running on a host that is a VM, don't indicate this on the container node",
-			section: 'Docker'
+			helpText: () => m.topology_hideVmOnContainerHelp(),
+			section: () => m.common_docker()
 		},
 		// Left Zone section
 		{
 			id: 'left_zone_title',
-			label: 'Title',
+			label: () => m.common_title(),
 			type: 'string',
 			path: 'local',
 			key: 'left_zone_title',
-			helpText: "Customize the label for each subnet's left zone",
-			section: 'Left Zone',
-			placeholder: 'Infrastructure'
+			helpText: () => m.topology_leftZoneTitleHelp(),
+			section: () => m.topology_leftZone(),
+			placeholder: () => m.common_infrastructure()
 		},
 		{
 			id: 'left_zone_service_categories',
-			label: 'Categories',
+			label: () => m.common_categories(),
 			type: 'multiselect',
 			path: 'request',
 			key: 'left_zone_service_categories',
-			helpText:
-				'Select service categories that should be displayed in the left zone of subnets they interface with',
-			section: 'Left Zone',
+			helpText: () => m.topology_leftZoneCategoriesHelp(),
+			section: () => m.topology_leftZone(),
 			getOptions: () => serviceCategories
 		},
 		{
 			id: 'show_gateway_in_left_zone',
-			label: 'Show gateways in left zone',
+			label: () => m.topology_showGatewayInLeftZone(),
 			type: 'boolean',
 			path: 'request',
 			key: 'show_gateway_in_left_zone',
-			helpText: "Display gateway services in the subnet's left zone",
-			section: 'Left Zone'
+			helpText: () => m.topology_showGatewayInLeftZoneHelp(),
+			section: () => m.topology_leftZone()
 		},
 		// Hide Stuff section
 		{
 			id: 'hide_ports',
-			label: 'Hide Ports',
+			label: () => m.topology_hidePorts(),
 			type: 'boolean',
 			path: 'request',
 			key: 'hide_ports',
-			helpText: "Don't show open ports next to services",
-			section: 'Hide Stuff'
+			helpText: () => m.topology_hidePortsHelp(),
+			section: () => m.topology_hideStuff()
 		},
 		{
 			id: 'hide_service_categories',
-			label: 'Service Categories',
+			label: () => m.topology_hideServiceCategories(),
 			type: 'multiselect',
 			path: 'request',
 			key: 'hide_service_categories',
-			helpText: 'Select service categories that should be hidden',
-			section: 'Hide Stuff',
+			helpText: () => m.topology_hideServiceCategoriesHelp(),
+			section: () => m.topology_hideStuff(),
 			getOptions: () => serviceCategories
 		},
 		{
 			id: 'hide_edge_types',
-			label: 'Edge Types',
+			label: () => m.topology_hideEdgeTypes(),
 			type: 'multiselect',
 			path: 'local',
 			key: 'hide_edge_types',
-			helpText: 'Choose which edge types you would like to hide',
-			section: 'Hide Stuff',
+			helpText: () => m.topology_hideEdgeTypesHelp(),
+			section: () => m.topology_hideStuff(),
 			getOptions: () => eTypes
 		}
 	];
 
 	// Get unique section names in order
-	const sectionNames = [...new Set(fieldDefs.map((d) => d.section))];
+	let sectionNames = $derived([...new Set(fieldDefs.map((d) => d.section()))]);
 
 	// Group fields by section
-	const sections = sectionNames.map((name) => ({
-		name,
-		fields: fieldDefs.filter((d) => d.section === name)
-	}));
+	let sections = $derived(
+		sectionNames.map((name) => ({
+			name,
+			fields: fieldDefs.filter((d) => d.section() === name)
+		}))
+	);
 
 	// Track expanded sections
 	let expandedSections = $state<Record<string, boolean>>(
-		Object.fromEntries(sectionNames.map((name) => [name, true]))
+		Object.fromEntries(
+			[m.common_visual(), m.common_docker(), m.topology_leftZone(), m.topology_hideStuff()].map(
+				(name) => [name, true]
+			)
+		)
 	);
 
 	// Create form values initialized from topologyOptions
@@ -195,7 +200,7 @@
 	<!-- Helper text -->
 	<div class="rounded bg-gray-800/50 pt-2">
 		<p class="text-tertiary text-[10px] leading-tight">
-			Hold Ctrl (Windows/Linux) or Cmd (Mac) to select/deselect multiple options
+			{m.topology_multiselectHelp()}
 		</p>
 	</div>
 
@@ -227,33 +232,33 @@
 										checked={!!values[def.id]}
 										onchange={(e) => updateValue(def, e.currentTarget.checked)}
 									/>
-									<span class="text-secondary text-sm">{def.label}</span>
+									<span class="text-secondary text-sm">{def.label()}</span>
 								</label>
 								{#if def.helpText}
-									<p class="text-tertiary ml-6 mt-1 text-xs">{def.helpText}</p>
+									<p class="text-tertiary ml-6 mt-1 text-xs">{def.helpText()}</p>
 								{/if}
 							</div>
 						{:else if def.type === 'string'}
 							<div>
 								<label for={def.id} class="text-secondary mb-1 block text-sm font-medium">
-									{def.label}
+									{def.label()}
 								</label>
 								<input
 									type="text"
 									id={def.id}
 									class="input-field w-full"
-									placeholder={def.placeholder ?? ''}
+									placeholder={def.placeholder?.() ?? ''}
 									value={values[def.id] ?? ''}
 									oninput={(e) => updateValue(def, e.currentTarget.value)}
 								/>
 								{#if def.helpText}
-									<p class="text-tertiary mt-1 text-xs">{def.helpText}</p>
+									<p class="text-tertiary mt-1 text-xs">{def.helpText()}</p>
 								{/if}
 							</div>
 						{:else if def.type === 'multiselect'}
 							<div>
 								<label for={def.id} class="text-secondary mb-1 block text-sm font-medium">
-									{def.label}
+									{def.label()}
 								</label>
 								<select
 									id={def.id}
@@ -272,7 +277,7 @@
 									{/each}
 								</select>
 								{#if def.helpText}
-									<p class="text-tertiary mt-1 text-xs">{def.helpText}</p>
+									<p class="text-tertiary mt-1 text-xs">{def.helpText()}</p>
 								{/if}
 							</div>
 						{/if}

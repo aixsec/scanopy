@@ -5,6 +5,7 @@
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import TextArea from '$lib/shared/components/forms/input/TextArea.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	interface Props {
 		isOpen?: boolean;
@@ -48,7 +49,7 @@
 </script>
 
 <GenericModal
-	title="Request Information - {planName}"
+	title={m.billing_requestInfo({ planName })}
 	{isOpen}
 	{onClose}
 	onOpen={handleOpen}
@@ -73,7 +74,7 @@
 				>
 					{#snippet children(field)}
 						<TextInput
-							label="Email"
+							label={m.common_email()}
 							id="inquiry-email"
 							{field}
 							placeholder="your@email.com"
@@ -85,10 +86,10 @@
 				<form.Field name="message">
 					{#snippet children(field)}
 						<TextArea
-							label="What information are you looking for?"
+							label={m.billing_inquiryLabel()}
 							id="inquiry-message"
 							{field}
-							placeholder="Tell us what you'd like to know about the {planName} plan..."
+							placeholder={m.billing_inquiryPlaceholder({ planName })}
 							rows={5}
 						/>
 					{/snippet}
@@ -99,10 +100,10 @@
 		<div class="modal-footer">
 			<div class="flex items-center justify-end gap-3">
 				<button type="button" disabled={loading} onclick={onClose} class="btn-secondary">
-					Cancel
+					{m.common_cancel()}
 				</button>
 				<button type="submit" disabled={loading} class="btn-primary">
-					{loading ? 'Sending...' : 'Send Request'}
+					{loading ? m.common_sending() : m.billing_sendRequest()}
 				</button>
 			</div>
 		</div>

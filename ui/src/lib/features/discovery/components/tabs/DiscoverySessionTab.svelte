@@ -10,6 +10,7 @@
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import type { TabProps } from '$lib/shared/types';
+	import * as m from '$lib/paraglide/messages';
 
 	let { isReadOnly = false }: TabProps = $props();
 
@@ -32,13 +33,13 @@
 	let discoveryFields = $derived.by((): FieldConfig<DiscoveryUpdatePayload>[] => [
 		{
 			key: 'name',
-			label: 'Name',
+			label: m.common_name(),
 			type: 'string',
 			searchable: true
 		},
 		{
 			key: 'discovery_type',
-			label: 'Discovery Type',
+			label: m.discovery_discoveryType(),
 			type: 'string',
 			searchable: true,
 			filterable: true,
@@ -46,47 +47,49 @@
 		},
 		{
 			key: 'daemon',
-			label: 'Daemon',
+			label: m.common_daemon(),
 			type: 'string',
 			searchable: true,
 			filterable: true,
 			getValue: (item) => {
 				const daemon = daemonsData.find((d) => d.id == item.daemon_id);
-				return daemon ? daemon.name : 'Unknown Daemon';
+				return daemon ? daemon.name : m.discovery_unknownDaemon();
 			}
 		},
 		{
 			key: 'phase',
-			label: 'Phase',
+			label: m.common_phase(),
 			type: 'string',
 			searchable: true,
 			filterable: true
 		},
 		{
 			key: 'started_at',
-			label: 'Started At',
+			label: m.discovery_startedAt(),
 			type: 'string',
 			searchable: true,
-			getValue: (item) => (item.started_at ? formatTimestamp(item.started_at) : 'Not Started')
+			getValue: (item) =>
+				item.started_at ? formatTimestamp(item.started_at) : m.discovery_notStarted()
 		},
 		{
 			key: 'finished_at',
-			label: 'Finished At',
+			label: m.discovery_finishedAt(),
 			type: 'string',
 			searchable: true,
-			getValue: (item) => (item.finished_at ? formatTimestamp(item.finished_at) : 'Not Started')
+			getValue: (item) =>
+				item.finished_at ? formatTimestamp(item.finished_at) : m.discovery_notStarted()
 		}
 	]);
 </script>
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Active Discovery Sessions" />
+	<TabHeader title={m.discovery_activeSessionsTitle()} />
 	{#if isLoading}
 		<Loading />
 	{:else if sessionsList.length === 0}
 		<!-- Empty state -->
-		<EmptyState title="No discovery sessions running" subtitle="" />
+		<EmptyState title={m.discovery_noActiveSessions()} subtitle="" />
 	{:else}
 		<DataControls
 			items={sessionsList}

@@ -1,6 +1,7 @@
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::auth::middleware::permissions::{Authorized, IsDaemon, Member, Or, Viewer};
 use crate::server::interfaces::r#impl::base::Interface;
+use crate::server::networks::r#impl::Network;
 use crate::server::shared::extractors::Query;
 use crate::server::shared::handlers::ordering::OrderField;
 use crate::server::shared::handlers::query::{
@@ -183,8 +184,7 @@ async fn get_all_subnets(
         }
         _ => {
             // Users/API keys - use standard filter with query params
-            let org_id = organization_id
-                .ok_or_else(|| ApiError::forbidden("Organization context required"))?;
+            let org_id = organization_id.ok_or_else(ApiError::organization_required)?;
             let base_filter = StorableFilter::<Subnet>::new().network_ids(&network_ids);
             let filter = query.apply_to_filter(base_filter, &network_ids, org_id);
 
@@ -268,15 +268,15 @@ async fn create_subnet(
                 })?;
                 Json(ApiResponse::success(created))
             } else {
-                return Err(ApiError::bad_request(
-                    "Daemon cannot create subnets on other networks",
-                ));
+                return Err(ApiError::entity_network_mismatch::<Subnet>());
             }
         }
         _ => {
             // User/API key - validate network access and create
             if !network_ids.contains(&request.base.network_id) {
-                return Err(ApiError::forbidden("You don't have access to this network"));
+                return Err(ApiError::entity_access_denied::<Network>(
+                    request.base.network_id,
+                ));
             }
             let service = Subnet::get_service(&state);
             let created = service.create(request, entity).await.map_err(|e| {
@@ -320,7 +320,7 @@ async fn update_subnet(
         .get_by_id(&id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| ApiError::not_found(format!("Subnet {} not found", id)))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Subnet>(id))?;
 
     if current.base.cidr != subnet.base.cidr {
         // CIDR is changing - validate that all existing interfaces are within the new CIDR
@@ -334,12 +334,10 @@ async fn update_subnet(
 
         for interface in &interfaces {
             if !subnet.base.cidr.contains(&interface.base.ip_address) {
-                return Err(ApiError::bad_request(&format!(
-                    "Cannot change CIDR to {}: interface \"{}\" has IP {} which would be outside the new range",
-                    subnet.base.cidr,
-                    interface.base.name.as_deref().unwrap_or("unnamed"),
-                    interface.base.ip_address
-                )));
+                return Err(ApiError::interface_ip_out_of_range(
+                    &interface.base.ip_address.to_string(),
+                    &subnet.base.cidr.to_string(),
+                ));
             }
         }
     }

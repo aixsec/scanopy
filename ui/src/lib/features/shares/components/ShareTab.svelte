@@ -11,6 +11,7 @@
 	import { useSharesQuery, useDeleteShareMutation, useBulkDeleteSharesMutation } from '../queries';
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import type { TabProps } from '$lib/shared/types';
+	import * as m from '$lib/paraglide/messages';
 
 	let { isReadOnly = false }: TabProps = $props();
 
@@ -36,43 +37,47 @@
 	const shareFields: FieldConfig<Share>[] = [
 		{
 			key: 'name',
-			label: 'Name',
+			label: m.common_name(),
 			type: 'string',
 			searchable: true
 		},
 		{
 			key: 'topology_id',
-			label: 'Topology',
+			label: m.common_topology(),
 			type: 'string',
 			searchable: true,
 			filterable: true,
 			getValue: (share) => {
-				return topologiesData.find((t) => t.id === share.topology_id)?.name || 'Unknown Topology';
+				return (
+					topologiesData.find((t) => t.id === share.topology_id)?.name || m.shares_unknownTopology()
+				);
 			}
 		},
 		{
 			key: 'network_id',
-			label: 'Network',
+			label: m.common_network(),
 			type: 'string',
 			filterable: true,
 			getValue: (share) => {
-				return networksData.find((n) => n.id === share.network_id)?.name || 'Unknown Network';
+				return (
+					networksData.find((n) => n.id === share.network_id)?.name || m.common_unknownNetwork()
+				);
 			}
 		},
 		{
 			key: 'is_enabled',
-			label: 'Enabled',
+			label: m.common_enabled(),
 			type: 'boolean',
 			filterable: true
 		},
 		{
 			key: 'expires_at',
-			label: 'Expires',
+			label: m.common_expires(),
 			type: 'date'
 		},
 		{
 			key: 'created_at',
-			label: 'Created',
+			label: m.common_created(),
 			type: 'date'
 		}
 	];
@@ -83,13 +88,13 @@
 	}
 
 	function handleDelete(share: Share) {
-		if (confirm(`Are you sure you want to delete "${share.name}"?`)) {
+		if (confirm(m.common_confirmDeleteName({ name: share.name }))) {
 			deleteShareMutation.mutate(share.id);
 		}
 	}
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(`Are you sure you want to delete ${ids.length} shares?`)) {
+		if (confirm(m.shares_confirmBulkDelete({ count: ids.length }))) {
 			await bulkDeleteSharesMutation.mutateAsync(ids);
 		}
 	}
@@ -102,17 +107,14 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Sharing" />
+	<TabHeader title={m.common_sharing()} />
 
 	<!-- Loading state -->
 	{#if isLoading}
 		<Loading />
 	{:else if sharesData.length === 0}
 		<!-- Empty state -->
-		<EmptyState
-			title="No links or embeds created yet"
-			subtitle="Create links or embeds from the Topology tab to share your topologies"
-		/>
+		<EmptyState title={m.shares_noSharesYet()} subtitle={m.shares_noSharesSubtitle()} />
 	{:else}
 		<DataControls
 			items={sharesData}

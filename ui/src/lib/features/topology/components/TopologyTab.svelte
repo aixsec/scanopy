@@ -35,6 +35,7 @@
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { permissions } from '$lib/shared/stores/metadata';
 	import type { TabProps } from '$lib/shared/types';
+	import * as m from '$lib/paraglide/messages';
 
 	let { isReadOnly = false }: TabProps = $props();
 
@@ -132,7 +133,7 @@
 		// Capture values before async operation (currentTopology becomes null after query refetch)
 		const toDeleteId = currentTopology.id;
 		const toDeleteName = currentTopology.name;
-		if (confirm(`Are you sure you want to delete topology ${toDeleteName}?`)) {
+		if (confirm(m.topology_confirmDelete({ name: toDeleteName }))) {
 			await deleteTopologyMutation.mutateAsync(toDeleteId);
 			// After mutation, topologiesData is already updated without the deleted topology
 			if (topologiesData.length > 0) {
@@ -207,7 +208,7 @@
 		currentTopology?.locked_by ? usersData.find((u) => u.id === currentTopology.locked_by) : null
 	);
 	let lockedByDisplay = $derived(
-		lockedByUser?.email ?? (currentTopology?.locked_by ? 'another user' : null)
+		lockedByUser?.email ?? (currentTopology?.locked_by ? m.topology_anotherUser() : null)
 	);
 </script>
 
@@ -228,7 +229,7 @@
 						target="_blank"
 						rel="noopener noreferrer"
 						class="btn-secondary"
-						title="Submit to Community Showcase"
+						title={m.topology_submitToCommunity()}
 					>
 						<Globe class="my-1 h-5 w-5" />
 					</a>
@@ -245,7 +246,7 @@
 									class={`text-xs ${currentTopology.is_locked ? 'btn-icon-info' : 'btn-icon'}`}
 								>
 									<Lock class="mr-2 h-4 w-4" />
-									{currentTopology.is_locked ? 'Unlock' : 'Lock'}
+									{currentTopology.is_locked ? m.common_unlock() : m.common_lock()}
 								</button>
 
 								{#if !currentTopology.is_locked}
@@ -256,20 +257,25 @@
 										disabled={currentTopology.is_locked}
 									>
 										{#if $autoRebuild}
-											<Radio class="mr-2 h-4 w-4" /> Auto
+											<Radio class="mr-2 h-4 w-4" /> {m.common_auto()}
 										{:else}
-											<RefreshCcw class="mr-2 h-4 w-4" /> Manual
+											<RefreshCcw class="mr-2 h-4 w-4" /> {m.common_manual()}
 										{/if}
 									</button>
 								{/if}
 							</div>
 							{#if currentTopology.is_locked && currentTopology.locked_at}
 								<span class="text-tertiary whitespace-nowrap text-[10px]"
-									>Locked: {formatTimestamp(currentTopology.locked_at)} by {lockedByDisplay}</span
+									>{m.topology_lockedTimestamp({
+										timestamp: formatTimestamp(currentTopology.locked_at),
+										user: lockedByDisplay ?? ''
+									})}</span
 								>
 							{:else}
 								<span class="text-tertiary whitespace-nowrap text-[10px]"
-									>Last Rebuild: {formatTimestamp(currentTopology.last_refreshed)}</span
+									>{m.topology_lastRebuild({
+										timestamp: formatTimestamp(currentTopology.last_refreshed)
+									})}</span
 								>
 							{/if}
 						</div>
@@ -333,21 +339,20 @@
 			{#if stateConfig.type === 'locked'}
 				<InlineInfo
 					dismissableKey="topology-locked-info"
-					title={`Topology Locked${lockedByDisplay ? ` by ${lockedByDisplay}` : ''}`}
-					body="Data can't be refreshed while this topology is locked. You can still move and resize nodes and edges, but you won't be able to make any other changes. Click the badge above to unlock and enable data refresh."
+					title={m.topology_locked()}
+					body={m.topology_lockedInfoBody()}
 				/>
 			{:else if stateConfig.type === 'stale_conflicts'}
 				<InlineDanger
 					dismissableKey="topology-conflict-info"
-					title="Conflicts Detected"
-					body="Some entities in this diagram no longer exist. Click the badge above to review
-								changes before updating."
+					title={m.topology_conflictsDetected()}
+					body={m.topology_conflictsDetectedBody()}
 				/>
 			{:else if stateConfig.type === 'stale_safe'}
 				<InlineWarning
 					dismissableKey="topology-refresh-info"
-					title="Stale Data"
-					body="Entities have been updated, and the diagram layout may need to change to fit them."
+					title={m.topology_staleData()}
+					body={m.topology_staleDataBody()}
 				/>
 			{/if}
 		{/if}
@@ -361,7 +366,7 @@
 			</div>
 		{:else}
 			<div class="card card-static text-secondary">
-				No topology selected. Create one to get started.
+				{m.topology_noTopologySelected()}
 			</div>
 		{/if}
 	</div>

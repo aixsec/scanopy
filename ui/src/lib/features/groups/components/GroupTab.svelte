@@ -20,6 +20,7 @@
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import type { TabProps } from '$lib/shared/types';
 	import type { components } from '$lib/api/schema';
+	import * as m from '$lib/paraglide/messages';
 
 	type GroupOrderField = components['schemas']['GroupOrderField'];
 
@@ -57,7 +58,7 @@
 	}
 
 	function handleDeleteGroup(group: Group) {
-		if (confirm(`Are you sure you want to delete "${group.name}"?`)) {
+		if (confirm(m.common_confirmDeleteName({ name: group.name }))) {
 			deleteGroupMutation.mutate(group.id);
 		}
 	}
@@ -88,7 +89,7 @@
 	}
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(`Are you sure you want to delete ${ids.length} Groups?`)) {
+		if (confirm(m.groups_confirmBulkDelete({ count: ids.length }))) {
 			await bulkDeleteGroupsMutation.mutateAsync(ids);
 		}
 	}
@@ -102,24 +103,29 @@
 	let groupFields = $derived(
 		defineFields<Group, GroupOrderField>(
 			{
-				name: { label: 'Name', type: 'string', searchable: true },
-				group_type: { label: 'Group Type', type: 'string', searchable: true, filterable: true },
+				name: { label: m.common_name(), type: 'string', searchable: true },
+				group_type: {
+					label: m.groups_groupType(),
+					type: 'string',
+					searchable: true,
+					filterable: true
+				},
 				network_id: {
-					label: 'Network',
+					label: m.common_network(),
 					type: 'string',
 					filterable: true,
 					groupable: true,
 					getValue: (item) =>
-						networksData.find((n) => n.id == item.network_id)?.name || 'Unknown Network'
+						networksData.find((n) => n.id == item.network_id)?.name || m.common_unknownNetwork()
 				},
-				created_at: { label: 'Created', type: 'date' },
-				updated_at: { label: 'Updated', type: 'date' }
+				created_at: { label: m.common_created(), type: 'date' },
+				updated_at: { label: m.common_updated(), type: 'date' }
 			},
 			[
-				{ key: 'description', label: 'Description', type: 'string', searchable: true },
+				{ key: 'description', label: m.common_description(), type: 'string', searchable: true },
 				{
 					key: 'tags',
-					label: 'Tags',
+					label: m.common_tags(),
 					type: 'array',
 					searchable: true,
 					filterable: true,
@@ -134,11 +140,11 @@
 </script>
 
 <div class="space-y-6">
-	<TabHeader title="Groups" subtitle="Create custom groups to improve topology visualization">
+	<TabHeader title={m.common_groupsLabel()} subtitle={m.groups_subtitle()}>
 		<svelte:fragment slot="actions">
 			{#if !isReadOnly}
 				<button class="btn-primary flex items-center" onclick={handleCreateGroup}
-					><Plus class="h-5 w-5" />Create Group</button
+					><Plus class="h-5 w-5" />{m.common_create()}</button
 				>
 			{/if}
 		</svelte:fragment>
@@ -149,10 +155,10 @@
 	{:else if groupsData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
-			title="No groups configured yet"
-			subtitle="Groups define clusters or paths of nodes for visualization"
+			title={m.groups_noGroupsYet()}
+			subtitle={m.groups_noGroupsHelp()}
 			onClick={handleCreateGroup}
-			cta="Create your first group"
+			cta={m.common_create()}
 		/>
 	{:else}
 		<DataControls

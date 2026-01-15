@@ -23,6 +23,7 @@
 	import SelectInput from '$lib/shared/components/forms/input/SelectInput.svelte';
 	import SelectNetwork from '$lib/features/networks/components/SelectNetwork.svelte';
 	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	interface Props {
 		group?: Group | null;
@@ -79,8 +80,10 @@
 	let deleting = $state(false);
 
 	let isEditing = $derived(group !== null);
-	let title = $derived(isEditing ? `Edit ${group?.name}` : 'Create Group');
-	let saveLabel = $derived(isEditing ? 'Update Group' : 'Create Group');
+	let title = $derived(
+		isEditing ? m.common_editName({ name: group?.name ?? '' }) : m.groups_createGroup()
+	);
+	let saveLabel = $derived(isEditing ? m.common_update() : m.common_create());
 
 	function getDefaultValues(): Group {
 		return group ? { ...group } : createEmptyGroupFormData(defaultNetworkId);
@@ -220,7 +223,7 @@
 			<div class="space-y-8">
 				<!-- Group Details Section -->
 				<div class="space-y-4">
-					<h3 class="text-primary text-lg font-medium">Group Details</h3>
+					<h3 class="text-primary text-lg font-medium">{m.groups_groupDetails()}</h3>
 
 					<form.Field
 						name="name"
@@ -230,10 +233,10 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label="Group Name"
+								label={m.groups_groupName()}
 								id="name"
 								{field}
-								placeholder="e.g., DNS Resolution Path, Web Access Chain"
+								placeholder={m.groups_groupNamePlaceholder()}
 								required
 							/>
 						{/snippet}
@@ -253,7 +256,12 @@
 
 					<form.Field name="group_type">
 						{#snippet children(field)}
-							<SelectInput label="Group Type" id="group_type" {field} options={groupTypeOptions} />
+							<SelectInput
+								label={m.groups_groupType()}
+								id="group_type"
+								{field}
+								options={groupTypeOptions}
+							/>
 							<p class="text-tertiary text-xs">{groupTypes.getDescription(field.state.value)}</p>
 						{/snippet}
 					</form.Field>
@@ -266,10 +274,10 @@
 					>
 						{#snippet children(field)}
 							<TextArea
-								label="Description"
+								label={m.common_description()}
 								id="description"
 								{field}
-								placeholder="Describe the data flow or purpose of this group..."
+								placeholder={m.groups_descriptionPlaceholder()}
 							/>
 						{/snippet}
 					</form.Field>
@@ -289,12 +297,12 @@
 					<div class="border-t border-gray-700 pt-6">
 						<div class="rounded-lg bg-gray-800/50 p-4">
 							<ListManager
-								label="Service Bindings"
-								helpText="Select service bindings for this group"
+								label={m.groups_serviceBindings()}
+								helpText={m.groups_serviceBindingsHelp()}
 								placeholder={isServicesLoading
-									? 'Loading services...'
-									: 'Select a binding to add...'}
-								emptyMessage="No bindings in this group yet."
+									? m.groups_loadingServices()
+									: m.groups_selectBinding()}
+								emptyMessage={m.groups_noBindingsYet()}
 								allowReorder={true}
 								allowItemEdit={() => false}
 								showSearch={true}
@@ -316,7 +324,7 @@
 				<!-- Edge Style Section -->
 				<div class="space-y-4">
 					<div class="border-t border-gray-700 pt-6">
-						<h3 class="text-primary mb-4 text-lg font-medium">Edge Appearance</h3>
+						<h3 class="text-primary mb-4 text-lg font-medium">{m.groups_edgeAppearance()}</h3>
 						<div class="rounded-lg bg-gray-800/50 p-4">
 							<EdgeStyleForm formData={edgeStyleFormData} />
 						</div>
@@ -340,7 +348,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? 'Deleting...' : 'Delete'}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -351,10 +359,10 @@
 						onclick={onClose}
 						class="btn-secondary"
 					>
-						Cancel
+						{m.common_cancel()}
 					</button>
 					<button type="submit" disabled={loading || deleting} class="btn-primary">
-						{loading ? 'Saving...' : saveLabel}
+						{loading ? m.common_saving() : saveLabel}
 					</button>
 				</div>
 			</div>

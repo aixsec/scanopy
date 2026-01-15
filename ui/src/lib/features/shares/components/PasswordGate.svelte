@@ -6,6 +6,7 @@
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import ModalHeaderIcon from '$lib/shared/components/layout/ModalHeaderIcon.svelte';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	interface Props {
 		isOpen?: boolean;
@@ -14,12 +15,10 @@
 		submitLabel?: string;
 	}
 
-	let {
-		isOpen = true,
-		title = 'Password Required',
-		onSubmit,
-		submitLabel = 'View Topology'
-	}: Props = $props();
+	let { isOpen = true, title, onSubmit, submitLabel }: Props = $props();
+
+	let displayTitle = $derived(title ?? m.shares_passwordRequired());
+	let displaySubmitLabel = $derived(submitLabel ?? m.shares_viewTopology());
 
 	let loading = $state(false);
 	let serverError = $state('');
@@ -35,11 +34,11 @@
 			try {
 				const success = await onSubmit(value.password);
 				if (!success) {
-					serverError = 'Invalid password';
+					serverError = m.common_invalidPassword();
 					form.setFieldValue('password', '');
 				}
 			} catch {
-				serverError = 'An error occurred';
+				serverError = m.common_errorOccurred();
 			} finally {
 				loading = false;
 			}
@@ -58,7 +57,7 @@
 
 <GenericModal
 	{isOpen}
-	{title}
+	title={displayTitle}
 	size="sm"
 	onClose={() => {}}
 	onOpen={handleOpen}
@@ -88,11 +87,11 @@
 				>
 					{#snippet children(field)}
 						<TextInput
-							label="Password"
+							label={m.common_password()}
 							id="password"
 							type="password"
 							{field}
-							placeholder="Enter password"
+							placeholder={m.shares_passwordPlaceholder()}
 							required={true}
 							disabled={loading}
 						/>
@@ -108,7 +107,7 @@
 		<div class="modal-footer">
 			<div class="flex items-center justify-end">
 				<button type="submit" disabled={loading} class="btn-primary">
-					{loading ? 'Loading...' : submitLabel}
+					{loading ? m.common_loading() : displaySubmitLabel}
 				</button>
 			</div>
 		</div>

@@ -16,6 +16,7 @@
 	import { useSubnetsQuery, isContainerSubnet } from '$lib/features/subnets/queries';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import type { AnyFieldApi } from '@tanstack/svelte-form';
+	import * as m from '$lib/paraglide/messages';
 
 	// TanStack Query hooks
 	const servicesQuery = useServicesQuery();
@@ -174,22 +175,22 @@
 	// Port Binding Handlers
 	function handleCreatePortBinding() {
 		if (!service) {
-			pushWarning('Could not find service to create binding for');
+			pushWarning(m.hosts_services_couldNotFindService());
 			return;
 		}
 
 		if (host.interfaces.length === 0) {
-			pushWarning("Host does not have any interfaces, can't create binding");
+			pushWarning(m.hosts_services_noInterfaces());
 			return;
 		}
 
 		if (host.ports.length === 0) {
-			pushWarning("Host does not have any ports, can't create binding");
+			pushWarning(m.hosts_services_noPorts());
 			return;
 		}
 
 		if (!canCreatePortBinding) {
-			pushWarning('No available port+interface combinations to bind');
+			pushWarning(m.hosts_services_noAvailablePortCombos());
 			return;
 		}
 
@@ -214,7 +215,7 @@
 
 	function handleRemovePortBinding(index: number) {
 		if (!service) {
-			pushWarning('Could not find service to remove binding for');
+			pushWarning(m.hosts_services_couldNotFindServiceToRemove());
 			return;
 		}
 
@@ -248,17 +249,17 @@
 	// Interface Binding Handlers
 	function handleCreateInterfaceBinding() {
 		if (!service) {
-			pushWarning('Could not find service to create binding for');
+			pushWarning(m.hosts_services_couldNotFindService());
 			return;
 		}
 
 		if (host.interfaces.length === 0) {
-			pushWarning("Host does not have any interfaces, can't create binding");
+			pushWarning(m.hosts_services_noInterfaces());
 			return;
 		}
 
 		if (!canCreateInterfaceBinding) {
-			pushWarning('No available interfaces to bind');
+			pushWarning(m.hosts_services_noAvailableInterfaces());
 			return;
 		}
 
@@ -282,7 +283,7 @@
 
 	function handleRemoveInterfaceBinding(index: number) {
 		if (!service) {
-			pushWarning('Could not find service to remove binding for');
+			pushWarning(m.hosts_services_couldNotFindServiceToRemove());
 			return;
 		}
 
@@ -320,7 +321,7 @@
 
 		<!-- Basic Configuration -->
 		<div class="space-y-4">
-			<div class="text-primary font-medium">Details</div>
+			<div class="text-primary font-medium">{m.common_details()}</div>
 			<!-- Service Name Field -->
 			<form.Field
 				name={nameFieldName}
@@ -334,9 +335,9 @@
 			>
 				{#snippet children(field: AnyFieldApi)}
 					<TextInput
-						label="Name"
+						label={m.common_name()}
 						id="service_name_{service.id}"
-						placeholder="Enter a descriptive name..."
+						placeholder={m.hosts_services_namePlaceholder()}
 						required={true}
 						{field}
 					/>
@@ -351,20 +352,19 @@
 		</div>
 
 		<div>
-			<div class="text-primary font-medium">Bindings</div>
+			<div class="text-primary font-medium">{m.common_bindings()}</div>
 			<span class="text-muted text-xs">
-				For a given interface, a service can have either port bindings OR an interface binding, not
-				both.
+				{m.hosts_services_bindingsHelp()}
 			</span>
 		</div>
 		<!-- Port Bindings -->
 		<div class="space-y-4">
 			{#key `${service.id}`}
 				<ListManager
-					label="Port Bindings"
-					helpText="Service listens on a specific port, optionally on a specific interface"
-					placeholder="Select a binding to add"
-					createNewLabel="New Binding"
+					label={m.common_portBindings()}
+					helpText={m.hosts_services_portBindingsHelp()}
+					placeholder={m.hosts_services_selectBinding()}
+					createNewLabel={m.hosts_services_newBinding()}
 					allowDuplicates={false}
 					allowItemEdit={() => true}
 					allowItemRemove={() => true}
@@ -401,8 +401,8 @@
 				<form.Field
 					name={`services[${index}].bindings[${bindingIndex}].port_id`}
 					validators={{
-						onChange: () => (!binding.port_id ? 'Port selection is required' : undefined),
-						onBlur: () => (!binding.port_id ? 'Port selection is required' : undefined)
+						onChange: () => (!binding.port_id ? m.hosts_services_portRequired() : undefined),
+						onBlur: () => (!binding.port_id ? m.hosts_services_portRequired() : undefined)
 					}}
 				>
 					{#snippet children(field: AnyFieldApi)}
@@ -416,10 +416,10 @@
 		<div class="space-y-4">
 			{#key service.id}
 				<ListManager
-					label="Interface Bindings"
-					helpText="Service is present at an interface (IP address) without a specific port"
-					placeholder="Select a binding to add"
-					createNewLabel="New Binding"
+					label={m.common_interfaceBindings()}
+					helpText={m.hosts_services_interfaceBindingsHelp()}
+					placeholder={m.hosts_services_selectBinding()}
+					createNewLabel={m.hosts_services_newBinding()}
 					allowDuplicates={false}
 					allowItemEdit={() => true}
 					allowItemRemove={() => true}

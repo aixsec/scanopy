@@ -10,6 +10,7 @@ import type { DiscoveryUpdatePayload } from './types/api';
 import { pushError, pushSuccess, pushWarning } from '$lib/shared/stores/feedback';
 import { BaseSSEManager, type SSEConfig } from '$lib/shared/utils/sse';
 import { writable } from 'svelte/store';
+import * as m from '$lib/paraglide/messages';
 
 /**
  * Query hook for fetching all discoveries
@@ -222,22 +223,22 @@ export function generateCronSchedule(hours: number): string {
 export const discoveryFields = (daemons: Daemon[]): FieldConfig<Discovery>[] => [
 	{
 		key: 'name',
-		label: 'Name',
+		label: m.common_name(),
 		type: 'string',
 		searchable: true,
 		getValue: (item: Discovery) => item.name
 	},
 	{
 		key: 'daemon_id',
-		label: 'Daemon',
+		label: m.common_daemon(),
 		type: 'string',
 		filterable: true,
 		getValue: (item: Discovery) =>
-			daemons.find((d) => d.id == item.daemon_id)?.name ?? 'Unknown Daemon'
+			daemons.find((d) => d.id == item.daemon_id)?.name ?? m.discovery_unknownDaemon()
 	},
 	{
 		key: 'discovery_type',
-		label: 'Type',
+		label: m.common_type(),
 		type: 'string',
 		filterable: true,
 		getValue: (item: Discovery) => item.discovery_type.type

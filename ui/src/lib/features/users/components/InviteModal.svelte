@@ -21,6 +21,7 @@
 	import { metadata, entities } from '$lib/shared/stores/metadata';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import { useConfigQuery } from '$lib/shared/stores/config-query';
+	import * as m from '$lib/paraglide/messages';
 
 	// Shared components
 	import PermissionSelect from '$lib/shared/components/api-keys/PermissionSelect.svelte';
@@ -65,8 +66,8 @@
 	let emailValid = $derived(!emailValue || !email(emailValue));
 
 	let usingEmail = $derived(enableEmail && emailValue && emailValid);
-	let ctaText = $derived(usingEmail ? 'Send Invite Link' : 'Generate Invite Link');
-	let ctaLoadingText = $derived(usingEmail ? 'Sending...' : 'Generating...');
+	let ctaText = $derived(usingEmail ? m.users_sendInviteLink() : m.users_generateInviteLink());
+	let ctaLoadingText = $derived(usingEmail ? m.common_sending() : m.common_generating());
 	let CtaIcon = $derived(usingEmail ? Send : RotateCcw);
 
 	// Handle network selection changes
@@ -98,9 +99,10 @@
 				email: currentEmail
 			});
 			invite = result;
-			pushSuccess(`Invite ${currentEmail ? 'sent' : 'generated'} successfully`);
+			pushSuccess(currentEmail ? m.users_inviteSentSuccess() : m.users_inviteGeneratedSuccess());
 		} catch (err) {
-			pushError(`Failed to ${form.state.values.email ? 'send' : 'generate'} invite: ${err}`);
+			const action = form.state.values.email ? 'send' : 'generate';
+			pushError(m.users_inviteFailed({ action, error: String(err) }));
 		}
 	}
 
@@ -115,7 +117,7 @@
 		try {
 			await navigator.clipboard.writeText(formatInviteUrl(invite));
 			copied = true;
-			pushSuccess('Invite link copied to clipboard');
+			pushSuccess(m.users_inviteCopied());
 
 			// Reset copied state after 2 seconds
 			if (copyTimeoutId) {
@@ -125,7 +127,7 @@
 				copied = false;
 			}, 2000);
 		} catch (err) {
-			pushError('Failed to copy link to clipboard');
+			pushError(m.users_copyFailed());
 			console.error('Failed to copy:', err);
 		}
 	}
@@ -142,7 +144,7 @@
 
 <GenericModal
 	{isOpen}
-	title="Invite User"
+	title={m.users_inviteUser()}
 	size="xl"
 	onClose={handleClose}
 	onOpen={handleOpen}
@@ -156,8 +158,7 @@
 		<div class="flex-1 overflow-auto p-6">
 			<div class="space-y-6">
 				<p class="text-secondary text-sm">
-					Select the permissions level for the new user, then generate an invite link. They can use
-					it to register or join your organization.
+					{m.users_inviteInstructions()}
 				</p>
 
 				<!-- Permissions Selection -->
@@ -165,8 +166,8 @@
 					{#snippet children(field)}
 						<PermissionSelect
 							{field}
-							label="Permissions Level"
-							helpText="Choose the access level for the invited user"
+							label={m.users_permissionsLevel()}
+							helpText={m.users_permissionsLevelHelp()}
 							disabled={!!invite}
 						/>
 					{/snippet}
@@ -176,17 +177,17 @@
 					{selectedNetworkIds}
 					onChange={handleNetworkChange}
 					permissionLevel={permissionsValue}
-					helpText="Select networks this user will have access to"
+					helpText={m.users_networkAccessHelp()}
 				/>
 
 				{#if enableEmail}
 					<form.Field name="email" validators={{ onBlur: ({ value }) => email(value) }}>
 						{#snippet children(field)}
 							<TextInput
-								label="Email"
+								label={m.common_email()}
 								id="email"
-								placeholder="Enter email address..."
-								helpText="Enter the email you would like to send this invite to, or leave empty to just generate a link"
+								placeholder={m.users_emailPlaceholder()}
+								helpText={m.users_emailHelp()}
 								{field}
 							/>
 						{/snippet}
@@ -212,7 +213,7 @@
 						<div class="space-y-3">
 							<div class="flex items-center gap-2">
 								<LinkIcon class="text-secondary h-4 w-4 flex-shrink-0" />
-								<h3 class="text-primary text-sm font-semibold">Invite Link</h3>
+								<h3 class="text-primary text-sm font-semibold">{m.users_inviteLink()}</h3>
 							</div>
 
 							<!-- URL Display -->
@@ -230,10 +231,10 @@
 								>
 									{#if copied}
 										<Check class="mr-2 h-4 w-4" />
-										Copied!
+										{m.common_copied()}
 									{:else}
 										<Copy class="mr-2 h-4 w-4" />
-										Copy Link
+										{m.common_copyLink()}
 									{/if}
 								</button>
 							{/if}
@@ -250,15 +251,15 @@
 							</div>
 							<div class="flex-1">
 								<p class="text-primary text-sm font-medium">
-									{'Expires ' + formatTimestamp(invite.expires_at)}
+									{m.users_expires({ timestamp: formatTimestamp(invite.expires_at) })}
 								</p>
 							</div>
 						</div>
 					</div>
 
 					<InlineWarning
-						title="Sensitive Link"
-						body="Anyone with this link can join your organization with {permissionsValue} permissions. Keep it secure and only share it with people you trust."
+						title={m.users_sensitiveLink()}
+						body={m.users_sensitiveLinkWarning({ permissions: permissionsValue })}
 					/>
 				{/if}
 			</div>
@@ -267,7 +268,9 @@
 		<!-- Footer -->
 		<div class="modal-footer">
 			<div class="flex items-center justify-end gap-3">
-				<button type="button" onclick={handleClose} class="btn-secondary"> Close </button>
+				<button type="button" onclick={handleClose} class="btn-secondary">
+					{m.common_close()}
+				</button>
 			</div>
 		</div>
 	</div>

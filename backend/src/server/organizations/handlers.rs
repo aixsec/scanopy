@@ -24,6 +24,8 @@ use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
+pub const DEMO_USER_ID: Uuid = Uuid::from_u128(0x550e8400_e29b_41d4_a716_446655440050);
+
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
         .routes(routes!(get_organization, update_org_name))
@@ -52,9 +54,7 @@ pub async fn get_organization(
         .get_by_id(&organization_id)
         .await
         .map_err(|e| ApiError::internal_error(&e.to_string()))?
-        .ok_or_else(|| {
-            ApiError::not_found(format!("Organization '{}' not found", organization_id))
-        })?;
+        .ok_or_else(|| ApiError::entity_not_found::<Organization>(organization_id))?;
 
     Ok(Json(ApiResponse::success(entity)))
 }
@@ -118,7 +118,7 @@ pub async fn reset(
 ) -> ApiResult<Json<ApiResponse<()>>> {
     let user_org_id = auth
         .organization_id()
-        .ok_or_else(|| ApiError::forbidden("Organization context required"))?;
+        .ok_or_else(ApiError::organization_required)?;
 
     // Verify organization exists
     let org = state
@@ -126,10 +126,10 @@ pub async fn reset(
         .organization_service
         .get_by_id(&id)
         .await?
-        .ok_or_else(|| ApiError::not_found("Organization not found".to_string()))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Organization>(id))?;
 
     if org.id != user_org_id {
-        return Err(ApiError::forbidden("Cannot reset another organization"));
+        return Err(ApiError::permission_denied());
     }
 
     let entity: AuthenticatedEntity = auth.into_entity();
@@ -162,22 +162,18 @@ pub async fn populate_demo_data(
 
     let user_org_id = auth
         .organization_id()
-        .ok_or_else(|| ApiError::forbidden("Organization context required"))?;
-    let user_id = auth
-        .user_id()
-        .ok_or_else(|| ApiError::forbidden("User context required"))?;
+        .ok_or_else(ApiError::organization_required)?;
+    let user_id = auth.user_id().ok_or_else(ApiError::user_required)?;
 
     let org = state
         .services
         .organization_service
         .get_by_id(&id)
         .await?
-        .ok_or_else(|| ApiError::not_found("Organization not found".to_string()))?;
+        .ok_or_else(|| ApiError::entity_not_found::<Organization>(id))?;
 
     if org.id != user_org_id {
-        return Err(ApiError::forbidden(
-            "Cannot populate demo data for another organization",
-        ));
+        return Err(ApiError::permission_denied());
     }
 
     // Only available for demo organizations
@@ -186,20 +182,6 @@ pub async fn populate_demo_data(
             "Populate demo data is only available for demo organizations",
         ));
     }
-
-    // Preserve admin user ID so that users don't get logged out
-    let admin_user_id = state
-        .services
-        .user_service
-        .get_all(
-            StorableFilter::<User>::new()
-                .organization_id(&org.id)
-                .user_permissions(&UserOrgPermissions::Admin),
-        )
-        .await?
-        .first()
-        .map(|u| u.id)
-        .unwrap_or(Uuid::new_v4());
 
     let entity: AuthenticatedEntity = auth.into_entity();
 
@@ -305,7 +287,8 @@ pub async fn populate_demo_data(
         vec![],
         None,
     ));
-    demo_admin.id = admin_user_id;
+    demo_admin.base.email_verified = true;
+    demo_admin.id = DEMO_USER_ID;
     state
         .services
         .user_service

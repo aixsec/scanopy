@@ -5,6 +5,7 @@
 	import { isContainerSubnet } from '../queries';
 	import type { Subnet } from '../types/base';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let {
 		subnet,
@@ -30,11 +31,11 @@
 		Icon: subnetTypes.getIconComponent(subnet.subnet_type),
 		fields: [
 			{
-				label: 'Description',
+				label: m.common_description(),
 				value: subnet.description
 			},
 			{
-				label: 'Subnet Type',
+				label: m.subnets_subnetType(),
 				value: [
 					{
 						id: 'type',
@@ -42,16 +43,16 @@
 						color: subnetTypes.getColorString(subnet.subnet_type)
 					}
 				],
-				emptyText: 'No type specified'
+				emptyText: m.common_noTypeSpecified()
 			},
-			{ label: 'Tags', snippet: tagsSnippet }
+			{ label: m.common_tags(), snippet: tagsSnippet }
 		],
 
 		actions: [
 			...(onDelete
 				? [
 						{
-							label: 'Delete',
+							label: m.common_delete(),
 							icon: Trash2,
 							class: 'btn-icon-danger',
 							onClick: () => onDelete(subnet)
@@ -61,7 +62,7 @@
 			...(onEdit
 				? [
 						{
-							label: 'Edit',
+							label: m.common_edit(),
 							icon: Edit,
 							onClick: () => onEdit(subnet)
 						}
@@ -73,7 +74,7 @@
 
 {#snippet tagsSnippet()}
 	<div class="flex items-center gap-2">
-		<span class="text-secondary text-sm">Tags:</span>
+		<span class="text-secondary text-sm">{m.common_tags()}:</span>
 		<TagPickerInline selectedTagIds={subnet.tags} entityId={subnet.id} entityType="Subnet" />
 	</div>
 {/snippet}

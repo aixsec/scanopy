@@ -3,6 +3,7 @@
 	import { Calendar, Clock, Hash } from 'lucide-svelte';
 	import { pushWarning } from '$lib/shared/stores/feedback';
 	import CodeContainer from '../data/CodeContainer.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	export let entities: (any | null)[] = [null];
@@ -23,7 +24,7 @@
 			try {
 				await navigator.clipboard.writeText(id);
 			} catch (error) {
-				pushWarning('Failed to copy ID to clipboard: ' + error);
+				pushWarning(m.common_failedToCopyId({ error: String(error) }));
 			}
 		}
 	}
@@ -41,11 +42,11 @@
 						</div>
 						{#if isSecureContext}
 							<div class="min-w-0 flex-1">
-								<p class="text-secondary text-sm font-medium">ID</p>
+								<p class="text-secondary text-sm font-medium">{m.common_id()}</p>
 								<button
 									type="button"
 									class="text-tertiary hover:text-primary block max-w-full cursor-pointer truncate font-mono text-sm transition-colors"
-									title={`${id} (Click to copy)`}
+									title={`${id} (${m.common_clickToCopy()})`}
 									on:click={copyId}
 								>
 									{formatId(id)}
@@ -62,7 +63,7 @@
 							<Calendar class="text-tertiary h-5 w-5" />
 						</div>
 						<div class="min-w-0 flex-1">
-							<p class="text-secondary text-sm font-medium">Created</p>
+							<p class="text-secondary text-sm font-medium">{m.common_created()}</p>
 							<p class="text-tertiary text-sm" title={createdAt}>
 								{formatTimestamp(createdAt)}
 							</p>
@@ -77,7 +78,7 @@
 							<Clock class="text-tertiary h-5 w-5" />
 						</div>
 						<div class="min-w-0 flex-1">
-							<p class="text-secondary text-sm font-medium">Updated</p>
+							<p class="text-secondary text-sm font-medium">{m.common_updated()}</p>
 							<p class="text-tertiary text-sm" title={updatedAt}>
 								{formatTimestamp(updatedAt)}
 							</p>

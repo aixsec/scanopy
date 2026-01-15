@@ -23,6 +23,8 @@
 		useCreateUserApiKeyMutation,
 		useRotateUserApiKeyMutation
 	} from '../queries';
+	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	interface Props {
 		isOpen?: boolean;
@@ -43,7 +45,9 @@
 	let generatedKey = $state<string | null>(null);
 
 	let isEditing = $derived(apiKey !== null);
-	let title = $derived(isEditing ? `Edit ${apiKey?.name || 'API Key'}` : 'Create API Key');
+	let title = $derived(
+		isEditing ? m.common_editName({ name: apiKey?.name ?? '' }) : m.userApiKeys_createApiKey()
+	);
 
 	// Get minimum date (now) in local time format for datetime-local input
 	function getLocalDateTimeMin(): string {
@@ -96,11 +100,11 @@
 
 		// Validate required fields before creating
 		if (!formData.name?.trim()) {
-			pushError('Name is required');
+			pushError(m.common_nameRequired());
 			return;
 		}
 		if (!formData.network_ids?.length) {
-			pushError('At least one network must be selected');
+			pushError(m.common_networkRequired());
 			return;
 		}
 
@@ -109,7 +113,7 @@
 			const result = await createMutation.mutateAsync(formData);
 			generatedKey = result.keyString;
 		} catch {
-			pushError('Failed to generate API key');
+			pushError(m.common_failedGenerateApiKey());
 		} finally {
 			loading = false;
 		}
@@ -122,7 +126,7 @@
 			const newKey = await rotateMutation.mutateAsync(formData.id);
 			generatedKey = newKey;
 		} catch {
-			pushError('Failed to rotate API key');
+			pushError(m.common_failedRotateApiKey());
 		} finally {
 			loading = false;
 		}
@@ -173,58 +177,15 @@
 	>
 		<div class="flex-1 overflow-auto p-6">
 			<div class="space-y-6">
-				<!-- Access Control Info -->
-				<details class="bg-secondary/50 text-secondary rounded-lg text-sm">
-					<summary class="text-primary cursor-pointer p-4 font-medium">
-						API Key Access Reference
-					</summary>
-					<div class="px-4 pb-4">
-						<table class="w-full text-left text-xs">
-							<thead>
-								<tr class="border-secondary border-b">
-									<th class="text-primary pb-2 pr-3 font-medium">Permission</th>
-									<th class="text-primary pb-2 pr-3 font-medium">Network Resources</th>
-									<th class="text-primary pb-2 pr-3 font-medium">Tags</th>
-									<th class="text-primary pb-2 font-medium">Users</th>
-								</tr>
-							</thead>
-							<tbody class="text-secondary">
-								<tr class="border-secondary/50 border-b">
-									<td class="py-2 pr-3">Viewer</td>
-									<td class="py-2 pr-3">Read</td>
-									<td class="py-2 pr-3">Read</td>
-									<td class="py-2">—</td>
-								</tr>
-								<tr class="border-secondary/50 border-b">
-									<td class="py-2 pr-3">Member</td>
-									<td class="py-2 pr-3">Read/Write</td>
-									<td class="py-2 pr-3">Read</td>
-									<td class="py-2">—</td>
-								</tr>
-								<tr class="border-secondary/50 border-b">
-									<td class="py-2 pr-3">Admin</td>
-									<td class="py-2 pr-3">Read/Write</td>
-									<td class="py-2 pr-3">Read/Write</td>
-									<td class="py-2">Read/Write (Member, Viewer)</td>
-								</tr>
-								<tr>
-									<td class="py-2 pr-3">Owner</td>
-									<td class="py-2 pr-3">Read/Write</td>
-									<td class="py-2 pr-3">Read/Write</td>
-									<td class="py-2">Read/Write (all levels)</td>
-								</tr>
-							</tbody>
-						</table>
-						<p class="mt-3 text-xs italic">
-							Network resources: hosts, subnets, services, groups. Org settings (name, billing)
-							require user session and are not accessible via API keys.
-						</p>
-					</div>
-				</details>
+				<InlineSuccess
+					dismissableKey="share-integration"
+					title="Share your integration with the community!"
+					body="Creating an integration that you think others might benefit from? Scanopy will be adding an integration library in an upcoming release. Go to the <a class='underline hover:no-underline' target='_blank' href='https://github.com/scanopy/integrations'>Scanopy integrations GitHub</a> and create a PR to get started."
+				></InlineSuccess>
 
 				<!-- Key Details Section -->
 				<div class="space-y-4">
-					<h3 class="text-primary text-lg font-medium">Key Details</h3>
+					<h3 class="text-primary text-lg font-medium">{m.common_keyDetails()}</h3>
 
 					<form.Field
 						name="name"
@@ -234,11 +195,11 @@
 					>
 						{#snippet children(field)}
 							<TextInput
-								label="Name"
+								label={m.common_name()}
 								id="name"
 								{field}
-								placeholder="e.g., CI/CD Pipeline, Terraform, Local Development"
-								helpText="A friendly name to help you identify this key"
+								placeholder={m.userApiKeys_namePlaceholder()}
+								helpText={m.common_apiKeyNameHelp()}
 								required
 							/>
 						{/snippet}
@@ -248,8 +209,8 @@
 						{#snippet children(field)}
 							<PermissionSelect
 								{field}
-								label="Permissions"
-								helpText="The maximum permission level this key can have (cannot exceed your own)"
+								label={m.common_permissions()}
+								helpText={m.userApiKeys_permissionsHelp()}
 								context="api_key"
 							/>
 						{/snippet}
@@ -280,10 +241,10 @@
 					<form.Field name="expires_at">
 						{#snippet children(field)}
 							<DateInput
-								label="Expiration Date (Optional)"
+								label={m.common_expirationDateOptional()}
 								id="expires_at"
 								{field}
-								helpText="Leave empty for keys that never expire"
+								helpText={m.common_expirationNeverHelp()}
 								min={today}
 							/>
 						{/snippet}
@@ -293,8 +254,8 @@
 						{#snippet children(field)}
 							<Checkbox
 								{field}
-								label="Enable API Key"
-								helpText="Manually enable or disable API Key. Will be auto-disabled if used after expiry date."
+								label={m.common_enableApiKey()}
+								helpText={m.userApiKeys_enableHelp()}
 								id="enableApiKey"
 							/>
 						{/snippet}
@@ -328,7 +289,7 @@
 							onclick={handleDelete}
 							class="btn-danger"
 						>
-							{deleting ? 'Deleting...' : 'Delete'}
+							{deleting ? m.common_deleting() : m.common_delete()}
 						</button>
 					{/if}
 				</div>
@@ -339,11 +300,11 @@
 						onclick={handleOnClose}
 						class="btn-secondary"
 					>
-						Close
+						{m.common_close()}
 					</button>
 					{#if isEditing}
 						<button type="submit" disabled={loading || deleting} class="btn-primary">
-							{loading ? 'Saving...' : 'Save'}
+							{loading ? m.common_saving() : m.common_save()}
 						</button>
 					{/if}
 				</div>

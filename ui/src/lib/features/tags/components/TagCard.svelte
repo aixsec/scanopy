@@ -6,6 +6,7 @@
 	import { TagIcon } from 'lucide-svelte';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { permissions } from '$lib/shared/stores/metadata';
+	import * as m from '$lib/paraglide/messages';
 
 	let {
 		tag,
@@ -38,11 +39,11 @@
 		Icon: TagIcon,
 		fields: [
 			{
-				label: 'Description',
+				label: m.common_description(),
 				value: tag.description
 			},
 			{
-				label: 'Color',
+				label: m.common_color(),
 				value: [
 					{
 						id: 'color',
@@ -56,13 +57,13 @@
 			...(canManageNetworks
 				? [
 						{
-							label: 'Delete',
+							label: m.common_delete(),
 							icon: Trash2,
 							class: 'btn-icon-danger',
 							onClick: () => onDelete(tag)
 						},
 						{
-							label: 'Edit',
+							label: m.common_edit(),
 							icon: Edit,
 							onClick: () => onEdit(tag)
 						}

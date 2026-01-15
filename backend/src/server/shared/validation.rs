@@ -1,4 +1,7 @@
-use crate::server::shared::types::api::ApiError;
+use crate::server::{
+    networks::r#impl::Network, organizations::r#impl::base::Organization,
+    shared::types::api::ApiError,
+};
 use uuid::Uuid;
 
 /// Validates that a user has access to a network.
@@ -6,15 +9,12 @@ use uuid::Uuid;
 pub fn validate_network_access(
     network_id: Option<Uuid>,
     user_network_ids: &[Uuid],
-    action: &str,
+    _action: &str,
 ) -> Result<(), ApiError> {
     if let Some(network_id) = network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::unauthorized(format!(
-            "You aren't allowed to {} entities on this network",
-            action
-        )));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     Ok(())
 }
@@ -24,15 +24,14 @@ pub fn validate_network_access(
 pub fn validate_organization_access(
     entity_organization_id: Option<Uuid>,
     user_organization_id: Uuid,
-    action: &str,
+    _action: &str,
 ) -> Result<(), ApiError> {
     if let Some(organization_id) = entity_organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::unauthorized(format!(
-            "You aren't allowed to {} entities for this organization",
-            action
-        )));
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
+        ));
     }
     Ok(())
 }
@@ -88,15 +87,13 @@ pub fn validate_update_access(
     if let Some(network_id) = existing_network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::unauthorized(
-            "You don't have access to this entity".to_string(),
-        ));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     if let Some(organization_id) = existing_organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::unauthorized(
-            "You don't have access to this entity".to_string(),
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
         ));
     }
 
@@ -104,15 +101,13 @@ pub fn validate_update_access(
     if let Some(network_id) = new_network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::unauthorized(
-            "You can't move this entity to a network you don't have access to".to_string(),
-        ));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     if let Some(organization_id) = new_organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::unauthorized(
-            "You can't move this entity to a different organization".to_string(),
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
         ));
     }
 
@@ -130,15 +125,13 @@ pub fn validate_delete_access(
     if let Some(network_id) = network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::unauthorized(
-            "You don't have access to delete this entity".to_string(),
-        ));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     if let Some(organization_id) = organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::unauthorized(
-            "You don't have access to delete this entity".to_string(),
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
         ));
     }
     Ok(())
@@ -155,15 +148,13 @@ pub fn validate_bulk_delete_access(
     if let Some(network_id) = network_id
         && !user_network_ids.contains(&network_id)
     {
-        return Err(ApiError::unauthorized(
-            "You don't have access to delete one or more of these entities".to_string(),
-        ));
+        return Err(ApiError::entity_access_denied::<Network>(network_id));
     }
     if let Some(organization_id) = organization_id
         && organization_id != user_organization_id
     {
-        return Err(ApiError::unauthorized(
-            "You don't have access to delete one or more of these entities".to_string(),
+        return Err(ApiError::entity_access_denied::<Organization>(
+            organization_id,
         ));
     }
     Ok(())

@@ -242,7 +242,15 @@ pub async fn rate_limit_middleware(
         }
 
         let check_result = match entity {
-            Some(AuthenticatedEntity::User { user_id, .. }) => check_user(user_id),
+            Some(AuthenticatedEntity::User { user_id, .. }) => {
+                // Shared user account, rely on IP limiting
+                use crate::server::organizations::handlers::DEMO_USER_ID;
+                if user_id == DEMO_USER_ID {
+                    check_anonymous(ip)
+                } else {
+                    check_user(user_id)
+                }
+            }
             Some(AuthenticatedEntity::ApiKey { user_id, .. }) => check_user(user_id),
             Some(AuthenticatedEntity::ExternalService { .. }) => check_external_service(ip),
             _ => check_anonymous(ip),

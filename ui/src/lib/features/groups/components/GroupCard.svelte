@@ -7,6 +7,7 @@
 	import { toColor } from '$lib/shared/utils/styling';
 	import { serviceDefinitions } from '$lib/shared/stores/metadata';
 	import TagPickerInline from '$lib/features/tags/components/TagPickerInline.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	// Queries
 	const servicesQuery = useServicesQuery();
@@ -65,11 +66,11 @@
 		Icon: groupTypes.getIconComponent(group.group_type),
 		fields: [
 			{
-				label: 'Description',
+				label: m.common_description(),
 				value: group.description
 			},
 			{
-				label: 'Group Type',
+				label: m.groups_groupType(),
 				value: [
 					{
 						id: 'type',
@@ -77,10 +78,10 @@
 						color: groupTypes.getColorString(group.group_type)
 					}
 				],
-				emptyText: 'No type specified'
+				emptyText: m.common_noTypeSpecified()
 			},
 			{
-				label: 'Color',
+				label: m.common_color(),
 				value: [
 					{
 						id: 'color',
@@ -88,10 +89,10 @@
 						color: group.color
 					}
 				],
-				emptyText: 'No type specified'
+				emptyText: m.common_noTypeSpecified()
 			},
 			{
-				label: 'Edge Style',
+				label: m.groups_edgeStyleLabel(),
 				value: [
 					{
 						id: 'type',
@@ -99,10 +100,10 @@
 						color: toColor('gray')
 					}
 				],
-				emptyText: 'No type specified'
+				emptyText: m.common_noTypeSpecified()
 			},
 			{
-				label: 'Services',
+				label: m.common_services(),
 				value: groupServiceLabels.map(({ id, label }, i) => {
 					return {
 						id: id + i,
@@ -110,30 +111,30 @@
 						color: entities.getColorString('Service')
 					};
 				}),
-				emptyText: isServicesLoading ? 'Loading...' : 'No services in group'
+				emptyText: isServicesLoading ? m.groups_loadingServices() : m.groups_noServicesInGroup()
 			},
-			{ label: 'Tags', snippet: tagsSnippet }
+			{ label: m.common_tags(), snippet: tagsSnippet }
 		],
 
 		actions: [
 			...(onDelete
 				? [
 						{
-							label: 'Delete',
+							label: m.common_delete(),
 							icon: Trash2,
 							class: 'btn-icon-danger',
 							onClick: () => onDelete(group)
 						}
 					]
 				: []),
-			...(onEdit ? [{ label: 'Edit', icon: Edit, onClick: () => onEdit(group) }] : [])
+			...(onEdit ? [{ label: m.common_edit(), icon: Edit, onClick: () => onEdit(group) }] : [])
 		]
 	});
 </script>
 
 {#snippet tagsSnippet()}
 	<div class="flex items-center gap-2">
-		<span class="text-secondary text-sm">Tags:</span>
+		<span class="text-secondary text-sm">{m.common_tags()}:</span>
 		<TagPickerInline selectedTagIds={group.tags} entityId={group.id} entityType="Group" />
 	</div>
 {/snippet}

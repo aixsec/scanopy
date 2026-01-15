@@ -7,6 +7,7 @@
 	import type { OrganizationInvite } from '$lib/features/organizations/types';
 	import { useUsersQuery } from '$lib/features/users/queries';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
+	import * as m from '$lib/paraglide/messages';
 
 	let { invite, viewMode }: { invite: OrganizationInvite; viewMode: 'card' | 'list' } = $props();
 
@@ -22,7 +23,7 @@
 	const revokeInviteMutation = useRevokeInviteMutation();
 
 	function handleRevokeInvite() {
-		if (confirm(`Are you sure you want to revoke this invite URL?`)) {
+		if (confirm(m.invites_confirmRevoke())) {
 			revokeInviteMutation.mutate(invite.id);
 		}
 	}
@@ -37,28 +38,28 @@
 
 	// Build card data
 	let cardData = $derived({
-		title: 'Pending Invite',
+		title: m.invites_pendingInvite(),
 		iconColor: entities.getColorHelper('User').icon,
 		Icon: UserPlus,
 		fields: [
 			{
-				label: 'URL',
+				label: m.common_url(),
 				value: formatInviteUrl(invite)
 			},
 			{
-				label: 'Permissions',
+				label: m.common_permissions(),
 				value: invite.permissions
 			},
 			{
-				label: 'Created By',
-				value: usersData.find((u) => u.id == invite.created_by)?.email || 'Unknown User'
+				label: m.invites_createdBy(),
+				value: usersData.find((u) => u.id == invite.created_by)?.email || m.invites_unknownUser()
 			},
 			{
-				label: 'Sent To',
-				value: invite.send_to ? invite.send_to : 'N/A'
+				label: m.invites_sentTo(),
+				value: invite.send_to ? invite.send_to : m.common_notApplicable()
 			},
 			{
-				label: 'Expires',
+				label: m.common_expires(),
 				value: formatTimestamp(invite.expires_at)
 			}
 		],
@@ -66,7 +67,7 @@
 			...(canManage
 				? [
 						{
-							label: 'Revoke',
+							label: m.common_revoke(),
 							icon: UserX,
 							class: 'btn-icon-danger',
 							onClick: () => handleRevokeInvite()

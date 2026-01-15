@@ -6,6 +6,7 @@
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { billingPlans } from '$lib/shared/stores/metadata';
 	import { isExporting } from '../interactions';
+	import * as m from '$lib/paraglide/messages';
 
 	const { getNodes, getEdges, getViewport, setViewport } = useSvelteFlow();
 
@@ -26,7 +27,7 @@
 		link.download = `scanopy-topology-${new Date().toISOString().split('T')[0]}.png`;
 		link.href = dataUrl;
 		link.click();
-		pushSuccess('Export complete! Check your downloads folder.');
+		pushSuccess(m.topology_exportComplete());
 	}
 
 	function getAbsolutePosition(node: Node, nodes: Node[]) {
@@ -47,7 +48,7 @@
 		const edges = getEdges();
 
 		if (nodes.length === 0) {
-			pushError('No nodes to export');
+			pushError(m.topology_noNodesToExport());
 			return;
 		}
 
@@ -55,7 +56,7 @@
 		const flowElement = document.querySelector('.svelte-flow') as HTMLElement;
 
 		if (!flowElement) {
-			pushError('Flow element not found');
+			pushError(m.topology_flowNotFound());
 			return;
 		}
 
@@ -187,7 +188,7 @@
 			`;
 
 			const text = document.createElement('span');
-			text.textContent = 'Created using scanopy.net';
+			text.textContent = m.topology_createdUsing();
 
 			watermark.appendChild(logo);
 			watermark.appendChild(text);
@@ -215,7 +216,7 @@
 			downloadImage(dataUrl);
 		} catch (err) {
 			console.error('Export failed:', err);
-			pushError('Export failed');
+			pushError(m.topology_exportFailed());
 		} finally {
 			isExporting.set(false);
 			watermark.remove();

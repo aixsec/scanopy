@@ -2,33 +2,41 @@
 	import { createColorHelper, AVAILABLE_COLORS } from '$lib/shared/utils/styling';
 	import type { Group } from '../../types/base';
 	import { Edit } from 'lucide-svelte';
+	import * as m from '$lib/paraglide/messages';
 
-	export let formData: Group;
-	export let collapsed: boolean = false;
-	export let editable: boolean = true;
+	let {
+		formData = $bindable(),
+		collapsed = $bindable(false),
+		editable = true
+	}: {
+		formData: Group;
+		collapsed?: boolean;
+		editable?: boolean;
+	} = $props();
 
-	const edgeStyleOptions: Array<{
-		value: 'Straight' | 'SmoothStep' | 'Step' | 'Bezier' | 'SimpleBezier';
-		label: string;
-	}> = [
-		{ value: 'Straight', label: 'Straight' },
-		{ value: 'SmoothStep', label: 'Smooth Step' },
-		{ value: 'Step', label: 'Step' },
-		{ value: 'Bezier', label: 'Bezier' },
-		{ value: 'SimpleBezier', label: 'Simple Bezier' }
-	];
+	let edgeStyleOptions = $derived([
+		{ value: 'Straight' as const, label: m.common_straight() },
+		{ value: 'SmoothStep' as const, label: m.groups_smoothStep() },
+		{ value: 'Step' as const, label: m.common_step() },
+		{ value: 'Bezier' as const, label: m.common_bezier() },
+		{ value: 'SimpleBezier' as const, label: m.groups_simpleBezier() }
+	]);
 
 	// Ensure formData has default values if not set
-	$: if (!formData.color) {
-		formData.color = 'Blue';
-	}
-	$: if (!formData.edge_style) {
-		formData.edge_style = 'SmoothStep';
-	}
+	$effect(() => {
+		if (!formData.color) {
+			formData.color = 'Blue';
+		}
+		if (!formData.edge_style) {
+			formData.edge_style = 'SmoothStep';
+		}
+	});
 
-	$: selectedColorHelper = createColorHelper(formData.color);
-	$: selectedEdgeStyleLabel =
-		edgeStyleOptions.find((opt) => opt.value === formData.edge_style)?.label || 'Smooth Step';
+	let selectedColorHelper = $derived(createColorHelper(formData.color));
+	let selectedEdgeStyleLabel = $derived(
+		edgeStyleOptions.find((opt) => opt.value === formData.edge_style)?.label ||
+			m.groups_smoothStep()
+	);
 </script>
 
 {#if collapsed}
@@ -55,7 +63,7 @@
 			onclick={() => (editable ? (collapsed = false) : {})}
 			class="btn-icon"
 			disabled={!editable}
-			aria-label="Edit edge style"
+			aria-label={m.groups_editEdgeStyle()}
 		>
 			<Edit size={16} />
 		</button>
@@ -65,16 +73,16 @@
 	<div class="space-y-6">
 		<!-- Header with collapse button -->
 		<div class="flex items-center justify-between">
-			<div class="block text-sm font-medium text-gray-200">Edit Edge Style</div>
+			<div class="block text-sm font-medium text-gray-200">{m.groups_editEdgeStyle()}</div>
 			<button type="button" onclick={() => (collapsed = true)} class="btn-secondary text-xs">
-				Done
+				{m.common_done()}
 			</button>
 		</div>
 
 		<!-- Edge Color Section -->
 		<div class="space-y-3">
-			<div class="block text-sm font-medium text-gray-200">Edge Color</div>
-			<p class="text-xs text-gray-400">Choose the color for edges in this group</p>
+			<div class="block text-sm font-medium text-gray-200">{m.groups_edgeColor()}</div>
+			<p class="text-xs text-gray-400">{m.groups_edgeColorHelp()}</p>
 
 			<div class="grid grid-cols-7 gap-2">
 				{#each AVAILABLE_COLORS as color (color)}
@@ -114,8 +122,8 @@
 
 		<!-- Edge Style Section -->
 		<div class="space-y-3">
-			<div class="block text-sm font-medium text-gray-200">Edge Style</div>
-			<p class="text-xs text-gray-400">Choose how edges are drawn between services</p>
+			<div class="block text-sm font-medium text-gray-200">{m.groups_edgeStyleLabel()}</div>
+			<p class="text-xs text-gray-400">{m.groups_edgeStyleHelp()}</p>
 
 			<div class="space-y-2">
 				{#each edgeStyleOptions as option (option.value)}

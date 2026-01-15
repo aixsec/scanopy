@@ -18,6 +18,7 @@
 	import { useHostsQuery } from '$lib/features/hosts/queries';
 	import type { TabProps } from '$lib/shared/types';
 	import type { components } from '$lib/api/schema';
+	import * as m from '$lib/paraglide/messages';
 
 	type DaemonOrderField = components['schemas']['DaemonOrderField'];
 
@@ -44,7 +45,7 @@
 	let daemon = $state<Daemon | null>(null);
 
 	function handleDeleteDaemon(daemon: Daemon) {
-		if (confirm(`Are you sure you want to delete daemon @"${daemon.name}"?`)) {
+		if (confirm(m.daemons_confirmDelete({ name: daemon.name }))) {
 			deleteDaemonMutation.mutate(daemon.id);
 		}
 	}
@@ -60,7 +61,7 @@
 	}
 
 	async function handleBulkDelete(ids: string[]) {
-		if (confirm(`Are you sure you want to delete ${ids.length} Daemons?`)) {
+		if (confirm(m.daemons_confirmBulkDelete({ count: ids.length }))) {
 			await bulkDeleteDaemonsMutation.mutateAsync(ids);
 		}
 	}
@@ -74,23 +75,23 @@
 	let daemonFields = $derived(
 		defineFields<Daemon, DaemonOrderField>(
 			{
-				name: { label: 'Name', type: 'string', searchable: true },
+				name: { label: m.common_name(), type: 'string', searchable: true },
 				network_id: {
-					label: 'Network',
+					label: m.common_network(),
 					type: 'string',
 					filterable: true,
 					groupable: true,
 					getValue: (item) =>
-						networksData.find((n) => n.id == item.network_id)?.name || 'Unknown Network'
+						networksData.find((n) => n.id == item.network_id)?.name || m.common_unknownNetwork()
 				},
-				last_seen: { label: 'Last Seen', type: 'date' },
-				created_at: { label: 'Created', type: 'date' },
-				updated_at: { label: 'Updated', type: 'date' }
+				last_seen: { label: m.daemons_lastSeen(), type: 'date' },
+				created_at: { label: m.common_created(), type: 'date' },
+				updated_at: { label: m.common_updated(), type: 'date' }
 			},
 			[
 				{
 					key: 'tags',
-					label: 'Tags',
+					label: m.common_tags(),
 					type: 'array',
 					searchable: true,
 					filterable: true,
@@ -106,11 +107,11 @@
 
 <div class="space-y-6">
 	<!-- Header -->
-	<TabHeader title="Daemons">
+	<TabHeader title={m.common_daemons()}>
 		<svelte:fragment slot="actions">
 			{#if !isReadOnly}
 				<button class="btn-primary flex items-center" onclick={handleCreateDaemon}
-					><Plus class="h-5 w-5" />Create Daemon</button
+					><Plus class="h-5 w-5" />{m.common_create()}</button
 				>
 			{/if}
 		</svelte:fragment>
@@ -122,10 +123,10 @@
 	{:else if daemonsData.length === 0}
 		<!-- Empty state -->
 		<EmptyState
-			title="No daemons configured yet"
+			title={m.daemons_noDaemonsYet()}
 			subtitle=""
 			onClick={handleCreateDaemon}
-			cta="Create your first daemon"
+			cta={m.common_create()}
 		/>
 	{:else}
 		<DataControls
