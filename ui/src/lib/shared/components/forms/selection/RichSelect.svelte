@@ -4,7 +4,12 @@
 	import type { EntityDisplayComponent } from './types';
 	import { tick, onMount } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
-	import * as m from '$lib/paraglide/messages';
+	import {
+		common_noOptionsAvailable,
+		common_selectOption,
+		common_typeToFilter,
+		common_noOptionsMatch
+	} from '$lib/paraglide/messages';
 
 	export let label: string = '';
 	export let selectedValue: string | null = '';
@@ -221,8 +226,8 @@
 			{:else}
 				<span class="text-secondary"
 					>{options.length == 0
-						? m.common_noOptionsAvailable()
-						: (placeholder ?? m.common_selectOption())}</span
+						? common_noOptionsAvailable()
+						: (placeholder ?? common_selectOption())}</span
 				>
 			{/if}
 		</div>
@@ -256,7 +261,7 @@
 					bind:this={inputElement}
 					bind:value={filterText}
 					type="text"
-					placeholder={m.common_typeToFilter()}
+					placeholder={common_typeToFilter()}
 					class="text-primary w-full rounded border border-gray-600 bg-gray-800 px-2 py-1 text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
 					on:keydown={handleInputKeydown}
 					on:click|stopPropagation
@@ -268,7 +273,7 @@
 		<div class="max-h-80 overflow-y-auto">
 			{#if groupedOptions.length === 0 || groupedOptions.every((group) => group.options.length === 0)}
 				<div class="text-tertiary px-3 py-4 text-center text-sm">
-					{m.common_noOptionsMatch({ filterText })}
+					{common_noOptionsMatch({ filterText })}
 				</div>
 			{:else}
 				{#each groupedOptions as group, groupIndex (group.category ?? '__ungrouped__')}

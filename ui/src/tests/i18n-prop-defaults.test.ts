@@ -22,24 +22,28 @@ function findFilesRecursively(dir: string, extensions: string[]): string[] {
 }
 
 describe('i18n prop defaults', () => {
-	it('should not use m.* calls directly in export let default values', () => {
-		// This pattern breaks in production builds due to Svelte 5 + bundler tree-shaking.
-		// The @__NO_SIDE_EFFECTS__ annotation on paraglide message functions causes the
-		// bundler to remove these calls when used only as default values, resulting in
-		// "(void 0) is not a function" errors at runtime.
+	it('should not use namespace imports for paraglide messages in Svelte files', () => {
+		// Namespace imports (import * as m from '$lib/paraglide/messages') break in
+		// production builds due to Svelte 5 + Vite bundler tree-shaking.
 		//
-		// BAD:  export let message: string = m.common_loading();
-		// GOOD: export let message: string | undefined = undefined;
-		//       $: displayMessage = message ?? m.common_loading();
+		// The @__NO_SIDE_EFFECTS__ annotation on paraglide message functions causes the
+		// bundler to aggressively tree-shake m.function() calls, even in templates,
+		// resulting in "(void 0) is not a function" errors at runtime.
+		//
+		// BAD:  import * as m from '$lib/paraglide/messages';
+		//       {message ?? m.common_loading()}
+		//
+		// GOOD: import { common_loading } from '$lib/paraglide/messages';
+		//       {message ?? common_loading()}
 
 		const srcPath = path.resolve(__dirname, '..');
 		const svelteFiles = findFilesRecursively(srcPath, ['.svelte']);
 
-		// Pattern: export let <name>: <type> = m.<function>(
-		// This catches direct message function calls in prop defaults
-		const badPattern = /export\s+let\s+(\w+)\s*:\s*[^=]+=\s*m\.(\w+)\s*\(/g;
+		// Pattern: import * as <name> from '$lib/paraglide/messages'
+		const namespaceImportPattern =
+			/import\s+\*\s+as\s+(\w+)\s+from\s+['"]\$lib\/paraglide\/messages['"]/;
 
-		const violations: { file: string; prop: string; messageFunc: string; line: number }[] = [];
+		const violations: { file: string; alias: string; line: number }[] = [];
 
 		for (const file of svelteFiles) {
 			const content = fs.readFileSync(file, 'utf8');
@@ -47,13 +51,12 @@ describe('i18n prop defaults', () => {
 
 			for (let i = 0; i < lines.length; i++) {
 				const line = lines[i];
-				const matches = [...line.matchAll(badPattern)];
+				const match = line.match(namespaceImportPattern);
 
-				for (const match of matches) {
+				if (match) {
 					violations.push({
 						file: path.relative(srcPath, file),
-						prop: match[1],
-						messageFunc: match[2],
+						alias: match[1],
 						line: i + 1
 					});
 				}
@@ -62,17 +65,15 @@ describe('i18n prop defaults', () => {
 
 		if (violations.length > 0) {
 			const lines = violations.map(
-				(v) => `  - ${v.file}:${v.line}\n    prop "${v.prop}" uses m.${v.messageFunc}() as default`
+				(v) =>
+					`  - ${v.file}:${v.line}\n    uses "import * as ${v.alias} from '$lib/paraglide/messages'"`
 			);
-			const message = `Found ${violations.length} Svelte props using m.* calls as default values:
+			const message = `Found ${violations.length} Svelte files using namespace imports for paraglide messages:
 
 ${lines.join('\n')}
 
-This pattern breaks in production builds. Instead, use:
-  export let prop: string | undefined = undefined;
-  $: displayProp = prop ?? m.message_key();
-
-Or handle the default in the template with ?? operator.`;
+This pattern breaks in production builds due to tree-shaking. Instead, use named imports:
+  import { common_loading, common_save } from '$lib/paraglide/messages';`;
 			expect.fail(message);
 		}
 	});

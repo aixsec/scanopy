@@ -1,7 +1,12 @@
 <script lang="ts">
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import { AlertTriangle } from 'lucide-svelte';
-	import * as m from '$lib/paraglide/messages';
+	import {
+		common_confirmAction,
+		common_areYouSure,
+		common_confirm,
+		common_cancel
+	} from '$lib/paraglide/messages';
 
 	export let isOpen: boolean = false;
 	export let title: string | undefined = undefined;
@@ -13,10 +18,10 @@
 	export let onConfirm: () => void;
 	export let onCancel: () => void;
 
-	$: resolvedTitle = title ?? m.common_confirmAction();
-	$: resolvedMessage = message ?? m.common_areYouSure();
-	$: resolvedConfirmLabel = confirmLabel ?? m.common_confirm();
-	$: resolvedCancelLabel = cancelLabel ?? m.common_cancel();
+	$: resolvedTitle = title ?? common_confirmAction();
+	$: resolvedMessage = message ?? common_areYouSure();
+	$: resolvedConfirmLabel = confirmLabel ?? common_confirm();
+	$: resolvedCancelLabel = cancelLabel ?? common_cancel();
 
 	const variantClasses = {
 		danger: 'bg-red-900/20 border-red-600 text-red-400',
