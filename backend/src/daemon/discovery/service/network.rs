@@ -5,7 +5,11 @@ use crate::daemon::discovery::types::base::{DiscoveryCriticalError, DiscoverySes
 use crate::daemon::utils::arp::{self, ArpScanResult};
 use crate::daemon::utils::base::ConcurrentPipelineOps;
 use crate::daemon::utils::scanner::{can_arp_scan, scan_endpoints, scan_tcp_ports, scan_udp_ports};
-use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
+use crate::daemon::utils::snmp::{self, IfTableEntry};
+use crate::server::discovery::r#impl::types::{
+    DiscoveryType, HostNamingFallback, SnmpCredentialMapping, SnmpQueryCredential,
+};
+use crate::server::if_entries::r#impl::base::{IfAdminStatus, IfEntry, IfEntryBase, IfOperStatus};
 use crate::server::interfaces::r#impl::base::{Interface, InterfaceBase};
 use crate::server::ports::r#impl::base::PortType;
 use crate::server::services::r#impl::base::{Service, ServiceMatchBaselineParams};
@@ -52,13 +56,19 @@ const PROGRESS_GRACE_PHASE: u8 = 5; // 95-100%: Grace period
 pub struct NetworkScanDiscovery {
     subnet_ids: Option<Vec<Uuid>>,
     host_naming_fallback: HostNamingFallback,
+    snmp_credentials: Option<SnmpCredentialMapping>,
 }
 
 impl NetworkScanDiscovery {
-    pub fn new(subnet_ids: Option<Vec<Uuid>>, host_naming_fallback: HostNamingFallback) -> Self {
+    pub fn new(
+        subnet_ids: Option<Vec<Uuid>>,
+        host_naming_fallback: HostNamingFallback,
+        snmp_credentials: Option<SnmpCredentialMapping>,
+    ) -> Self {
         Self {
             subnet_ids,
             host_naming_fallback,
+            snmp_credentials,
         }
     }
 }
@@ -73,6 +83,8 @@ pub struct DeepScanParams<'a> {
     gateway_ips: &'a [IpAddr],
     /// Optional counter for batch-level progress tracking
     batches_completed: Option<&'a Arc<AtomicUsize>>,
+    /// SNMP credential for this host (from default or IP-specific override)
+    snmp_credential: Option<SnmpQueryCredential>,
 }
 
 impl CreatesDiscoveredEntities for DiscoveryRunner<NetworkScanDiscovery> {}
@@ -83,6 +95,7 @@ impl RunsDiscovery for DiscoveryRunner<NetworkScanDiscovery> {
         DiscoveryType::Network {
             subnet_ids: self.domain.subnet_ids.clone(),
             host_naming_fallback: self.domain.host_naming_fallback,
+            snmp_credentials: self.domain.snmp_credentials.clone(),
         }
     }
 
@@ -598,6 +611,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                 let batches_completed = batches_completed.clone();
 
                                 total_batches.fetch_add(batches_per_host, Ordering::Relaxed);
+                                let snmp_credential = self.get_snmp_credential_for_ip(ip);
                                 pending_scans.push(Box::pin(async move {
                                     let result = self
                                         .deep_scan_host(DeepScanParams {
@@ -609,6 +623,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                             port_scan_batch_size: ports_per_host_batch,
                                             gateway_ips: &gateway_ips,
                                             batches_completed: Some(&batches_completed),
+                                            snmp_credential,
                                         })
                                         .await;
 
@@ -654,6 +669,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                         let hosts_scanned = hosts_scanned.clone();
                         let last_activity = last_activity.clone();
                         let batches_completed = batches_completed.clone();
+                        let snmp_credential = self.get_snmp_credential_for_ip(ip);
 
                         pending_scans.push(Box::pin(async move {
                             let result = self
@@ -666,6 +682,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                     port_scan_batch_size: ports_per_host_batch,
                                     gateway_ips: &gateway_ips,
                                     batches_completed: Some(&batches_completed),
+                                    snmp_credential,
                                 })
                                 .await;
 
@@ -796,6 +813,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             port_scan_batch_size,
             gateway_ips,
             batches_completed,
+            snmp_credential,
         } = params;
 
         if cancel.is_cancelled() {
@@ -811,6 +829,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             ip = %ip,
             phase1_ports = phase1_ports.len(),
             remaining_ports = remaining_tcp_ports.len(),
+            snmp_enabled = snmp_credential.is_some(),
             "Starting deep scan"
         );
 
@@ -882,14 +901,91 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             return Err(Error::msg("Discovery was cancelled"));
         }
 
+        // SNMP polling - gather system info, interface table, and neighbor discovery
+        let (snmp_system_info, snmp_if_entries, lldp_neighbors, cdp_neighbors) =
+            if let Some(credential) = &snmp_credential {
+                match snmp::query_system_info(ip, credential).await {
+                    Ok(system_info) => {
+                        tracing::debug!(
+                            ip = %ip,
+                            sys_name = ?system_info.sys_name,
+                            "SNMP system info retrieved"
+                        );
+
+                        // Walk interface table
+                        let if_entries = match snmp::walk_if_table(ip, credential).await {
+                            Ok(entries) => {
+                                tracing::debug!(
+                                    ip = %ip,
+                                    if_count = entries.len(),
+                                    "SNMP ifTable walked"
+                                );
+                                entries
+                            }
+                            Err(e) => {
+                                tracing::debug!(ip = %ip, error = %e, "SNMP ifTable walk failed");
+                                Vec::new()
+                            }
+                        };
+
+                        // Query LLDP neighbors
+                        let lldp = match snmp::query_lldp_neighbors(ip, credential).await {
+                            Ok(neighbors) => {
+                                tracing::debug!(
+                                    ip = %ip,
+                                    count = neighbors.len(),
+                                    "LLDP neighbors discovered"
+                                );
+                                neighbors
+                            }
+                            Err(e) => {
+                                tracing::debug!(ip = %ip, error = %e, "LLDP query failed");
+                                Vec::new()
+                            }
+                        };
+
+                        // Query CDP neighbors (Cisco devices)
+                        let cdp = match snmp::query_cdp_neighbors(ip, credential).await {
+                            Ok(neighbors) => {
+                                tracing::debug!(
+                                    ip = %ip,
+                                    count = neighbors.len(),
+                                    "CDP neighbors discovered"
+                                );
+                                neighbors
+                            }
+                            Err(e) => {
+                                tracing::debug!(ip = %ip, error = %e, "CDP query failed");
+                                Vec::new()
+                            }
+                        };
+
+                        (Some(system_info), if_entries, lldp, cdp)
+                    }
+                    Err(e) => {
+                        tracing::debug!(ip = %ip, error = %e, "SNMP query failed");
+                        (None, Vec::new(), Vec::new(), Vec::new())
+                    }
+                }
+            } else {
+                (None, Vec::new(), Vec::new(), Vec::new())
+            };
+
         tracing::info!(
             ip = %ip,
             open_ports = open_ports.len(),
             endpoints = endpoint_responses.len(),
+            snmp_interfaces = snmp_if_entries.len(),
             "Deep scan complete"
         );
 
-        let hostname = self.get_hostname_for_ip(ip).await?;
+        // Use SNMP sysName for hostname if DNS lookup fails
+        let dns_hostname = self.get_hostname_for_ip(ip).await?;
+        let hostname = dns_hostname.or_else(|| {
+            snmp_system_info
+                .as_ref()
+                .and_then(|info| info.sys_name.clone())
+        });
 
         let interface = Interface::new(InterfaceBase {
             network_id: subnet.base.network_id,
@@ -897,11 +993,11 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             name: None,
             subnet_id: subnet.id,
             ip_address: ip,
-            mac_address: mac,
+            mac_address: mac, // MAC populated from ARP discovery
             position: 0,
         });
 
-        if let Ok(Some((host, interfaces, ports, services))) = self
+        if let Ok(Some((mut host, interfaces, ports, services))) = self
             .process_host(
                 ServiceMatchBaselineParams {
                     subnet,
@@ -915,12 +1011,38 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             )
             .await
         {
-            let services_count = services.len();
+            // Add SNMP system info to host if available
+            if let Some(ref info) = snmp_system_info {
+                host.base.sys_descr = info.sys_descr.clone();
+                host.base.sys_object_id = info.sys_object_id.clone();
+                host.base.sys_location = info.sys_location.clone();
+                host.base.sys_contact = info.sys_contact.clone();
+            }
 
-            if let Ok(host_response) = self.create_host(host, interfaces, ports, services).await {
+            // Convert SNMP ifTable entries to IfEntry entities with LLDP/CDP data
+            let if_entries: Vec<IfEntry> = snmp_if_entries
+                .into_iter()
+                .map(|entry| {
+                    self.convert_snmp_if_entry(
+                        &entry,
+                        subnet.base.network_id,
+                        &lldp_neighbors,
+                        &cdp_neighbors,
+                    )
+                })
+                .collect();
+
+            let services_count = services.len();
+            let if_entries_count = if_entries.len();
+
+            if let Ok(host_response) = self
+                .create_host(host, interfaces, ports, services, if_entries)
+                .await
+            {
                 tracing::info!(
                     ip = %ip,
                     services = services_count,
+                    if_entries = if_entries_count,
                     "Host created"
                 );
                 return Ok(Some(host_response.to_host()));
@@ -932,6 +1054,75 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         }
 
         Ok(None)
+    }
+
+    /// Convert SNMP ifTable entry to IfEntry entity with LLDP/CDP neighbor data
+    /// Uses Uuid::nil() for host_id as placeholder - server will set correct host_id
+    fn convert_snmp_if_entry(
+        &self,
+        entry: &IfTableEntry,
+        network_id: Uuid,
+        lldp_neighbors: &[snmp::LldpNeighbor],
+        cdp_neighbors: &[snmp::CdpNeighbor],
+    ) -> IfEntry {
+        use crate::server::snmp_credentials::resolution::lldp::{LldpChassisId, LldpPortId};
+
+        // Find LLDP neighbor data for this port (match by local_port_index == if_index)
+        let lldp_neighbor = lldp_neighbors
+            .iter()
+            .find(|n| n.local_port_index == entry.if_index);
+
+        // Find CDP neighbor data for this port
+        let cdp_neighbor = cdp_neighbors
+            .iter()
+            .find(|n| n.local_port_index == entry.if_index);
+
+        // Convert LLDP chassis ID to our enum type
+        // For now, use MacAddress subtype if it looks like a MAC, otherwise LocallyAssigned
+        let lldp_chassis_id = lldp_neighbor.and_then(|n| {
+            n.remote_chassis_id.as_ref().map(|id| {
+                // Check if it looks like a MAC address (xx:xx:xx:xx:xx:xx format)
+                if id.contains(':') && id.len() == 17 {
+                    LldpChassisId::MacAddress(id.clone())
+                } else {
+                    LldpChassisId::LocallyAssigned(id.clone())
+                }
+            })
+        });
+
+        // Convert LLDP port ID to our enum type
+        let lldp_port_id = lldp_neighbor.and_then(|n| {
+            n.remote_port_id
+                .as_ref()
+                .map(|id| LldpPortId::InterfaceName(id.clone()))
+        });
+
+        IfEntry::new(IfEntryBase {
+            host_id: Uuid::nil(), // Placeholder - server will set correct host_id
+            network_id,
+            if_index: entry.if_index,
+            if_descr: entry.if_descr.clone().unwrap_or_default(),
+            if_alias: entry.if_alias.clone(),
+            if_type: entry.if_type.unwrap_or(1), // 1 = "other"
+            speed_bps: entry.if_speed.map(|s| s as i64),
+            admin_status: IfAdminStatus::from(entry.if_admin_status.unwrap_or(1)),
+            oper_status: IfOperStatus::from(entry.if_oper_status.unwrap_or(1)),
+            mac_address: entry.if_phys_address, // MAC from SNMP ifPhysAddress
+            interface_id: None,                 // Linked server-side via MAC matching
+            neighbor: None,                     // Resolved server-side from LLDP/CDP data
+            // LLDP raw data
+            lldp_chassis_id,
+            lldp_port_id,
+            lldp_sys_name: lldp_neighbor.and_then(|n| n.remote_sys_name.clone()),
+            lldp_port_desc: lldp_neighbor.and_then(|n| n.remote_port_desc.clone()),
+            lldp_mgmt_addr: lldp_neighbor.and_then(|n| n.remote_mgmt_addr),
+            lldp_sys_desc: lldp_neighbor.and_then(|n| n.remote_sys_desc.clone()),
+            // CDP raw data
+            cdp_device_id: cdp_neighbor.and_then(|n| n.remote_device_id.clone()),
+            cdp_port_id: cdp_neighbor.and_then(|n| n.remote_port_id.clone()),
+            cdp_platform: cdp_neighbor.and_then(|n| n.remote_platform.clone()),
+            cdp_address: cdp_neighbor.and_then(|n| n.remote_address),
+        })
     }
 
     async fn get_hostname_for_ip(&self, ip: IpAddr) -> Result<Option<String>, Error> {
@@ -996,5 +1187,23 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             .api_client
             .get("/api/v1/subnets", "Failed to get subnets")
             .await
+    }
+
+    /// Get the SNMP credential to use for a given IP address.
+    /// Checks for IP-specific overrides first, then falls back to default.
+    fn get_snmp_credential_for_ip(&self, ip: IpAddr) -> Option<SnmpQueryCredential> {
+        let Some(mapping) = &self.domain.snmp_credentials else {
+            return None;
+        };
+
+        // Check for IP-specific override
+        for override_entry in &mapping.ip_overrides {
+            if override_entry.ip == ip {
+                return Some(override_entry.credential.clone());
+            }
+        }
+
+        // Fall back to default credential
+        mapping.default_credential.clone()
     }
 }

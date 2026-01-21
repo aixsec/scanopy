@@ -27,6 +27,7 @@
 	import UserTab from '$lib/features/users/components/UserTab.svelte';
 	import UserApiKeyTab from '$lib/features/user_api_keys/components/UserApiKeyTab.svelte';
 	import TagTab from '$lib/features/tags/components/TagTab.svelte';
+	import SnmpCredentialsTab from '$lib/features/snmp/components/SnmpCredentialsTab.svelte';
 	import Tag from '$lib/shared/components/data/Tag.svelte';
 	import ShareTab from '$lib/features/shares/components/ShareTab.svelte';
 
@@ -200,6 +201,12 @@
 					label: 'Tags',
 					icon: entities.getIconComponent('Tag'),
 					component: TagTab
+				},
+				{
+					id: 'snmp-credentials',
+					label: 'SNMP Credentials',
+					icon: entities.getIconComponent('SnmpCredential'),
+					component: SnmpCredentialsTab
 				}
 			]
 		},

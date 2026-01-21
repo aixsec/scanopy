@@ -30,13 +30,15 @@
 		form: { Field: any; setFieldValue: any };
 		currentServices?: Service[];
 		onServicesChange?: (services: Service[]) => void;
+		isEditing?: boolean;
 	}
 
 	let {
 		formData = $bindable(),
 		form,
 		currentServices = [],
-		onServicesChange = () => {}
+		onServicesChange = () => {},
+		isEditing = false
 	}: Props = $props();
 
 	// TanStack Query for subnets
@@ -222,6 +224,7 @@
 						{subnet}
 						{index}
 						{form}
+						{isEditing}
 						onChange={(updatedInterface) => handleInterfaceChange(updatedInterface, index)}
 					/>
 				</div>

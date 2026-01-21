@@ -25,7 +25,9 @@ use crate::server::{
     },
     discovery::r#impl::{
         base::{Discovery, DiscoveryBase},
-        types::{DiscoveryType, HostNamingFallback, RunType},
+        types::{
+            DiscoveryType, HostNamingFallback, RunType, SnmpCredentialMapping, SnmpQueryCredential,
+        },
     },
     hosts::r#impl::base::{Host, HostBase},
     shared::{
@@ -396,12 +398,26 @@ async fn register_daemon(
         virtualization: None,
         hidden: false,
         tags: Vec::new(),
+        sys_descr: None,
+        sys_object_id: None,
+        sys_location: None,
+        sys_contact: None,
+        management_url: None,
+        chassis_id: None,
+        snmp_credential_id: None,
     });
 
     let host_response = state
         .services
         .host_service
-        .discover_host(dummy_host, vec![], vec![], vec![], auth.entity.clone())
+        .discover_host(
+            dummy_host,
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            auth.entity.clone(),
+        )
         .await?;
 
     // If user_id is nil (old daemon), fall back to org owner
@@ -530,9 +546,34 @@ async fn register_daemon(
             .await?;
     }
 
+    // Build SNMP credential mapping from network settings if credential is configured
+    let snmp_credentials = if let Some(credential_id) = network.base.snmp_credential_id {
+        // Look up the credential to get the community string
+        if let Ok(Some(credential)) = state
+            .services
+            .snmp_credential_service
+            .get_by_id(&credential_id)
+            .await
+        {
+            use secrecy::ExposeSecret;
+            Some(SnmpCredentialMapping {
+                default_credential: Some(SnmpQueryCredential {
+                    version: credential.base.version,
+                    community: credential.base.community.expose_secret().to_string(),
+                }),
+                ip_overrides: vec![],
+            })
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let network_discovery_type = DiscoveryType::Network {
         subnet_ids: None,
         host_naming_fallback: HostNamingFallback::BestService,
+        snmp_credentials,
     };
 
     let network_discovery = discovery_service

@@ -22,6 +22,7 @@ use crate::server::groups::handlers::GroupOrderField;
 use crate::server::hosts::handlers::HostOrderField;
 use crate::server::services::handlers::ServiceOrderField;
 use crate::server::shared::handlers::query::{OrderDirection, PaginationParams};
+use crate::server::snmp_credentials::handlers::SnmpCredentialOrderField;
 use crate::server::subnets::handlers::SubnetOrderField;
 use crate::server::tags::handlers::TagOrderField;
 
@@ -44,7 +45,8 @@ const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
         TagOrderField,
         GroupOrderField,
         SubnetOrderField,
-        DaemonOrderField
+        DaemonOrderField,
+        SnmpCredentialOrderField
     )),
     info(
         title = "Scanopy API",
@@ -178,6 +180,8 @@ Resources are scoped to your **organization** and **network(s)**:
         (name = "organizations", description = "Manage organization settings."),
         (name = "services", description = "Services running on hosts. Detected or manually added services like databases, web servers, etc."),
         (name = "shares", description = "Shared network views. Create read-only shareable links to your network topology."),
+        (name = "snmp-credentials", description = "SNMP credentials for network device discovery. Manage credentials used to query SNMP-enabled devices."),
+        (name = "if-entries", description = "SNMP interface entries (ifTable). Physical and logical interfaces discovered via SNMP on hosts."),
         (name = "subnets", description = "IP subnets within networks. Define address ranges and organize hosts by subnet."),
         (name = "system", description = "System information endpoints. Version and compatibility checking."),
         (name = "tags", description = "Custom tags for categorization. Apply labels to entities for filtering and organization."),

@@ -68,6 +68,13 @@ impl Storable for Host {
                     source,
                     virtualization,
                     tags: _, // Stored in entity_tags junction table
+                    sys_descr,
+                    sys_object_id,
+                    sys_location,
+                    sys_contact,
+                    management_url,
+                    chassis_id,
+                    snmp_credential_id,
                 },
         } = self.clone();
 
@@ -83,6 +90,13 @@ impl Storable for Host {
                 "hostname",
                 "hidden",
                 "virtualization",
+                "sys_descr",
+                "sys_object_id",
+                "sys_location",
+                "sys_contact",
+                "management_url",
+                "chassis_id",
+                "snmp_credential_id",
             ],
             vec![
                 SqlValue::Uuid(id),
@@ -95,6 +109,13 @@ impl Storable for Host {
                 SqlValue::OptionalString(hostname),
                 SqlValue::Bool(hidden),
                 SqlValue::OptionalHostVirtualization(virtualization),
+                SqlValue::OptionalString(sys_descr),
+                SqlValue::OptionalString(sys_object_id),
+                SqlValue::OptionalString(sys_location),
+                SqlValue::OptionalString(sys_contact),
+                SqlValue::OptionalString(management_url),
+                SqlValue::OptionalString(chassis_id),
+                SqlValue::OptionalUuid(snmp_credential_id),
             ],
         ))
     }
@@ -121,6 +142,13 @@ impl Storable for Host {
                 hidden: row.get("hidden"),
                 virtualization,
                 tags: Vec::new(), // Hydrated from entity_tags junction table
+                sys_descr: row.get("sys_descr"),
+                sys_object_id: row.get("sys_object_id"),
+                sys_location: row.get("sys_location"),
+                sys_contact: row.get("sys_contact"),
+                management_url: row.get("management_url"),
+                chassis_id: row.get("chassis_id"),
+                snmp_credential_id: row.get("snmp_credential_id"),
             },
         })
     }

@@ -24,6 +24,8 @@
 	import { useNetworksQuery } from '$lib/features/networks/queries';
 	import PortsForm from './Ports/PortsForm.svelte';
 	import VirtualizationForm from './Virtualization/VirtualizationForm.svelte';
+	import SnmpForm from './Snmp/SnmpForm.svelte';
+	import IfEntriesForm from './IfEntries/IfEntriesForm.svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { pushError } from '$lib/shared/stores/feedback';
 	import {
@@ -244,6 +246,9 @@
 
 	// Tab management
 	let activeTab = $state('details');
+	// Get network for passing to SNMP form
+	let currentNetwork = $derived(networksData.find((n) => n.id === formData.network_id) ?? null);
+
 	let tabs = $derived([
 		{
 			id: 'details',
@@ -276,6 +281,24 @@
 						label: common_virtualization(),
 						icon: concepts.getIconComponent('Virtualization'),
 						description: hosts_editor_virtualizationDesc()
+					}
+				]
+			: []),
+		// SNMP tab - always shown (users can set credential before discovery)
+		{
+			id: 'snmp',
+			label: 'SNMP',
+			icon: entities.getIconComponent('SnmpCredential'),
+			description: 'SNMP credential and system information'
+		},
+		// IfEntries tab - only show when data exists (populated by discovery)
+		...(formData.if_entries && formData.if_entries.length > 0
+			? [
+					{
+						id: 'if-entries',
+						label: 'SNMP Interfaces',
+						icon: entities.getIconComponent('IfEntry'),
+						description: 'Physical interfaces from SNMP ifTable'
 					}
 				]
 			: [])
@@ -421,6 +444,7 @@
 						<InterfacesForm
 							bind:formData
 							{form}
+							{isEditing}
 							currentServices={formData.services}
 							onServicesChange={(services) => (formData.services = services)}
 						/>
@@ -460,6 +484,24 @@
 							onServiceChange={handleVirtualizationServiceChange}
 							onVirtualizedHostChange={handleVirtualizationHostChange}
 						/>
+					</div>
+				</div>
+			{/if}
+
+			<!-- SNMP Tab -->
+			{#if activeTab === 'snmp'}
+				<div class="h-full">
+					<div class="relative flex-1">
+						<SnmpForm bind:formData {isEditing} network={currentNetwork} />
+					</div>
+				</div>
+			{/if}
+
+			<!-- IfEntries Tab -->
+			{#if activeTab === 'if-entries'}
+				<div class="h-full">
+					<div class="relative flex-1">
+						<IfEntriesForm {formData} />
 					</div>
 				</div>
 			{/if}

@@ -3,21 +3,21 @@
   "exchanges": [
     {
       "method": "POST",
-      "path": "/api/daemons/5f4a0eb6-22e8-4252-a820-def479ca5841/startup",
+      "path": "/api/daemons/1b0ede64-3084-442d-8ed6-6c1d85389243/startup",
       "request_body": {
         "daemon_version": "0.13.6"
       },
       "response_status": 404,
       "response_body": {
         "code": "entity_not_found",
-        "error": "daemon with ID '5f4a0eb6-22e8-4252-a820-def479ca5841' not found",
+        "error": "daemon with ID '1b0ede64-3084-442d-8ed6-6c1d85389243' not found",
         "meta": {
           "api_version": 1,
           "server_version": "0.13.6"
         },
         "params": {
           "entity": "daemon",
-          "id": "5f4a0eb6-22e8-4252-a820-def479ca5841"
+          "id": "1b0ede64-3084-442d-8ed6-6c1d85389243"
         },
         "success": false
       }
@@ -30,10 +30,10 @@
           "has_docker_socket": false,
           "interfaced_subnet_ids": []
         },
-        "daemon_id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
+        "daemon_id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
         "mode": "Push",
         "name": "scanopy-daemon",
-        "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+        "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
         "url": "http://172.25.0.4:60073",
         "user_id": "00000000-0000-0000-0000-000000000000",
         "version": "0.13.6"
@@ -46,20 +46,20 @@
               "has_docker_socket": false,
               "interfaced_subnet_ids": []
             },
-            "created_at": "2026-01-15T18:15:17.013058222Z",
-            "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
-            "id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
-            "last_seen": "2026-01-15T18:15:17.013057847Z",
+            "created_at": "2026-01-21T14:40:46.449500638Z",
+            "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
+            "id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
+            "last_seen": "2026-01-21T14:40:46.449500138Z",
             "mode": "Push",
             "name": "scanopy-daemon",
-            "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+            "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
             "tags": [],
-            "updated_at": "2026-01-15T18:15:17.013058222Z",
+            "updated_at": "2026-01-21T14:40:46.449500638Z",
             "url": "http://172.25.0.4:60073",
-            "user_id": "bc0f082f-e663-4335-821c-b0be37c935ee",
+            "user_id": "d28d75d3-e108-46b6-9f27-ffc589548c88",
             "version": "0.13.6"
           },
-          "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
+          "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
           "server_capabilities": {
             "minimum_daemon_version": "0.12.0",
             "server_version": "0.13.6"
@@ -77,17 +77,17 @@
       "path": "/api/v1/subnets",
       "request_body": {
         "cidr": "172.25.0.0/28",
-        "created_at": "2026-01-15T18:15:17.021545764Z",
+        "created_at": "2026-01-21T14:40:46.464825680Z",
         "description": null,
-        "id": "4bf08837-dbcf-410e-8088-e7fa03f2f271",
+        "id": "eb6de697-000b-4ab8-85ff-c0fd56357fe9",
         "name": "172.25.0.0/28",
-        "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+        "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
         "source": {
           "metadata": [
             {
-              "daemon_id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
-              "date": "2026-01-15T18:15:17.021544472Z",
-              "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
+              "daemon_id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
+              "date": "2026-01-21T14:40:46.464824097Z",
+              "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
               "type": "SelfReport"
             }
           ],
@@ -95,23 +95,23 @@
         },
         "subnet_type": "Lan",
         "tags": [],
-        "updated_at": "2026-01-15T18:15:17.021545764Z"
+        "updated_at": "2026-01-21T14:40:46.464825680Z"
       },
       "response_status": 200,
       "response_body": {
         "data": {
           "cidr": "172.25.0.0/28",
-          "created_at": "2026-01-15T18:15:17.021545764Z",
+          "created_at": "2026-01-21T14:40:46.464825680Z",
           "description": null,
-          "id": "4bf08837-dbcf-410e-8088-e7fa03f2f271",
+          "id": "eb6de697-000b-4ab8-85ff-c0fd56357fe9",
           "name": "172.25.0.0/28",
-          "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+          "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
           "source": {
             "metadata": [
               {
-                "daemon_id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
-                "date": "2026-01-15T18:15:17.021544472Z",
-                "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
+                "daemon_id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
+                "date": "2026-01-21T14:40:46.464824097Z",
+                "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
                 "type": "SelfReport"
               }
             ],
@@ -119,7 +119,7 @@
           },
           "subnet_type": "Lan",
           "tags": [],
-          "updated_at": "2026-01-15T18:15:17.021545764Z"
+          "updated_at": "2026-01-21T14:40:46.464825680Z"
         },
         "meta": {
           "api_version": 1,
@@ -130,11 +130,11 @@
     },
     {
       "method": "POST",
-      "path": "/api/daemons/5f4a0eb6-22e8-4252-a820-def479ca5841/update-capabilities",
+      "path": "/api/daemons/1b0ede64-3084-442d-8ed6-6c1d85389243/update-capabilities",
       "request_body": {
         "has_docker_socket": false,
         "interfaced_subnet_ids": [
-          "4bf08837-dbcf-410e-8088-e7fa03f2f271"
+          "eb6de697-000b-4ab8-85ff-c0fd56357fe9"
         ]
       },
       "response_status": 200,
@@ -152,73 +152,73 @@
       "path": "/api/v1/hosts/discovery",
       "request_body": {
         "host": {
-          "created_at": "2026-01-15T18:15:17.031960555Z",
+          "created_at": "2026-01-21T14:40:46.480380930Z",
           "description": "Scanopy daemon",
           "hidden": false,
-          "hostname": "41ba81f8f316",
-          "id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
-          "name": "41ba81f8f316",
-          "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+          "hostname": "6f6bb3cd4f3a",
+          "id": "4c738865-b185-4ad3-9de5-c16b54792caa",
+          "name": "6f6bb3cd4f3a",
+          "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
           "source": {
             "metadata": [
               {
-                "daemon_id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
-                "date": "2026-01-15T18:15:17.031953305Z",
-                "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
+                "daemon_id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
+                "date": "2026-01-21T14:40:46.480379930Z",
+                "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
                 "type": "SelfReport"
               }
             ],
             "type": "Discovery"
           },
           "tags": [],
-          "updated_at": "2026-01-15T18:15:17.031960555Z",
+          "updated_at": "2026-01-21T14:40:46.480380930Z",
           "virtualization": null
         },
         "interfaces": [
           {
-            "created_at": "2026-01-15T18:15:17.021683722Z",
+            "created_at": "2026-01-21T14:40:46.464950763Z",
             "host_id": "00000000-0000-0000-0000-000000000000",
-            "id": "0567aaba-4f3a-4c2d-bc4a-59836bc96ca1",
+            "id": "6f57deb3-08db-4960-a184-ce2a27e3ccc7",
             "ip_address": "172.25.0.4",
-            "mac_address": "2E:8F:9F:84:83:64",
+            "mac_address": "16:41:B6:F6:6A:C1",
             "name": "eth0",
-            "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+            "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
             "position": 0,
-            "subnet_id": "4bf08837-dbcf-410e-8088-e7fa03f2f271",
-            "updated_at": "2026-01-15T18:15:17.021683722Z"
+            "subnet_id": "eb6de697-000b-4ab8-85ff-c0fd56357fe9",
+            "updated_at": "2026-01-21T14:40:46.464950763Z"
           }
         ],
         "ports": [
           {
-            "created_at": "2026-01-15T18:15:17.031748389Z",
+            "created_at": "2026-01-21T14:40:46.480291555Z",
             "host_id": "00000000-0000-0000-0000-000000000000",
-            "id": "5befbe5a-df6e-4515-aa8a-92b5348df1be",
+            "id": "f3ad83db-adf5-4b8c-80f3-7e244f7c25df",
             "network_id": "00000000-0000-0000-0000-000000000000",
             "number": 60073,
             "protocol": "Tcp",
             "type": "Custom",
-            "updated_at": "2026-01-15T18:15:17.031748389Z"
+            "updated_at": "2026-01-21T14:40:46.480291555Z"
           }
         ],
         "services": [
           {
             "bindings": [
               {
-                "created_at": "2026-01-15T18:15:17.032007639Z",
-                "id": "af6bca1c-e1dc-4dd3-93a8-965b04211fc8",
-                "interface_id": "0567aaba-4f3a-4c2d-bc4a-59836bc96ca1",
+                "created_at": "2026-01-21T14:40:46.480392013Z",
+                "id": "df40b4c7-bf41-4d07-a2bf-520c633af008",
+                "interface_id": "6f57deb3-08db-4960-a184-ce2a27e3ccc7",
                 "network_id": "00000000-0000-0000-0000-000000000000",
-                "port_id": "5befbe5a-df6e-4515-aa8a-92b5348df1be",
+                "port_id": "f3ad83db-adf5-4b8c-80f3-7e244f7c25df",
                 "service_id": "00000000-0000-0000-0000-000000000000",
                 "type": "Port",
-                "updated_at": "2026-01-15T18:15:17.032007639Z"
+                "updated_at": "2026-01-21T14:40:46.480392013Z"
               }
             ],
-            "created_at": "2026-01-15T18:15:17.032014555Z",
-            "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
-            "id": "f414f21a-9ffc-4430-90d3-d9722d4e556d",
+            "created_at": "2026-01-21T14:40:46.480398930Z",
+            "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
+            "id": "1d9114e7-1c17-48a7-a680-f1c79a8890e9",
             "name": "Scanopy Daemon",
-            "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+            "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
             "position": 0,
             "service_definition": "Scanopy Daemon",
             "source": {
@@ -231,16 +231,16 @@
               },
               "metadata": [
                 {
-                  "daemon_id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
-                  "date": "2026-01-15T18:15:17.032010639Z",
-                  "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
+                  "daemon_id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
+                  "date": "2026-01-21T14:40:46.480392972Z",
+                  "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
                   "type": "SelfReport"
                 }
               ],
               "type": "DiscoveryWithMatch"
             },
             "tags": [],
-            "updated_at": "2026-01-15T18:15:17.032014555Z",
+            "updated_at": "2026-01-21T14:40:46.480398930Z",
             "virtualization": null
           }
         ]
@@ -248,58 +248,59 @@
       "response_status": 200,
       "response_body": {
         "data": {
-          "created_at": "2026-01-15T18:15:16.977659Z",
+          "created_at": "2026-01-21T14:40:46.444992Z",
           "description": null,
           "hidden": false,
-          "hostname": "41ba81f8f316",
-          "id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
+          "hostname": "6f6bb3cd4f3a",
+          "id": "4c738865-b185-4ad3-9de5-c16b54792caa",
+          "if_entries": [],
           "interfaces": [
             {
-              "created_at": "2026-01-15T18:15:17.021683722Z",
-              "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
-              "id": "0567aaba-4f3a-4c2d-bc4a-59836bc96ca1",
+              "created_at": "2026-01-21T14:40:46.464950763Z",
+              "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
+              "id": "6f57deb3-08db-4960-a184-ce2a27e3ccc7",
               "ip_address": "172.25.0.4",
-              "mac_address": "2E:8F:9F:84:83:64",
+              "mac_address": "16:41:B6:F6:6A:C1",
               "name": "eth0",
-              "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+              "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
               "position": 0,
-              "subnet_id": "4bf08837-dbcf-410e-8088-e7fa03f2f271",
-              "updated_at": "2026-01-15T18:15:17.021683722Z"
+              "subnet_id": "eb6de697-000b-4ab8-85ff-c0fd56357fe9",
+              "updated_at": "2026-01-21T14:40:46.464950763Z"
             }
           ],
           "name": "scanopy-daemon",
-          "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+          "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
           "ports": [
             {
-              "created_at": "2026-01-15T18:15:17.031748389Z",
-              "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
-              "id": "5befbe5a-df6e-4515-aa8a-92b5348df1be",
-              "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+              "created_at": "2026-01-21T14:40:46.480291555Z",
+              "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
+              "id": "f3ad83db-adf5-4b8c-80f3-7e244f7c25df",
+              "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
               "number": 60073,
               "protocol": "Tcp",
               "type": "Custom",
-              "updated_at": "2026-01-15T18:15:17.031748389Z"
+              "updated_at": "2026-01-21T14:40:46.480291555Z"
             }
           ],
           "services": [
             {
               "bindings": [
                 {
-                  "created_at": "2026-01-15T18:15:17.032007639Z",
-                  "id": "af6bca1c-e1dc-4dd3-93a8-965b04211fc8",
-                  "interface_id": "0567aaba-4f3a-4c2d-bc4a-59836bc96ca1",
-                  "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
-                  "port_id": "5befbe5a-df6e-4515-aa8a-92b5348df1be",
-                  "service_id": "f414f21a-9ffc-4430-90d3-d9722d4e556d",
+                  "created_at": "2026-01-21T14:40:46.480392013Z",
+                  "id": "df40b4c7-bf41-4d07-a2bf-520c633af008",
+                  "interface_id": "6f57deb3-08db-4960-a184-ce2a27e3ccc7",
+                  "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
+                  "port_id": "f3ad83db-adf5-4b8c-80f3-7e244f7c25df",
+                  "service_id": "1d9114e7-1c17-48a7-a680-f1c79a8890e9",
                   "type": "Port",
-                  "updated_at": "2026-01-15T18:15:17.032007639Z"
+                  "updated_at": "2026-01-21T14:40:46.480392013Z"
                 }
               ],
-              "created_at": "2026-01-15T18:15:17.032014555Z",
-              "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
-              "id": "f414f21a-9ffc-4430-90d3-d9722d4e556d",
+              "created_at": "2026-01-21T14:40:46.480398930Z",
+              "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
+              "id": "1d9114e7-1c17-48a7-a680-f1c79a8890e9",
               "name": "Scanopy Daemon",
-              "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+              "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
               "position": 0,
               "service_definition": "Scanopy Daemon",
               "source": {
@@ -312,32 +313,32 @@
                 },
                 "metadata": [
                   {
-                    "daemon_id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
-                    "date": "2026-01-15T18:15:17.032010639Z",
-                    "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
+                    "daemon_id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
+                    "date": "2026-01-21T14:40:46.480392972Z",
+                    "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
                     "type": "SelfReport"
                   }
                 ],
                 "type": "DiscoveryWithMatch"
               },
               "tags": [],
-              "updated_at": "2026-01-15T18:15:17.032014555Z",
+              "updated_at": "2026-01-21T14:40:46.480398930Z",
               "virtualization": null
             }
           ],
           "source": {
             "metadata": [
               {
-                "daemon_id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
-                "date": "2026-01-15T18:15:17.031953305Z",
-                "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
+                "daemon_id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
+                "date": "2026-01-21T14:40:46.480379930Z",
+                "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
                 "type": "SelfReport"
               }
             ],
             "type": "Discovery"
           },
           "tags": [],
-          "updated_at": "2026-01-15T18:15:16.977659Z",
+          "updated_at": "2026-01-21T14:40:46.444992Z",
           "virtualization": null
         },
         "meta": {
@@ -349,20 +350,20 @@
     },
     {
       "method": "POST",
-      "path": "/api/v1/discovery/21dfd064-0636-4669-888c-3da7d3b52b55/update",
+      "path": "/api/v1/discovery/a841ed6e-3437-462b-84cb-3958fca689a0/update",
       "request_body": {
-        "daemon_id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
+        "daemon_id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
         "discovery_type": {
-          "host_id": "8b841ece-41f9-4398-aca4-3823e4b95d93",
+          "host_id": "4c738865-b185-4ad3-9de5-c16b54792caa",
           "type": "SelfReport"
         },
         "error": null,
-        "finished_at": "2026-01-15T18:15:17.049866097Z",
-        "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+        "finished_at": "2026-01-21T14:40:46.540598180Z",
+        "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
         "phase": "Complete",
         "progress": 100,
-        "session_id": "21dfd064-0636-4669-888c-3da7d3b52b55",
-        "started_at": "2026-01-15T18:15:17.020929847Z"
+        "session_id": "a841ed6e-3437-462b-84cb-3958fca689a0",
+        "started_at": "2026-01-21T14:40:46.464145722Z"
       },
       "response_status": 200,
       "response_body": {
@@ -376,21 +377,22 @@
     },
     {
       "method": "POST",
-      "path": "/api/v1/discovery/f5b99a14-f034-4cf8-83af-14a14904de81/update",
+      "path": "/api/v1/discovery/c9b3c04b-5147-4b44-aca1-6be6a9efe53c/update",
       "request_body": {
-        "daemon_id": "5f4a0eb6-22e8-4252-a820-def479ca5841",
+        "daemon_id": "1b0ede64-3084-442d-8ed6-6c1d85389243",
         "discovery_type": {
           "host_naming_fallback": "BestService",
+          "snmp_credentials": null,
           "subnet_ids": null,
           "type": "Network"
         },
         "error": null,
         "finished_at": null,
-        "network_id": "00b7dc41-a6e5-49d6-a8cb-dc59ebf29241",
+        "network_id": "f2156552-5f3b-4df3-999e-dfb9c4e0dc5e",
         "phase": "Started",
         "progress": 0,
-        "session_id": "f5b99a14-f034-4cf8-83af-14a14904de81",
-        "started_at": "2026-01-15T18:15:17.062639514Z"
+        "session_id": "c9b3c04b-5147-4b44-aca1-6be6a9efe53c",
+        "started_at": "2026-01-21T14:40:46.554231222Z"
       },
       "response_status": 200,
       "response_body": {
@@ -404,7 +406,7 @@
     },
     {
       "method": "POST",
-      "path": "/api/daemons/5f4a0eb6-22e8-4252-a820-def479ca5841/heartbeat",
+      "path": "/api/daemons/1b0ede64-3084-442d-8ed6-6c1d85389243/heartbeat",
       "request_body": {
         "mode": "Push",
         "name": "scanopy-daemon",

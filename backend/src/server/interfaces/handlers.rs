@@ -2,7 +2,11 @@ use crate::server::auth::middleware::permissions::{Authorized, Member};
 use crate::server::config::AppState;
 use crate::server::hosts::r#impl::base::Host;
 use crate::server::interfaces::r#impl::base::Interface;
-use crate::server::shared::handlers::traits::{BulkDeleteResponse, create_handler, update_handler};
+use crate::server::interfaces::service::InterfaceService;
+use crate::server::shared::handlers::query::InterfaceQuery;
+use crate::server::shared::handlers::traits::{
+    BulkDeleteResponse, CrudHandlers, create_handler, update_handler,
+};
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::types::api::{
@@ -17,11 +21,19 @@ use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-// Generated handlers for read operations only
+impl CrudHandlers for Interface {
+    type Service = InterfaceService;
+    type FilterQuery = InterfaceQuery;
+
+    fn get_service(state: &AppState) -> &Self::Service {
+        &state.services.interface_service
+    }
+}
+
 mod generated {
     use super::*;
-    crate::crud_get_by_id_handler!(Interface, "interfaces", "interface");
     crate::crud_get_all_handler!(Interface, "interfaces", "interface");
+    crate::crud_get_by_id_handler!(Interface, "interfaces", "interface");
 }
 
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
@@ -153,7 +165,7 @@ async fn update_interface(
     ),
      security(("user_api_key" = []), ("session" = []))
 )]
-async fn delete_interface(
+pub async fn delete_interface(
     State(state): State<Arc<AppState>>,
     auth: Authorized<Member>,
     Path(id): Path<Uuid>,

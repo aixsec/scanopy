@@ -359,10 +359,11 @@ async fn create_host(
                 interfaces,
                 ports,
                 services,
+                if_entries,
             } = discovery_request;
 
             let host_response = host_service
-                .discover_host(host, interfaces, ports, services, entity)
+                .discover_host(host, interfaces, ports, services, if_entries, entity)
                 .await?;
 
             let legacy_response = LegacyHostWithServicesResponse::from_host_response(host_response);
@@ -483,6 +484,7 @@ async fn create_host_discovery(
         interfaces,
         ports,
         services,
+        if_entries,
     } = request;
 
     // Get daemon network_id from entity
@@ -499,7 +501,14 @@ async fn create_host_discovery(
     }
 
     let host_response = host_service
-        .discover_host(host, interfaces, ports, services, auth.into_entity())
+        .discover_host(
+            host,
+            interfaces,
+            ports,
+            services,
+            if_entries,
+            auth.into_entity(),
+        )
         .await?;
 
     Ok(Json(ApiResponse::success(host_response)))

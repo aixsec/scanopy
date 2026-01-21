@@ -10,8 +10,12 @@
 	import { createEmptyNetworkFormData } from '../queries';
 	import { pushError } from '$lib/shared/stores/feedback';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
+	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import TagPicker from '$lib/features/tags/components/TagPicker.svelte';
+	import RichSelect from '$lib/shared/components/forms/selection/RichSelect.svelte';
+	import { useSnmpCredentialsQuery } from '$lib/features/snmp/queries';
+	import { SnmpCredentialDisplay } from '$lib/shared/components/forms/selection/display/SnmpCredentialDisplay.svelte';
 	import {
 		common_cancel,
 		common_couldNotLoadUser,
@@ -43,9 +47,20 @@
 		onDelete?: ((id: string) => Promise<void> | void) | null;
 	} = $props();
 
-	// TanStack Query for organization
+	// TanStack Query for organization and current user
 	const organizationQuery = useOrganizationQuery();
 	let organization = $derived(organizationQuery.data);
+
+	const currentUserQuery = useCurrentUserQuery();
+	let currentUser = $derived(currentUserQuery.data);
+
+	// Demo mode check: only Owner can modify SNMP settings in demo orgs
+	let isDemoOrg = $derived(organization?.plan?.type === 'Demo');
+	let isNonOwnerInDemo = $derived(isDemoOrg && currentUser?.permissions !== 'Owner');
+
+	// TanStack Query for SNMP credentials
+	const snmpCredentialsQuery = useSnmpCredentialsQuery();
+	let snmpCredentials = $derived(snmpCredentialsQuery.data ?? []);
 
 	let loading = $state(false);
 	let deleting = $state(false);
@@ -157,6 +172,28 @@
 								selectedTagIds={field.state.value || []}
 								onChange={(tags) => field.handleChange(tags)}
 							/>
+						{/snippet}
+					</form.Field>
+
+					<form.Field name="snmp_credential_id">
+						{#snippet children(field)}
+							<RichSelect
+								label="Default SNMP Credential"
+								placeholder="No SNMP (disabled)"
+								required={false}
+								selectedValue={field.state.value}
+								options={snmpCredentials}
+								displayComponent={SnmpCredentialDisplay}
+								onSelect={(id) => field.handleChange(id)}
+								disabled={isNonOwnerInDemo}
+							/>
+							<p class="text-muted mt-1 text-xs">
+								{#if isNonOwnerInDemo}
+									SNMP settings are read-only in demo mode.
+								{:else}
+									Setting a credential enables SNMP discovery for this network. Hosts can override.
+								{/if}
+							</p>
 						{/snippet}
 					</form.Field>
 				</div>

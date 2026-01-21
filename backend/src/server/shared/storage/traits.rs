@@ -11,6 +11,7 @@ use crate::server::{
     daemons::r#impl::{api::DaemonCapabilities, base::DaemonMode},
     discovery::r#impl::types::{DiscoveryType, RunType},
     hosts::r#impl::{base::Host, virtualization::HostVirtualization},
+    if_entries::r#impl::base::IfEntry,
     interfaces::r#impl::base::Interface,
     ports::r#impl::base::Port,
     services::r#impl::{definitions::ServiceDefinition, virtualization::ServiceVirtualization},
@@ -168,6 +169,7 @@ pub enum SqlValue {
     UuidArray(Vec<Uuid>),
     IpCidr(IpCidr),
     IpAddr(IpAddr),
+    OptionalIpAddr(Option<IpAddr>),
     EntitySource(EntitySource),
     EntityDiscriminant(EntityDiscriminants),
     ServiceDefinition(Box<dyn ServiceDefinition>),
@@ -197,4 +199,5 @@ pub enum SqlValue {
     JsonValue(serde_json::Value),
     MacAddress(MacAddress),
     OptionalMacAddress(Option<MacAddress>),
+    IfEntries(Vec<IfEntry>),
 }

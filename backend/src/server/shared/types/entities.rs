@@ -64,6 +64,7 @@ impl Default for DiscoveryMetadata {
             discovery_type: DiscoveryType::Network {
                 subnet_ids: None,
                 host_naming_fallback: HostNamingFallback::BestService,
+                snmp_credentials: None,
             },
             daemon_id: Uuid::new_v4(),
             date: Utc::now(),

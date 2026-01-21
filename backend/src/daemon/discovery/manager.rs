@@ -62,11 +62,16 @@ impl DaemonDiscoverySessionManager {
             DiscoveryType::Network {
                 subnet_ids,
                 host_naming_fallback,
+                snmp_credentials,
             } => self.clone().spawn_discovery(
                 DiscoveryRunner::new(
                     self.discovery_service.clone(),
                     self.clone(),
-                    NetworkScanDiscovery::new(subnet_ids.clone(), *host_naming_fallback),
+                    NetworkScanDiscovery::new(
+                        subnet_ids.clone(),
+                        *host_naming_fallback,
+                        snmp_credentials.clone(),
+                    ),
                 ),
                 request.clone(),
                 cancel_token,

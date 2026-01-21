@@ -27,7 +27,8 @@ import type {
 	PortInput,
 	ServiceInput,
 	BindingInput,
-	AllInterfaces
+	AllInterfaces,
+	IfEntry
 } from './types/base';
 import type { Service } from '$lib/features/services/types/base';
 import type { components } from '$lib/api/schema';
@@ -541,12 +542,23 @@ export function hydrateHostToFormData(
 	const allInterfaces = queryClient.getQueryData<Interface[]>(queryKeys.interfaces.all) ?? [];
 	const allPorts = queryClient.getQueryData<Port[]>(queryKeys.ports.all) ?? [];
 	const allServices = queryClient.getQueryData<Service[]>(queryKeys.services.all) ?? [];
+	const allIfEntries =
+		queryClient.getQueryData<IfEntry[]>(queryKeys.ifEntries.byHost(host.id)) ?? [];
 
 	return {
 		...host,
 		interfaces: allInterfaces.filter((i) => i.host_id === host.id),
 		ports: allPorts.filter((p) => p.host_id === host.id),
-		services: allServices.filter((s) => s.host_id === host.id)
+		services: allServices.filter((s) => s.host_id === host.id),
+		// SNMP fields from host
+		sys_descr: host.sys_descr ?? null,
+		sys_object_id: host.sys_object_id ?? null,
+		sys_location: host.sys_location ?? null,
+		sys_contact: host.sys_contact ?? null,
+		management_url: host.management_url ?? null,
+		chassis_id: host.chassis_id ?? null,
+		snmp_credential_id: host.snmp_credential_id ?? null,
+		if_entries: allIfEntries
 	};
 }
 
@@ -577,7 +589,16 @@ export function createEmptyHostFormData(defaultNetworkId?: string): HostFormData
 		},
 		virtualization: null,
 		network_id: defaultNetworkId ?? '',
-		hidden: false
+		hidden: false,
+		// SNMP fields (populated by discovery)
+		sys_descr: null,
+		sys_object_id: null,
+		sys_location: null,
+		sys_contact: null,
+		management_url: null,
+		chassis_id: null,
+		snmp_credential_id: null,
+		if_entries: []
 	};
 }
 

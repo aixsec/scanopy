@@ -48,6 +48,7 @@ use crate::{
             api::{DiscoveryHostRequest, HostResponse},
             base::{Host, HostBase},
         },
+        if_entries::r#impl::base::IfEntry,
         interfaces::r#impl::base::Interface,
         ports::r#impl::base::{Port, PortType},
         services::{
@@ -407,6 +408,14 @@ pub trait DiscoversNetworkedEntities:
             },
             virtualization: None,
             hidden: false,
+            // SNMP fields - populated by snmp.rs when SNMP is enabled
+            sys_descr: None,
+            sys_object_id: None,
+            sys_location: None,
+            sys_contact: None,
+            management_url: None,
+            chassis_id: None,
+            snmp_credential_id: None,
         });
 
         // Store interfaces separately to pass to server
@@ -563,18 +572,23 @@ const ENTITY_CREATION_MAX_RETRIES: u32 = 5;
 pub trait CreatesDiscoveredEntities:
     AsRef<DaemonDiscoveryService> + Send + Sync + RunsDiscovery
 {
+    /// Create a host with all child entities during discovery.
+    ///
+    /// Pass an empty `if_entries` vec if SNMP data is not available (e.g., Docker discovery).
     async fn create_host(
         &self,
         host: Host,
         interfaces: Vec<Interface>,
         ports: Vec<Port>,
         services: Vec<Service>,
+        if_entries: Vec<IfEntry>,
     ) -> Result<HostResponse, Error> {
         let request = DiscoveryHostRequest {
             host,
             interfaces,
             ports,
             services,
+            if_entries,
         };
         self.as_ref()
             .api_client

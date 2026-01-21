@@ -2,6 +2,7 @@ use crate::daemon::runtime::service::LOG_TARGET;
 use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::daemons::r#impl::base::DaemonMode;
 use crate::server::discovery::r#impl::types::RunType;
+use crate::server::hosts::service::HostService;
 use crate::server::shared::entities::{ChangeTriggersTopologyStaleness, EntityDiscriminants};
 use crate::server::shared::events::bus::EventBus;
 use crate::server::shared::events::types::{EntityEvent, EntityOperation};
@@ -32,6 +33,7 @@ use crate::{
 pub struct DiscoveryService {
     discovery_storage: Arc<GenericPostgresStorage<Discovery>>,
     daemon_service: Arc<DaemonService>,
+    host_service: Arc<HostService>,
     sessions: RwLock<HashMap<Uuid, DiscoveryUpdatePayload>>, // session_id -> session state mapping
     daemon_sessions: RwLock<HashMap<Uuid, Vec<Uuid>>>,       // daemon_id -> session_id mapping
     daemon_pull_cancellations: RwLock<HashMap<Uuid, (bool, Uuid)>>, // daemon_id -> (boolean, session_id) mapping for pull mode cancellations of current session on daemon
@@ -70,6 +72,7 @@ impl DiscoveryService {
     pub async fn new(
         discovery_storage: Arc<GenericPostgresStorage<Discovery>>,
         daemon_service: Arc<DaemonService>,
+        host_service: Arc<HostService>,
         event_bus: Arc<EventBus>,
         entity_tag_service: Arc<EntityTagService>,
     ) -> Result<Arc<Self>> {
@@ -79,6 +82,7 @@ impl DiscoveryService {
         Ok(Arc::new(Self {
             discovery_storage,
             daemon_service,
+            host_service,
             sessions: RwLock::new(HashMap::new()),
             daemon_sessions: RwLock::new(HashMap::new()),
             daemon_pull_cancellations: RwLock::new(HashMap::new()),
@@ -579,6 +583,22 @@ impl DiscoveryService {
         );
 
         if is_terminal {
+            // Resolve LLDP links on successful completion
+            if session.phase == DiscoveryPhase::Complete
+                && let Err(e) = self
+                    .host_service
+                    .resolve_lldp_links(session.network_id)
+                    .await
+            {
+                tracing::warn!(
+                    session_id = %session.session_id,
+                    network_id = %session.network_id,
+                    error = %e,
+                    "Failed to resolve LLDP links after discovery completion"
+                );
+                // Non-fatal: discovery succeeded, link resolution is best-effort
+            }
+
             // Create historical discovery record
             let historical_discovery = Discovery {
                 id: Uuid::new_v4(),

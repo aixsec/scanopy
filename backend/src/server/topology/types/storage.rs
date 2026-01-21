@@ -1,5 +1,6 @@
 use crate::server::bindings::r#impl::base::Binding;
 use crate::server::groups::r#impl::base::Group;
+use crate::server::if_entries::r#impl::base::IfEntry;
 use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::ports::r#impl::base::Port;
 use crate::server::services::r#impl::base::Service;
@@ -76,6 +77,7 @@ impl Storable for Topology {
                     services,
                     subnets,
                     groups,
+                    if_entries,
                     is_stale,
                     last_refreshed,
                     is_locked,
@@ -88,6 +90,7 @@ impl Storable for Topology {
                     removed_groups,
                     removed_bindings,
                     removed_ports,
+                    removed_if_entries,
                     parent_id,
                     tags,
                 },
@@ -110,6 +113,7 @@ impl Storable for Topology {
                 "services",
                 "bindings",
                 "ports",
+                "if_entries",
                 "is_stale",
                 "last_refreshed",
                 "is_locked",
@@ -122,6 +126,7 @@ impl Storable for Topology {
                 "removed_groups",
                 "removed_bindings",
                 "removed_ports",
+                "removed_if_entries",
                 "parent_id",
                 "tags",
             ],
@@ -141,6 +146,7 @@ impl Storable for Topology {
                 SqlValue::Services(services),
                 SqlValue::Bindings(bindings),
                 SqlValue::Ports(ports),
+                SqlValue::IfEntries(if_entries),
                 SqlValue::Bool(is_stale),
                 SqlValue::Timestamp(last_refreshed),
                 SqlValue::Bool(is_locked),
@@ -153,6 +159,7 @@ impl Storable for Topology {
                 SqlValue::UuidArray(removed_groups),
                 SqlValue::UuidArray(removed_bindings),
                 SqlValue::UuidArray(removed_ports),
+                SqlValue::UuidArray(removed_if_entries),
                 SqlValue::OptionalUuid(parent_id),
                 SqlValue::UuidArray(tags),
             ],
@@ -190,6 +197,10 @@ impl Storable for Topology {
             serde_json::from_value(row.get::<serde_json::Value, _>("bindings"))
                 .map_err(|e| anyhow::anyhow!("Failed to deserialize bindings: {}", e))?;
 
+        let if_entries: Vec<IfEntry> =
+            serde_json::from_value(row.get::<serde_json::Value, _>("if_entries"))
+                .map_err(|e| anyhow::anyhow!("Failed to deserialize if_entries: {}", e))?;
+
         Ok(Topology {
             id: row.get("id"),
             created_at: row.get("created_at"),
@@ -209,6 +220,7 @@ impl Storable for Topology {
                 removed_subnets: row.get("removed_subnets"),
                 removed_ports: row.get("removed_ports"),
                 removed_bindings: row.get("removed_bindings"),
+                removed_if_entries: row.get("removed_if_entries"),
                 parent_id: row.get("parent_id"),
                 nodes,
                 edges,
@@ -219,6 +231,7 @@ impl Storable for Topology {
                 ports,
                 services,
                 groups,
+                if_entries,
                 options,
                 tags: row.get("tags"),
             },

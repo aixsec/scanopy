@@ -456,4 +456,111 @@ impl<T: Storable> StorableFilter<T> {
     pub fn values(&self) -> &[SqlValue] {
         &self.values
     }
+
+    // =========================================================================
+    // LLDP resolution filters
+    // =========================================================================
+
+    /// Filter by IP address (for interfaces table)
+    pub fn ip_address(mut self, ip: std::net::IpAddr) -> Self {
+        let col = self.qualify_column("ip_address");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::IpAddr(ip));
+        self
+    }
+
+    /// Filter by if_descr (for if_entries table)
+    pub fn if_descr(mut self, descr: &str) -> Self {
+        let col = self.qualify_column("if_descr");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::String(descr.to_string()));
+        self
+    }
+
+    /// Filter by chassis_id (for hosts table)
+    pub fn chassis_id(mut self, chassis_id: &str) -> Self {
+        let col = self.qualify_column("chassis_id");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::String(chassis_id.to_string()));
+        self
+    }
+
+    /// Filter by interface_id FK (for if_entries table)
+    pub fn interface_id(mut self, interface_id: Uuid) -> Self {
+        let col = self.qualify_column("interface_id");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::Uuid(interface_id));
+        self
+    }
+
+    /// Filter if_entries with unresolved LLDP/CDP neighbors in a network.
+    /// Matches entries that have LLDP or CDP data but no neighbor (neither if_entry nor host).
+    pub fn unresolved_lldp_in_network(mut self, network_id: Uuid) -> Self {
+        let network_col = self.qualify_column("network_id");
+        let lldp_chassis_col = self.qualify_column("lldp_chassis_id");
+        let cdp_device_col = self.qualify_column("cdp_device_id");
+        let cdp_addr_col = self.qualify_column("cdp_address");
+        let neighbor_if_entry_col = self.qualify_column("neighbor_if_entry_id");
+        let neighbor_host_col = self.qualify_column("neighbor_host_id");
+
+        self.conditions
+            .push(format!("{} = ${}", network_col, self.values.len() + 1));
+        self.values.push(SqlValue::Uuid(network_id));
+
+        // Has LLDP or CDP data but not yet resolved (no neighbor of either type)
+        self.conditions.push(format!(
+            "({} IS NOT NULL OR {} IS NOT NULL OR {} IS NOT NULL)",
+            lldp_chassis_col, cdp_device_col, cdp_addr_col
+        ));
+        self.conditions
+            .push(format!("{} IS NULL", neighbor_if_entry_col));
+        self.conditions
+            .push(format!("{} IS NULL", neighbor_host_col));
+
+        self
+    }
+
+    /// Filter if_entries that have any resolved neighbor (full or partial resolution)
+    pub fn has_neighbor(mut self) -> Self {
+        let neighbor_if_entry_col = self.qualify_column("neighbor_if_entry_id");
+        let neighbor_host_col = self.qualify_column("neighbor_host_id");
+
+        self.conditions.push(format!(
+            "({} IS NOT NULL OR {} IS NOT NULL)",
+            neighbor_if_entry_col, neighbor_host_col
+        ));
+
+        self
+    }
+
+    /// Filter if_entries with full neighbor resolution (specific remote port known)
+    pub fn has_neighbor_if_entry(mut self) -> Self {
+        let col = self.qualify_column("neighbor_if_entry_id");
+        self.conditions.push(format!("{} IS NOT NULL", col));
+        self
+    }
+
+    /// Filter if_entries connected to a specific host (either resolution type)
+    pub fn neighbor_host(mut self, host_id: Uuid) -> Self {
+        let neighbor_if_entry_col = self.qualify_column("neighbor_if_entry_id");
+        let neighbor_host_col = self.qualify_column("neighbor_host_id");
+
+        // Either directly connected to host (partial resolution)
+        // Or connected to an if_entry on that host (full resolution)
+        // For full resolution, we need a subquery
+        self.conditions.push(format!(
+            "({} = ${} OR {} IN (SELECT id FROM if_entries WHERE host_id = ${}))",
+            neighbor_host_col,
+            self.values.len() + 1,
+            neighbor_if_entry_col,
+            self.values.len() + 1
+        ));
+        self.values.push(SqlValue::Uuid(host_id));
+
+        self
+    }
 }
