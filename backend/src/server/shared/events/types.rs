@@ -345,7 +345,7 @@ impl EntityOperation {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Eq)]
+#[derive(Debug, Clone, Serialize)]
 pub struct EntityEvent {
     pub id: Uuid,
     pub entity_type: Entity,

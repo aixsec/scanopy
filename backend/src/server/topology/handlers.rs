@@ -178,7 +178,7 @@ async fn create_topology(
 
     let service = Topology::get_service(&state);
 
-    let (hosts, interfaces, subnets, groups, ports, bindings) =
+    let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
         service.get_entity_data(topology.base.network_id).await?;
 
     let services = service
@@ -194,6 +194,7 @@ async fn create_topology(
         groups: &groups,
         ports: &ports,
         bindings: &bindings,
+        if_entries: &if_entries,
         old_edges: &[],
         old_nodes: &[],
     });
@@ -206,6 +207,7 @@ async fn create_topology(
         groups,
         ports,
         bindings,
+        if_entries,
     });
 
     topology.set_graph(nodes, edges);
@@ -276,7 +278,7 @@ async fn refresh(
     // Update options from request
     topology.base.options = request.options;
 
-    let (hosts, interfaces, subnets, groups, ports, bindings) =
+    let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
         service.get_entity_data(request.network_id).await?;
 
     let services = service
@@ -291,6 +293,7 @@ async fn refresh(
         groups,
         ports,
         bindings,
+        if_entries,
     });
 
     service.update(&mut topology, auth.into_entity()).await?;
@@ -340,7 +343,7 @@ async fn rebuild(
     // Update options from request
     topology.base.options = request.options.clone();
 
-    let (hosts, interfaces, subnets, groups, ports, bindings) =
+    let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
         service.get_entity_data(request.network_id).await?;
 
     let services = service
@@ -356,6 +359,7 @@ async fn rebuild(
         groups: &groups,
         ports: &ports,
         bindings: &bindings,
+        if_entries: &if_entries,
         old_nodes: &request.nodes,
         old_edges: &request.edges,
     });
@@ -368,6 +372,7 @@ async fn rebuild(
         groups,
         ports,
         bindings,
+        if_entries,
     });
 
     topology.set_graph(nodes, edges);

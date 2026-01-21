@@ -1,6 +1,7 @@
 use crate::server::bindings::r#impl::base::Binding;
 use crate::server::groups::r#impl::base::Group;
 use crate::server::hosts::r#impl::base::Host;
+use crate::server::if_entries::r#impl::base::IfEntry;
 use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::ports::r#impl::base::Port;
 use crate::server::services::r#impl::base::Service;
@@ -25,6 +26,7 @@ pub struct SetEntitiesParams {
     pub ports: Vec<Port>,
     pub bindings: Vec<Binding>,
     pub interfaces: Vec<Interface>,
+    pub if_entries: Vec<IfEntry>,
 }
 
 #[derive(
@@ -66,6 +68,7 @@ impl Topology {
         self.base.removed_subnets = vec![];
         self.base.removed_bindings = vec![];
         self.base.removed_ports = vec![];
+        self.base.removed_if_entries = vec![];
         self.base.is_stale = false;
         self.base.last_refreshed = Utc::now()
     }
@@ -78,6 +81,7 @@ impl Topology {
         self.base.ports = params.ports;
         self.base.bindings = params.bindings;
         self.base.interfaces = params.interfaces;
+        self.base.if_entries = params.if_entries;
     }
 
     pub fn set_graph(&mut self, nodes: Vec<Node>, edges: Vec<Edge>) {
@@ -111,6 +115,7 @@ pub struct TopologyBase {
     pub subnets: Vec<Subnet>,
     pub services: Vec<Service>,
     pub groups: Vec<Group>,
+    pub if_entries: Vec<IfEntry>,
 
     // Build state
     pub is_stale: bool,
@@ -126,6 +131,7 @@ pub struct TopologyBase {
     pub removed_groups: Vec<Uuid>,
     pub removed_ports: Vec<Uuid>,
     pub removed_bindings: Vec<Uuid>,
+    pub removed_if_entries: Vec<Uuid>,
 }
 
 impl TopologyBase {
@@ -143,6 +149,7 @@ impl TopologyBase {
             bindings: vec![],
             services: vec![],
             groups: vec![],
+            if_entries: vec![],
             is_stale: true,
             last_refreshed: Utc::now(),
             is_locked: false,
@@ -155,6 +162,7 @@ impl TopologyBase {
             removed_groups: vec![],
             removed_bindings: vec![],
             removed_ports: vec![],
+            removed_if_entries: vec![],
             parent_id: None,
             tags: vec![],
         }

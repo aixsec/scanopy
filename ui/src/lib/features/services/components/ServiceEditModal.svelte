@@ -31,7 +31,16 @@
 			...host,
 			interfaces: hostInterfaces,
 			ports: hostPorts,
-			services: hostServices
+			services: hostServices,
+			// SNMP fields - spread from host, default to null if not present
+			sys_descr: host.sys_descr ?? null,
+			sys_object_id: host.sys_object_id ?? null,
+			sys_location: host.sys_location ?? null,
+			sys_contact: host.sys_contact ?? null,
+			management_url: host.management_url ?? null,
+			chassis_id: host.chassis_id ?? null,
+			snmp_credential_id: host.snmp_credential_id ?? null,
+			if_entries: [] // IfEntries not available in this context
 		};
 	}
 

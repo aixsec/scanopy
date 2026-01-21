@@ -126,6 +126,14 @@ export const queryKeys = {
 		all: ['tags'] as const,
 		detail: (id: string) => [...queryKeys.tags.all, 'detail', id] as const
 	},
+	snmpCredentials: {
+		all: ['snmpCredentials'] as const,
+		detail: (id: string) => [...queryKeys.snmpCredentials.all, 'detail', id] as const
+	},
+	ifEntries: {
+		all: ['ifEntries'] as const,
+		byHost: (hostId: string) => [...queryKeys.ifEntries.all, 'host', hostId] as const
+	},
 	topology: {
 		all: ['topology'] as const,
 		detail: (id: string) => [...queryKeys.topology.all, 'detail', id] as const

@@ -124,10 +124,10 @@ impl Storable for Interface {
             .map_err(|e| anyhow::anyhow!("Failed to read ip_address: {}", e))?;
         let ip_address: IpAddr = ip_network.ip();
 
-        // Read mac_address from MACADDR column - sqlx returns [u8; 6] for mac_address feature
-        let mac_address: Option<MacAddress> =
-            row.try_get::<Option<MacAddress>, _>("mac_address")
-                .map_err(|e| anyhow::anyhow!("Failed to read mac_address: {}", e))?;
+        // Read mac_address from MACADDR column
+        let mac_address: Option<MacAddress> = row
+            .try_get("mac_address")
+            .map_err(|e| anyhow::anyhow!("Failed to read mac_address: {}", e))?;
 
         Ok(Interface {
             id: row.get("id"),
@@ -209,6 +209,10 @@ impl Entity for Interface {
 
     fn preserve_immutable_fields(&mut self, existing: &Self) {
         self.created_at = existing.created_at;
+        // MAC address is immutable once set
+        if existing.base.mac_address.is_some() {
+            self.base.mac_address = existing.base.mac_address;
+        }
     }
 }
 

@@ -223,9 +223,26 @@ pub async fn populate_demo_data(
             .await?;
     }
 
+    // 3.5 SNMP Credentials (depends on organization)
+    for credential in demo_data.snmp_credentials {
+        state
+            .services
+            .snmp_credential_service
+            .create(credential, entity.clone())
+            .await?;
+    }
+
     // 4. Hosts with Services - collect created services for group generation
     let mut all_created_services: Vec<Service> = Vec::new();
     for host_with_services in demo_data.hosts_with_services {
+        // Match if_entries for this host by host_id
+        let host_if_entries: Vec<crate::server::if_entries::r#impl::base::IfEntry> = demo_data
+            .if_entries
+            .iter()
+            .filter(|e| e.base.host_id == host_with_services.host.id)
+            .cloned()
+            .collect();
+
         let host_response = state
             .services
             .host_service
@@ -234,6 +251,7 @@ pub async fn populate_demo_data(
                 host_with_services.interfaces,
                 host_with_services.ports,
                 host_with_services.services,
+                host_if_entries,
                 entity.clone(),
             )
             .await?;

@@ -27,6 +27,7 @@ struct TopologyChanges {
     updated_groups: bool,
     updated_ports: bool,
     updated_bindings: bool,
+    updated_if_entries: bool,
     removed_hosts: HashSet<Uuid>,
     removed_interfaces: HashSet<Uuid>,
     removed_services: HashSet<Uuid>,
@@ -34,6 +35,7 @@ struct TopologyChanges {
     removed_groups: HashSet<Uuid>,
     removed_ports: HashSet<Uuid>,
     removed_bindings: HashSet<Uuid>,
+    removed_if_entries: HashSet<Uuid>,
     should_mark_stale: bool,
     clear_stale: bool,
 }
@@ -49,6 +51,7 @@ impl EventSubscriber for TopologyService {
             (EntityDiscriminants::Group, None),
             (EntityDiscriminants::Port, None),
             (EntityDiscriminants::Binding, None),
+            (EntityDiscriminants::IfEntry, None), // LLDP neighbor changes trigger edge rebuild
             (
                 EntityDiscriminants::Topology,
                 Some(vec![EntityOperation::Created, EntityOperation::Updated]),
@@ -126,6 +129,9 @@ impl EventSubscriber for TopologyService {
                         Entity::Binding(_) => {
                             changes.removed_bindings.insert(entity_event.entity_id)
                         }
+                        Entity::IfEntry(_) => {
+                            changes.removed_if_entries.insert(entity_event.entity_id)
+                        }
                         _ => false,
                     };
                 }
@@ -145,6 +151,7 @@ impl EventSubscriber for TopologyService {
                         Entity::Group(_) => changes.updated_groups = true,
                         Entity::Port(_) => changes.updated_ports = true,
                         Entity::Binding(_) => changes.updated_bindings = true,
+                        Entity::IfEntry(_) => changes.updated_if_entries = true,
                         _ => (),
                     };
                 }
@@ -156,7 +163,7 @@ impl EventSubscriber for TopologyService {
             let network_filter = StorageFilter::<Topology>::new().network_ids(&[network_id]);
             let topologies = self.get_all(network_filter).await?;
 
-            let (hosts, interfaces, subnets, groups, ports, bindings) =
+            let (hosts, interfaces, subnets, groups, ports, bindings, if_entries) =
                 self.get_entity_data(network_id).await?;
 
             if let Some(changes) = topology_updates.get(&network_id) {
@@ -201,6 +208,11 @@ impl EventSubscriber for TopologyService {
                             topology.base.removed_bindings.push(*binding_id);
                         }
                     }
+                    for if_entry_id in &changes.removed_if_entries {
+                        if !topology.base.removed_if_entries.contains(if_entry_id) {
+                            topology.base.removed_if_entries.push(*if_entry_id);
+                        }
+                    }
 
                     // Mark stale if needed
                     if changes.should_mark_stale && !changes.clear_stale {
@@ -238,6 +250,10 @@ impl EventSubscriber for TopologyService {
 
                     if changes.updated_bindings {
                         topology.base.bindings = bindings.clone();
+                    }
+
+                    if changes.updated_if_entries {
+                        topology.base.if_entries = if_entries.clone();
                     }
 
                     // Update topology in database

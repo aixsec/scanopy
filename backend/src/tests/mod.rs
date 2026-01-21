@@ -33,7 +33,6 @@ use axum::Router;
 use chrono::Utc;
 use cidr::IpCidr;
 use cidr::Ipv4Cidr;
-use mac_address::MacAddress;
 use sqlx::PgPool;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
@@ -99,16 +98,16 @@ pub fn host(network_id: &Uuid) -> Host {
         virtualization: None,
         hidden: false,
         tags: Vec::new(),
+        ..Default::default()
     })
 }
 
 pub fn interface(network_id: &Uuid, subnet_id: &Uuid) -> Interface {
-    let random_mac: [u8; 6] = std::array::from_fn(|_| fastrand::u8(1..=255));
     Interface::new(InterfaceBase {
         network_id: *network_id,
         subnet_id: *subnet_id,
         ip_address: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)),
-        mac_address: Some(MacAddress::new(random_mac)),
+        mac_address: None, // MAC populated during ARP discovery
         position: 0,
         name: Some("eth0".to_string()),
         host_id: Uuid::nil(), // Placeholder - tests will set correct host_id

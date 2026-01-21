@@ -158,6 +158,8 @@ const entityTypeToQueryKeyName: Record<EntityDiscriminants, keyof typeof queryKe
 	Port: null,
 	Binding: null,
 	Interface: null,
+	IfEntry: null,
+	SnmpCredential: null,
 	Topology: null,
 	Unknown: null
 };

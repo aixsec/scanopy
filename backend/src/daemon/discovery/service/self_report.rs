@@ -301,6 +301,14 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
             },
             hidden: false,
             virtualization: None,
+            // SNMP fields - not applicable to self-report
+            sys_descr: None,
+            sys_object_id: None,
+            sys_location: None,
+            sys_contact: None,
+            management_url: None,
+            chassis_id: None,
+            snmp_credential_id: None,
         };
 
         // Ports to create with the host
@@ -346,7 +354,7 @@ impl RunsDiscovery for DiscoveryRunner<SelfReportDiscovery> {
 
         // Pass interfaces and ports separately - server will create them with the correct host_id
         tracing::debug!("Creating host with interfaces, ports, and services");
-        self.create_host(host, interfaces.clone(), ports, services)
+        self.create_host(host, interfaces.clone(), ports, services, vec![])
             .await?;
 
         self.report_discovery_update(DiscoverySessionUpdate {

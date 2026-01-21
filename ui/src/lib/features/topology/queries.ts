@@ -394,6 +394,8 @@ export function createEmptyTopologyFormData(networkId: string): Topology {
 		removed_subnets: [],
 		removed_bindings: [],
 		removed_ports: [],
+		if_entries: [],
+		removed_if_entries: [],
 		locked_at: null,
 		locked_by: null,
 		parent_id: null,

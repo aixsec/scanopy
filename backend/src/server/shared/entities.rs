@@ -1,9 +1,11 @@
 use crate::server::bindings::r#impl::base::Binding;
+use crate::server::if_entries::r#impl::base::IfEntry;
 use crate::server::interfaces::r#impl::base::Interface;
 use crate::server::invites::r#impl::base::Invite;
 use crate::server::ports::r#impl::base::Port;
 use crate::server::services::r#impl::base::Service;
 use crate::server::shares::r#impl::base::Share;
+use crate::server::snmp_credentials::r#impl::base::SnmpCredential;
 use crate::server::subnets::r#impl::base::Subnet;
 use crate::server::topology::types::base::Topology;
 use crate::server::{groups::r#impl::base::Group, tags::r#impl::base::Tag};
@@ -52,8 +54,6 @@ pub fn is_entity_taggable(entity_type: EntityDiscriminants) -> bool {
     Debug,
     Clone,
     PartialEq,
-    Eq,
-    Hash,
     EnumDiscriminants,
     IntoStaticStr,
     Serialize,
@@ -89,7 +89,9 @@ pub enum Entity {
     Port(Port),
     Binding(Binding),
     Interface(Interface),
+    IfEntry(IfEntry),
 
+    SnmpCredential(SnmpCredential),
     Subnet(Subnet),
     Group(Group),
     Topology(Box<Topology>),
@@ -124,7 +126,9 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Interface => Color::Cyan,
             EntityDiscriminants::Port => Color::Cyan,
             EntityDiscriminants::Binding => Color::Purple,
+            EntityDiscriminants::IfEntry => Color::Teal,
 
+            EntityDiscriminants::SnmpCredential => Color::Orange,
             EntityDiscriminants::Subnet => Color::Orange,
             EntityDiscriminants::Group => Color::Rose,
             EntityDiscriminants::Topology => Color::Pink,
@@ -150,6 +154,8 @@ impl EntityMetadataProvider for EntityDiscriminants {
             EntityDiscriminants::Interface => Icon::Binary,
             EntityDiscriminants::Port => Icon::EthernetPort,
             EntityDiscriminants::Binding => Icon::Link,
+            EntityDiscriminants::IfEntry => Icon::Cable,
+            EntityDiscriminants::SnmpCredential => Icon::Shield,
             EntityDiscriminants::Subnet => Icon::Network,
             EntityDiscriminants::Group => Icon::Group,
             EntityDiscriminants::Topology => Icon::ChartBarStacked,
@@ -264,5 +270,17 @@ impl From<Topology> for Entity {
 impl From<Tag> for Entity {
     fn from(value: Tag) -> Self {
         Self::Tag(value)
+    }
+}
+
+impl From<SnmpCredential> for Entity {
+    fn from(value: SnmpCredential) -> Self {
+        Self::SnmpCredential(value)
+    }
+}
+
+impl From<IfEntry> for Entity {
+    fn from(value: IfEntry) -> Self {
+        Self::IfEntry(value)
     }
 }

@@ -128,6 +128,11 @@ where
                 let network = IpNetwork::from(*v);
                 query.bind(network)
             }
+            SqlValue::OptionalIpAddr(v) => {
+                // Convert Option<IpAddr> to Option<IpNetwork> for proper INET binding
+                let network = v.map(IpNetwork::from);
+                query.bind(network)
+            }
             SqlValue::RunType(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::DiscoveryType(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Email(v) => query.bind(v.as_str()),
@@ -143,6 +148,7 @@ where
             SqlValue::Subnets(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Services(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::Groups(v) => query.bind(serde_json::to_value(v)?),
+            SqlValue::IfEntries(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::TelemetryOperation(v) => query.bind(serde_json::to_value(v)?),
             SqlValue::StringArray(v) => query.bind(v.clone()),
             SqlValue::OptionalStringArray(v) => query.bind(v.clone()),

@@ -1049,6 +1049,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/if-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all if-entries */
+        get: operations["list_if-entries"];
+        put?: never;
+        /**
+         * Create a new if entry
+         * @description Creates an SNMP ifTable entry for a host. These are typically created by
+         *     SNMP discovery, but can also be created manually.
+         */
+        post: operations["create_if_entry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/if-entries/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bulk delete if-entries */
+        post: operations["bulk_delete_if-entries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/if-entries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get if_entry by ID */
+        get: operations["get_if_entry_by_id"];
+        /** Update an if entry */
+        put: operations["update_if_entry"];
+        post?: never;
+        /** Delete if_entry */
+        delete: operations["delete_if_entry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/interfaces": {
         parameters: {
             query?: never;
@@ -1515,6 +1573,74 @@ export interface paths {
         post?: never;
         /** Delete share */
         delete: operations["delete_share"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/snmp-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all SNMP credentials
+         * @description Returns all SNMP credentials in the authenticated user's organization.
+         *     The community string is returned for authorized users - handle with care.
+         */
+        get: operations["get_all_snmp_credentials"];
+        put?: never;
+        /**
+         * Create a new SNMP credential
+         * @description Creates an SNMP credential scoped to your organization. Credential names must
+         *     be unique within the organization.
+         *
+         *     ### Validation
+         *
+         *     - Name must be 1-100 characters
+         *     - Name must be unique within your organization
+         *     - Community string is required
+         */
+        post: operations["create_snmp_credential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/snmp-credentials/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bulk delete snmp-credentials */
+        post: operations["bulk_delete_snmp-credentials"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/snmp-credentials/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get snmp_credential by ID */
+        get: operations["get_snmp_credential_by_id"];
+        /** Update snmp_credential */
+        put: operations["update_snmp_credential"];
+        post?: never;
+        /** Delete snmp_credential */
+        delete: operations["delete_snmp_credential"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2053,14 +2179,23 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
+<<<<<<< HEAD
              *       "created_at": "2026-01-16T02:01:08.441628Z",
              *       "id": "9861b3e9-e450-4c3c-8f81-4c7d71bd90d0",
+=======
+             *       "created_at": "2026-01-21T19:23:31.719672Z",
+             *       "id": "0809dd73-d892-4b07-8fa4-0c818454c86f",
+>>>>>>> snmp-support
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
+<<<<<<< HEAD
              *       "updated_at": "2026-01-16T02:01:08.441628Z"
+=======
+             *       "updated_at": "2026-01-21T19:23:31.719672Z"
+>>>>>>> snmp-support
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2223,20 +2358,49 @@ export interface components {
         ApiResponse_HostResponse: {
             /**
              * @description Response type for host endpoints.
-             *     Includes hydrated children (interfaces, ports, services).
+             *     Includes children (interfaces, ports, services, if_entries).
              * @example {
              *       "created_at": "2026-01-15T10:30:00Z",
              *       "description": "Primary web server",
              *       "hidden": false,
              *       "hostname": "web-server-01.local",
              *       "id": "550e8400-e29b-41d4-a716-446655440003",
+             *       "if_entries": [
+             *         {
+             *           "admin_status": "Up",
+             *           "cdp_address": null,
+             *           "cdp_device_id": null,
+             *           "cdp_platform": null,
+             *           "cdp_port_id": null,
+             *           "created_at": "2026-01-15T10:30:00Z",
+             *           "host_id": "550e8400-e29b-41d4-a716-446655440003",
+             *           "id": "550e8400-e29b-41d4-a716-44665544000f",
+             *           "if_alias": "Uplink to Core Switch",
+             *           "if_descr": "GigabitEthernet0/1",
+             *           "if_index": 1,
+             *           "if_type": 6,
+             *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
+             *           "lldp_chassis_id": null,
+             *           "lldp_mgmt_addr": null,
+             *           "lldp_port_desc": null,
+             *           "lldp_port_id": null,
+             *           "lldp_sys_desc": null,
+             *           "lldp_sys_name": null,
+             *           "mac_address": "DE:AD:BE:EF:CA:FE",
+             *           "neighbor": null,
+             *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
+             *           "oper_status": "Up",
+             *           "speed_bps": 1000000000,
+             *           "updated_at": "2026-01-15T10:30:00Z"
+             *         }
+             *       ],
              *       "interfaces": [
              *         {
              *           "created_at": "2026-01-15T10:30:00Z",
              *           "host_id": "550e8400-e29b-41d4-a716-446655440003",
              *           "id": "550e8400-e29b-41d4-a716-446655440005",
              *           "ip_address": "192.168.1.100",
-             *           "mac_address": "DE:AD:BE:EF:12:34",
+             *           "mac_address": "DE:AD:BE:EF:CA:FE",
              *           "name": "eth0",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
@@ -2258,7 +2422,35 @@ export interface components {
              *           "updated_at": "2026-01-15T10:30:00Z"
              *         }
              *       ],
-             *       "services": [],
+             *       "services": [
+             *         {
+             *           "bindings": [
+             *             {
+             *               "created_at": "2026-01-21T19:23:31.706656Z",
+             *               "id": "f60bbb94-5503-4f87-9881-d376c7e544f3",
+             *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
+             *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
+             *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
+             *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
+             *               "type": "Port",
+             *               "updated_at": "2026-01-21T19:23:31.706656Z"
+             *             }
+             *           ],
+             *           "created_at": "2026-01-15T10:30:00Z",
+             *           "host_id": "550e8400-e29b-41d4-a716-446655440003",
+             *           "id": "550e8400-e29b-41d4-a716-446655440007",
+             *           "name": "nginx",
+             *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
+             *           "position": 0,
+             *           "service_definition": "AudioBookShelf",
+             *           "source": {
+             *             "type": "Manual"
+             *           },
+             *           "tags": [],
+             *           "updated_at": "2026-01-15T10:30:00Z",
+             *           "virtualization": null
+             *         }
+             *       ],
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -2268,6 +2460,7 @@ export interface components {
              *     }
              */
             data?: {
+                chassis_id?: string | null;
                 /** Format: date-time */
                 created_at: string;
                 description?: string | null;
@@ -2275,17 +2468,39 @@ export interface components {
                 hostname?: string | null;
                 /** Format: uuid */
                 id: string;
+                /** @description SNMP ifTable entries */
+                if_entries: components["schemas"]["IfEntry"][];
                 interfaces: components["schemas"]["Interface"][];
+                management_url?: string | null;
                 name: string;
                 /** Format: uuid */
                 network_id: string;
                 ports: components["schemas"]["Port"][];
                 services: components["schemas"]["Service"][];
+                /** Format: uuid */
+                snmp_credential_id?: string | null;
                 source: components["schemas"]["EntitySource"];
+                sys_contact?: string | null;
+                sys_descr?: string | null;
+                sys_location?: string | null;
+                sys_object_id?: string | null;
                 tags: string[];
                 /** Format: date-time */
                 updated_at: string;
                 virtualization?: null | components["schemas"]["HostVirtualization"];
+            };
+            error?: string | null;
+            meta: components["schemas"]["ApiMeta"];
+            success: boolean;
+        };
+        ApiResponse_IfEntry: {
+            data?: components["schemas"]["IfEntryBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -2298,7 +2513,7 @@ export interface components {
              *       "host_id": "550e8400-e29b-41d4-a716-446655440003",
              *       "id": "550e8400-e29b-41d4-a716-446655440005",
              *       "ip_address": "192.168.1.100",
-             *       "mac_address": "DE:AD:BE:EF:12:34",
+             *       "mac_address": "DE:AD:BE:EF:CA:FE",
              *       "name": "eth0",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
@@ -2463,14 +2678,23 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
+<<<<<<< HEAD
              *           "created_at": "2026-01-16T02:01:08.437536Z",
              *           "id": "f95decaa-9146-4d4f-b808-16d01afe11a7",
+=======
+             *           "created_at": "2026-01-21T19:23:31.715858Z",
+             *           "id": "91c37aee-71b9-4790-b0ad-4eb0e6f6b630",
+>>>>>>> snmp-support
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
+<<<<<<< HEAD
              *           "updated_at": "2026-01-16T02:01:08.437536Z"
+=======
+             *           "updated_at": "2026-01-21T19:23:31.715858Z"
+>>>>>>> snmp-support
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -2479,7 +2703,11 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
+<<<<<<< HEAD
              *       "service_definition": "Dhcp Server",
+=======
+             *       "service_definition": "AudioBookShelf",
+>>>>>>> snmp-support
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -2511,6 +2739,19 @@ export interface components {
         };
         ApiResponse_Share: {
             data?: components["schemas"]["ShareBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            };
+            error?: string | null;
+            meta: components["schemas"]["ApiMeta"];
+            success: boolean;
+        };
+        ApiResponse_SnmpCredential: {
+            data?: components["schemas"]["SnmpCredentialBase"] & {
                 /** Format: date-time */
                 readonly created_at: string;
                 /** Format: uuid */
@@ -2762,14 +3003,23 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
+<<<<<<< HEAD
          *       "created_at": "2026-01-16T02:01:08.428826Z",
          *       "id": "46a00c70-27f5-4efa-828c-79a3b7c624e7",
+=======
+         *       "created_at": "2026-01-21T19:23:31.706910Z",
+         *       "id": "05e88527-0ef2-4645-97e6-014e54895e6d",
+>>>>>>> snmp-support
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
+<<<<<<< HEAD
          *       "updated_at": "2026-01-16T02:01:08.428826Z"
+=======
+         *       "updated_at": "2026-01-21T19:23:31.706910Z"
+>>>>>>> snmp-support
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -2901,6 +3151,7 @@ export interface components {
          *       "description": "Primary web server",
          *       "hidden": false,
          *       "hostname": "web-server-01.local",
+         *       "if_entries": [],
          *       "interfaces": [
          *         {
          *           "id": "550e8400-e29b-41d4-a716-446655440005",
@@ -2933,7 +3184,11 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
+<<<<<<< HEAD
          *           "service_definition": "Dhcp Server",
+=======
+         *           "service_definition": "AudioBookShelf",
+>>>>>>> snmp-support
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -2943,11 +3198,15 @@ export interface components {
          *     }
          */
         CreateHostRequest: {
+            chassis_id?: string | null;
             description?: string | null;
             hidden?: boolean;
             hostname?: string | null;
+            /** @description SNMP interface entries (ifTable data) - server assigns UUIDs */
+            if_entries?: components["schemas"]["IfEntryInput"][];
             /** @description Interfaces to create with this host (client provides UUIDs) */
             interfaces?: components["schemas"]["InterfaceInput"][];
+            management_url?: string | null;
             name: string;
             /** Format: uuid */
             network_id: string;
@@ -2955,6 +3214,12 @@ export interface components {
             ports?: components["schemas"]["PortInput"][];
             /** @description Services to create with this host (can reference interfaces/ports by their UUIDs) */
             services?: components["schemas"]["ServiceInput"][];
+            /** Format: uuid */
+            snmp_credential_id?: string | null;
+            sys_contact?: string | null;
+            sys_descr?: string | null;
+            sys_location?: string | null;
+            sys_object_id?: string | null;
             tags: string[];
             virtualization?: null | components["schemas"]["HostVirtualization"];
         };
@@ -3175,6 +3440,8 @@ export interface components {
          */
         DiscoveryHostRequest: {
             host: components["schemas"]["Host"];
+            /** @description SNMP interface entries (ifTable data) - optional, populated when SNMP is enabled */
+            if_entries?: components["schemas"]["IfEntry"][];
             interfaces: components["schemas"]["Interface"][];
             ports: components["schemas"]["Port"][];
             services: components["schemas"]["Service"][];
@@ -3187,6 +3454,11 @@ export interface components {
         };
         /** @enum {string} */
         DiscoveryPhase: "Pending" | "Starting" | "Started" | "Scanning" | "Complete" | "Failed" | "Cancelled";
+        /**
+         * @description Protocol that discovered the physical link between network devices
+         * @enum {string}
+         */
+        DiscoveryProtocol: "LLDP" | "CDP";
         DiscoveryType: {
             /** Format: uuid */
             host_id: string;
@@ -3194,6 +3466,7 @@ export interface components {
             type: "SelfReport";
         } | {
             host_naming_fallback: components["schemas"]["HostNamingFallback"];
+            snmp_credentials?: null | components["schemas"]["SnmpCredentialMapping"];
             subnet_ids: string[] | null;
             /** @enum {string} */
             type: "Network";
@@ -3279,11 +3552,19 @@ export interface components {
             source_binding_id: string;
             /** Format: uuid */
             target_binding_id: string;
+        } | {
+            /** @enum {string} */
+            edge_type: "PhysicalLink";
+            protocol: components["schemas"]["DiscoveryProtocol"];
+            /** Format: uuid */
+            source_if_entry_id: string;
+            /** Format: uuid */
+            target_if_entry_id: string;
         };
         /** @enum {string} */
-        EdgeTypeDiscriminants: "Interface" | "HostVirtualization" | "ServiceVirtualization" | "RequestPath" | "HubAndSpoke";
+        EdgeTypeDiscriminants: "Interface" | "HostVirtualization" | "ServiceVirtualization" | "RequestPath" | "HubAndSpoke" | "PhysicalLink";
         /** @enum {string} */
-        EntityDiscriminants: "Organization" | "Invite" | "Share" | "Network" | "DaemonApiKey" | "UserApiKey" | "User" | "Tag" | "Discovery" | "Daemon" | "Host" | "Service" | "Port" | "Binding" | "Interface" | "Subnet" | "Group" | "Topology" | "Unknown";
+        EntityDiscriminants: "Organization" | "Invite" | "Share" | "Network" | "DaemonApiKey" | "UserApiKey" | "User" | "Tag" | "Discovery" | "Daemon" | "Host" | "Service" | "Port" | "Binding" | "Interface" | "IfEntry" | "SnmpCredential" | "Subnet" | "Group" | "Topology" | "Unknown";
         EntityMetadata: {
             color: components["schemas"]["Color"];
             icon: string;
@@ -3390,13 +3671,30 @@ export interface components {
          *     and queried by `host_id`. They are NOT stored on the host.
          */
         HostBase: {
+            /** @description LLDP lldpLocChassisId - globally unique device identifier for deduplication */
+            chassis_id?: string | null;
             description: string | null;
             hidden: boolean;
             hostname: string | null;
+            /** @description URL for device management interface (manual or discovered) */
+            management_url?: string | null;
             name: string;
             /** Format: uuid */
             network_id: string;
+            /**
+             * Format: uuid
+             * @description Per-host SNMP credential override (null = use network default)
+             */
+            snmp_credential_id?: string | null;
             source: components["schemas"]["EntitySource"];
+            /** @description SNMP sysContact.0 - admin contact info */
+            sys_contact?: string | null;
+            /** @description SNMP sysDescr.0 - full system description */
+            sys_descr?: string | null;
+            /** @description SNMP sysLocation.0 - physical location */
+            sys_location?: string | null;
+            /** @description SNMP sysObjectID.0 - vendor OID for device identification */
+            sys_object_id?: string | null;
             tags: string[];
             virtualization: null | components["schemas"]["HostVirtualization"];
         };
@@ -3409,20 +3707,49 @@ export interface components {
         HostOrderField: "created_at" | "name" | "hostname" | "updated_at" | "virtualized_by" | "network_id";
         /**
          * @description Response type for host endpoints.
-         *     Includes hydrated children (interfaces, ports, services).
+         *     Includes children (interfaces, ports, services, if_entries).
          * @example {
          *       "created_at": "2026-01-15T10:30:00Z",
          *       "description": "Primary web server",
          *       "hidden": false,
          *       "hostname": "web-server-01.local",
          *       "id": "550e8400-e29b-41d4-a716-446655440003",
+         *       "if_entries": [
+         *         {
+         *           "admin_status": "Up",
+         *           "cdp_address": null,
+         *           "cdp_device_id": null,
+         *           "cdp_platform": null,
+         *           "cdp_port_id": null,
+         *           "created_at": "2026-01-15T10:30:00Z",
+         *           "host_id": "550e8400-e29b-41d4-a716-446655440003",
+         *           "id": "550e8400-e29b-41d4-a716-44665544000f",
+         *           "if_alias": "Uplink to Core Switch",
+         *           "if_descr": "GigabitEthernet0/1",
+         *           "if_index": 1,
+         *           "if_type": 6,
+         *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
+         *           "lldp_chassis_id": null,
+         *           "lldp_mgmt_addr": null,
+         *           "lldp_port_desc": null,
+         *           "lldp_port_id": null,
+         *           "lldp_sys_desc": null,
+         *           "lldp_sys_name": null,
+         *           "mac_address": "DE:AD:BE:EF:CA:FE",
+         *           "neighbor": null,
+         *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
+         *           "oper_status": "Up",
+         *           "speed_bps": 1000000000,
+         *           "updated_at": "2026-01-15T10:30:00Z"
+         *         }
+         *       ],
          *       "interfaces": [
          *         {
          *           "created_at": "2026-01-15T10:30:00Z",
          *           "host_id": "550e8400-e29b-41d4-a716-446655440003",
          *           "id": "550e8400-e29b-41d4-a716-446655440005",
          *           "ip_address": "192.168.1.100",
-         *           "mac_address": "DE:AD:BE:EF:12:34",
+         *           "mac_address": "DE:AD:BE:EF:CA:FE",
          *           "name": "eth0",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
@@ -3444,7 +3771,35 @@ export interface components {
          *           "updated_at": "2026-01-15T10:30:00Z"
          *         }
          *       ],
-         *       "services": [],
+         *       "services": [
+         *         {
+         *           "bindings": [
+         *             {
+         *               "created_at": "2026-01-21T19:23:31.706288Z",
+         *               "id": "bfb77e2e-2214-4ed0-9d9a-dabf4058c94c",
+         *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
+         *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
+         *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
+         *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
+         *               "type": "Port",
+         *               "updated_at": "2026-01-21T19:23:31.706288Z"
+         *             }
+         *           ],
+         *           "created_at": "2026-01-15T10:30:00Z",
+         *           "host_id": "550e8400-e29b-41d4-a716-446655440003",
+         *           "id": "550e8400-e29b-41d4-a716-446655440007",
+         *           "name": "nginx",
+         *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
+         *           "position": 0,
+         *           "service_definition": "AudioBookShelf",
+         *           "source": {
+         *             "type": "Manual"
+         *           },
+         *           "tags": [],
+         *           "updated_at": "2026-01-15T10:30:00Z",
+         *           "virtualization": null
+         *         }
+         *       ],
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -3454,6 +3809,7 @@ export interface components {
          *     }
          */
         HostResponse: {
+            chassis_id?: string | null;
             /** Format: date-time */
             created_at: string;
             description?: string | null;
@@ -3461,13 +3817,22 @@ export interface components {
             hostname?: string | null;
             /** Format: uuid */
             id: string;
+            /** @description SNMP ifTable entries */
+            if_entries: components["schemas"]["IfEntry"][];
             interfaces: components["schemas"]["Interface"][];
+            management_url?: string | null;
             name: string;
             /** Format: uuid */
             network_id: string;
             ports: components["schemas"]["Port"][];
             services: components["schemas"]["Service"][];
+            /** Format: uuid */
+            snmp_credential_id?: string | null;
             source: components["schemas"]["EntitySource"];
+            sys_contact?: string | null;
+            sys_descr?: string | null;
+            sys_location?: string | null;
+            sys_object_id?: string | null;
             tags: string[];
             /** Format: date-time */
             updated_at: string;
@@ -3480,12 +3845,120 @@ export interface components {
             type: "Proxmox";
         };
         /**
+         * @description SNMP ifAdminStatus values per IF-MIB RFC 2863
+         * @enum {string}
+         */
+        IfAdminStatus: "Up" | "Down" | "Testing";
+        IfEntry: components["schemas"]["IfEntryBase"] & {
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        IfEntryBase: {
+            /** @description SNMP ifAdminStatus: 1=up, 2=down, 3=testing */
+            admin_status: components["schemas"]["IfAdminStatus"];
+            /** @description Remote management IP from CDP (cdpCacheAddress) */
+            cdp_address?: string | null;
+            /** @description Remote device ID from CDP (typically hostname, locally unique) */
+            cdp_device_id?: string | null;
+            /** @description Remote platform from CDP (e.g., "Cisco IOS") */
+            cdp_platform?: string | null;
+            /** @description Remote port ID from CDP */
+            cdp_port_id?: string | null;
+            /** Format: uuid */
+            host_id: string;
+            /** @description SNMP ifAlias - user-configured description */
+            if_alias?: string | null;
+            /** @description SNMP ifDescr - interface description (e.g., GigabitEthernet0/1) */
+            if_descr: string;
+            /**
+             * Format: int32
+             * @description SNMP ifIndex - stable identifier within device
+             */
+            if_index: number;
+            /**
+             * Format: int32
+             * @description SNMP ifType - IANAifType integer (6=ethernet, 24=loopback, etc.)
+             */
+            if_type: number;
+            /**
+             * Format: uuid
+             * @description FK to Interface entity - this port's IP assignment (must be on same host)
+             */
+            interface_id?: string | null;
+            lldp_chassis_id?: null | components["schemas"]["LldpChassisId"];
+            /** @description Remote management IP from LLDP neighbor (lldpRemManAddr) */
+            lldp_mgmt_addr?: string | null;
+            /** @description Remote port description from LLDP neighbor (lldpRemPortDesc) */
+            lldp_port_desc?: string | null;
+            lldp_port_id?: null | components["schemas"]["LldpPortId"];
+            /** @description Remote system description from LLDP neighbor (lldpRemSysDesc) - platform info */
+            lldp_sys_desc?: string | null;
+            /** @description Remote system name from LLDP neighbor (lldpRemSysName) */
+            lldp_sys_name?: string | null;
+            /** @description MAC address from SNMP ifPhysAddress - immutable once set */
+            mac_address?: string | null;
+            neighbor?: null | components["schemas"]["Neighbor"];
+            /** Format: uuid */
+            network_id: string;
+            /** @description SNMP ifOperStatus: 1=up, 2=down, 3=testing, 4=unknown, 5=dormant, 6=notPresent, 7=lowerLayerDown */
+            oper_status: components["schemas"]["IfOperStatus"];
+            /**
+             * Format: int64
+             * @description Interface speed from ifSpeed/ifHighSpeed in bits per second
+             */
+            speed_bps?: number | null;
+        };
+        /**
+         * @description Input for creating an SNMP interface entry (ifTable data).
+         *     Used in CreateHostRequest. Server assigns UUIDs since nothing references
+         *     IfEntry IDs at creation time (neighbor resolution is done server-side).
+         */
+        IfEntryInput: {
+            admin_status?: null | components["schemas"]["IfAdminStatus"];
+            /** @description SNMP ifAlias - user-configured description */
+            if_alias?: string | null;
+            /** @description SNMP ifDescr - interface description (e.g., GigabitEthernet0/1) */
+            if_descr: string;
+            /**
+             * Format: int32
+             * @description SNMP ifIndex - stable identifier within device
+             */
+            if_index: number;
+            /**
+             * Format: int32
+             * @description SNMP ifType - IANAifType integer (6=ethernet, 24=loopback, etc.)
+             */
+            if_type?: number | null;
+            /**
+             * Format: uuid
+             * @description Optional FK to Interface - links this SNMP port to its IP assignment
+             */
+            interface_id?: string | null;
+            /** @description MAC address from SNMP ifPhysAddress */
+            mac_address?: string | null;
+            oper_status?: null | components["schemas"]["IfOperStatus"];
+            /**
+             * Format: int64
+             * @description Interface speed in bits per second
+             */
+            speed_bps?: number | null;
+        };
+        /**
+         * @description SNMP ifOperStatus values per IF-MIB RFC 2863
+         * @enum {string}
+         */
+        IfOperStatus: "Up" | "Down" | "Testing" | "Unknown" | "Dormant" | "NotPresent" | "LowerLayerDown";
+        /**
          * @example {
          *       "created_at": "2026-01-15T10:30:00Z",
          *       "host_id": "550e8400-e29b-41d4-a716-446655440003",
          *       "id": "550e8400-e29b-41d4-a716-446655440005",
          *       "ip_address": "192.168.1.100",
-         *       "mac_address": "DE:AD:BE:EF:12:34",
+         *       "mac_address": "DE:AD:BE:EF:CA:FE",
          *       "name": "eth0",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
@@ -3505,7 +3978,8 @@ export interface components {
             /** Format: uuid */
             host_id: string;
             ip_address: string;
-            mac_address: string | null;
+            /** @description MAC address discovered from ARP, SNMP, or Docker - immutable once set */
+            mac_address?: string | null;
             name: string | null;
             /** Format: uuid */
             network_id: string;
@@ -3567,6 +4041,89 @@ export interface components {
             x: number;
             y: number;
         };
+        /**
+         * @description LLDP Chassis ID subtypes per IEEE 802.1AB.
+         *
+         *     The chassis ID identifies the remote device. Different network equipment
+         *     may use different subtypes depending on configuration and capabilities.
+         */
+        LldpChassisId: {
+            /** @enum {string} */
+            subtype: "ChassisComponent";
+            /** @description Subtype 1: Chassis component (e.g., backplane serial number) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "InterfaceAlias";
+            /** @description Subtype 2: Interface alias (ifAlias from IF-MIB) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "PortComponent";
+            /** @description Subtype 3: Port component (e.g., backplane port number) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "MacAddress";
+            /** @description Subtype 4: MAC address (most common) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "NetworkAddress";
+            /** @description Subtype 5: Network address (IP address stored as string) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "InterfaceName";
+            /** @description Subtype 6: Interface name (ifName from IF-MIB) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "LocallyAssigned";
+            /** @description Subtype 7: Locally assigned (device-specific identifier) */
+            value: string;
+        };
+        /**
+         * @description LLDP Port ID subtypes per IEEE 802.1AB.
+         *
+         *     The port ID identifies the specific port on the remote device.
+         */
+        LldpPortId: {
+            /** @enum {string} */
+            subtype: "InterfaceAlias";
+            /** @description Subtype 1: Interface alias (ifAlias from IF-MIB) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "PortComponent";
+            /** @description Subtype 2: Port component (e.g., backplane port number) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "MacAddress";
+            /** @description Subtype 3: MAC address */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "NetworkAddress";
+            /** @description Subtype 4: Network address (IP address stored as string) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "InterfaceName";
+            /** @description Subtype 5: Interface name (ifName from IF-MIB) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "AgentCircuitId";
+            /** @description Subtype 6: Agent circuit ID (used by some providers) */
+            value: string;
+        } | {
+            /** @enum {string} */
+            subtype: "LocallyAssigned";
+            /** @description Subtype 7: Locally assigned (device-specific identifier) */
+            value: string;
+        };
         /** @description Login request from client */
         LoginRequest: {
             /** Format: email */
@@ -3604,6 +4161,29 @@ export interface components {
             subnet_types: components["schemas"]["TypeMetadata"][];
         };
         /**
+         * @description Resolved LLDP/CDP neighbor connection.
+         *
+         *     Represents the remote endpoint this port connects to, discovered via LLDP or CDP.
+         *     The two variants are mutually exclusive and represent different resolution states.
+         */
+        Neighbor: {
+            /**
+             * Format: uuid
+             * @description Full resolution - the specific remote port was identified
+             */
+            id: string;
+            /** @enum {string} */
+            type: "IfEntry";
+        } | {
+            /**
+             * Format: uuid
+             * @description Partial resolution - the remote device was identified but not the specific port
+             */
+            id: string;
+            /** @enum {string} */
+            type: "Host";
+        };
+        /**
          * @example {
          *       "created_at": "2026-01-15T10:30:00Z",
          *       "id": "550e8400-e29b-41d4-a716-446655440002",
@@ -3625,6 +4205,12 @@ export interface components {
             name: string;
             /** Format: uuid */
             organization_id: string;
+            /**
+             * Format: uuid
+             * @description Default SNMP credential for this network (hosts can override).
+             *     When set, SNMP discovery is enabled for this network.
+             */
+            snmp_credential_id?: string | null;
             tags: string[];
         };
         /** @description Network configuration for setup */
@@ -3738,6 +4324,7 @@ export interface components {
         /** @description Response type for paginated list endpoints (pagination is always present in meta) */
         PaginatedApiResponse_HostResponse: {
             data: {
+                chassis_id?: string | null;
                 /** Format: date-time */
                 created_at: string;
                 description?: string | null;
@@ -3745,13 +4332,22 @@ export interface components {
                 hostname?: string | null;
                 /** Format: uuid */
                 id: string;
+                /** @description SNMP ifTable entries */
+                if_entries: components["schemas"]["IfEntry"][];
                 interfaces: components["schemas"]["Interface"][];
+                management_url?: string | null;
                 name: string;
                 /** Format: uuid */
                 network_id: string;
                 ports: components["schemas"]["Port"][];
                 services: components["schemas"]["Service"][];
+                /** Format: uuid */
+                snmp_credential_id?: string | null;
                 source: components["schemas"]["EntitySource"];
+                sys_contact?: string | null;
+                sys_descr?: string | null;
+                sys_location?: string | null;
+                sys_object_id?: string | null;
                 tags: string[];
                 /** Format: date-time */
                 updated_at: string;
@@ -3764,6 +4360,20 @@ export interface components {
         /** @description Response type for paginated list endpoints (pagination is always present in meta) */
         PaginatedApiResponse_Service: {
             data: (components["schemas"]["ServiceBase"] & {
+                /** Format: date-time */
+                readonly created_at: string;
+                /** Format: uuid */
+                readonly id: string;
+                /** Format: date-time */
+                readonly updated_at: string;
+            })[];
+            error?: string | null;
+            meta: components["schemas"]["PaginatedApiMeta"];
+            success: boolean;
+        };
+        /** @description Response type for paginated list endpoints (pagination is always present in meta) */
+        PaginatedApiResponse_SnmpCredential: {
+            data: (components["schemas"]["SnmpCredentialBase"] & {
                 /** Format: date-time */
                 readonly created_at: string;
                 /** Format: uuid */
@@ -4039,14 +4649,23 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
+<<<<<<< HEAD
          *           "created_at": "2026-01-16T02:01:08.428739Z",
          *           "id": "b4c64574-22ff-4f93-92d9-08199d3d3c3a",
+=======
+         *           "created_at": "2026-01-21T19:23:31.706820Z",
+         *           "id": "a7532afd-2d86-4610-9636-72a54aa800d4",
+>>>>>>> snmp-support
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
+<<<<<<< HEAD
          *           "updated_at": "2026-01-16T02:01:08.428739Z"
+=======
+         *           "updated_at": "2026-01-21T19:23:31.706820Z"
+>>>>>>> snmp-support
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -4055,7 +4674,11 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
+<<<<<<< HEAD
          *       "service_definition": "Dhcp Server",
+=======
+         *       "service_definition": "AudioBookShelf",
+>>>>>>> snmp-support
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -4181,6 +4804,60 @@ export interface components {
             show_inspect_panel: boolean;
             show_zoom_controls: boolean;
         };
+        SnmpCredential: components["schemas"]["SnmpCredentialBase"] & {
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        SnmpCredentialBase: {
+            /**
+             * @description SNMPv2c community string (stored encrypted)
+             *     For V3, this would be extended with auth/priv credentials
+             *     Redacted in API responses for security
+             */
+            community: string;
+            name: string;
+            /** Format: uuid */
+            organization_id: string;
+            /** @description SNMP version (V2c or V3) */
+            version?: components["schemas"]["SnmpVersion"];
+        };
+        /**
+         * @description SNMP credential mapping for network discovery
+         *     Server builds this before initiating discovery; daemon uses it during scan
+         */
+        SnmpCredentialMapping: {
+            default_credential?: null | components["schemas"]["SnmpQueryCredential"];
+            /** @description Per-IP overrides (from host.snmp_credential_id where host has known IPs) */
+            ip_overrides?: components["schemas"]["SnmpIpOverride"][];
+        };
+        /** @enum {string} */
+        SnmpCredentialOrderField: "created_at" | "name" | "version" | "updated_at";
+        /** @description IP-specific SNMP credential override */
+        SnmpIpOverride: {
+            /** @description Credential to use for this IP */
+            credential: components["schemas"]["SnmpQueryCredential"];
+            /** @description IP address for this override */
+            ip: string;
+        };
+        /**
+         * @description Minimal SNMP credential for daemon queries (version + community only)
+         *     Does not include organization_id, name, timestamps - just what's needed for SNMP queries
+         */
+        SnmpQueryCredential: {
+            /** @description SNMPv2c community string */
+            community: string;
+            /** @description SNMP version (V2c or V3) */
+            version?: components["schemas"]["SnmpVersion"];
+        };
+        /**
+         * @description SNMP protocol version
+         * @enum {string}
+         */
+        SnmpVersion: "V2c" | "V3";
         /**
          * @example {
          *       "cidr": "192.168.1.0/24",
@@ -4269,6 +4946,7 @@ export interface components {
             edges: components["schemas"]["Edge"][];
             groups: components["schemas"]["Group"][];
             hosts: components["schemas"]["Host"][];
+            if_entries: components["schemas"]["IfEntry"][];
             interfaces: components["schemas"]["Interface"][];
             is_locked: boolean;
             is_stale: boolean;
@@ -4289,6 +4967,7 @@ export interface components {
             removed_bindings: string[];
             removed_groups: string[];
             removed_hosts: string[];
+            removed_if_entries: string[];
             removed_interfaces: string[];
             removed_ports: string[];
             removed_services: string[];
@@ -7023,6 +7702,209 @@ export interface operations {
             };
         };
     };
+    "list_if-entries": {
+        parameters: {
+            query?: {
+                /** @description Filter by host ID */
+                host_id?: string | null;
+                /** @description Filter by network ID */
+                network_id?: string | null;
+                /** @description Filter by specific entity IDs (for selective loading) */
+                ids?: string[] | null;
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of if-entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["IfEntry"][];
+                        error?: string | null;
+                        meta: components["schemas"]["PaginatedApiMeta"];
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    create_if_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IfEntry"];
+            };
+        };
+        responses: {
+            /** @description If entry created successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_IfEntry"];
+                };
+            };
+            /** @description Network mismatch or duplicate if_index */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "bulk_delete_if-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Array of if-entries IDs to delete */
+        requestBody: {
+            content: {
+                "application/json": string[];
+            };
+        };
+        responses: {
+            /** @description IfEntrys deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_BulkDeleteResponse"];
+                };
+            };
+        };
+    };
+    get_if_entry_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description IfEntry ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description IfEntry found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_IfEntry"];
+                };
+            };
+            /** @description IfEntry not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    update_if_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description If entry ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IfEntry"];
+            };
+        };
+        responses: {
+            /** @description If entry updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_IfEntry"];
+                };
+            };
+            /** @description Network mismatch or invalid request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description If entry not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_if_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description IfEntry ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description IfEntry deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+            /** @description IfEntry not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     list_interfaces: {
         parameters: {
             query?: {
@@ -8399,6 +9281,204 @@ export interface operations {
                 };
             };
             /** @description Share not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    get_all_snmp_credentials: {
+        parameters: {
+            query?: {
+                /** @description Primary ordering field (used for grouping). Always sorts ASC to keep groups together. */
+                group_by?: null | components["schemas"]["SnmpCredentialOrderField"];
+                /** @description Secondary ordering field (sorting within groups or standalone sort). */
+                order_by?: null | components["schemas"]["SnmpCredentialOrderField"];
+                /** @description Direction for order_by field (group_by always uses ASC). */
+                order_direction?: null | components["schemas"]["OrderDirection"];
+                /** @description Maximum number of results to return (1-1000, default: 50). Use 0 for no limit. */
+                limit?: number | null;
+                /** @description Number of results to skip. Default: 0. */
+                offset?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of SNMP credentials */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedApiResponse_SnmpCredential"];
+                };
+            };
+        };
+    };
+    create_snmp_credential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnmpCredential"];
+            };
+        };
+        responses: {
+            /** @description SNMP credential created successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_SnmpCredential"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Credential name already exists in this organization */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "bulk_delete_snmp-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Array of snmp-credentials IDs to delete */
+        requestBody: {
+            content: {
+                "application/json": string[];
+            };
+        };
+        responses: {
+            /** @description SnmpCredentials deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_BulkDeleteResponse"];
+                };
+            };
+        };
+    };
+    get_snmp_credential_by_id: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description SnmpCredential ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SnmpCredential found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_SnmpCredential"];
+                };
+            };
+            /** @description SnmpCredential not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    update_snmp_credential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description SnmpCredential ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnmpCredential"];
+            };
+        };
+        responses: {
+            /** @description SnmpCredential updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_SnmpCredential"];
+                };
+            };
+            /** @description SnmpCredential not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_snmp_credential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description SnmpCredential ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SnmpCredential deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+            /** @description SnmpCredential not found */
             404: {
                 headers: {
                     [name: string]: unknown;
