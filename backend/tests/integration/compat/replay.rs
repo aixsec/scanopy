@@ -226,8 +226,12 @@ const SKIP_PATH_SUFFIXES: &[&str] = &[
 
 /// Check if an exchange path should be skipped.
 fn should_skip_path(path: &str) -> bool {
-    SKIP_PATH_PREFIXES.iter().any(|prefix| path.starts_with(prefix))
-        || SKIP_PATH_SUFFIXES.iter().any(|suffix| path.ends_with(suffix))
+    SKIP_PATH_PREFIXES
+        .iter()
+        .any(|prefix| path.starts_with(prefix))
+        || SKIP_PATH_SUFFIXES
+            .iter()
+            .any(|suffix| path.ends_with(suffix))
 }
 
 /// Replay all exchanges from a manifest.
