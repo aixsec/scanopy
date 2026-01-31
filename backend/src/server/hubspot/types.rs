@@ -2,6 +2,22 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// HubSpot form field for form submissions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HubSpotFormField {
+    pub name: String,
+    pub value: String,
+}
+
+impl HubSpotFormField {
+    pub fn new(name: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            value: value.into(),
+        }
+    }
+}
+
 /// HubSpot contact properties for Scanopy users
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ContactProperties {
@@ -205,6 +221,10 @@ pub struct CompanyProperties {
     /// First invite accepted date (ISO 8601)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scanopy_first_invite_accepted_date: Option<String>,
+
+    /// Urgency for enterprise inquiry: immediately, 1-3 months, 3-6 months, exploring
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scanopy_urgency: Option<String>,
 }
 
 impl CompanyProperties {
@@ -338,6 +358,11 @@ impl CompanyProperties {
 
     pub fn with_first_invite_accepted_date(mut self, date: DateTime<Utc>) -> Self {
         self.scanopy_first_invite_accepted_date = Some(date.to_rfc3339());
+        self
+    }
+
+    pub fn with_urgency(mut self, urgency: impl Into<String>) -> Self {
+        self.scanopy_urgency = Some(urgency.into());
         self
     }
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Check, Network } from 'lucide-svelte';
+	import { Network } from 'lucide-svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
 	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
 	import ConfirmationDialog from '$lib/shared/components/feedback/ConfirmationDialog.svelte';
@@ -12,7 +12,6 @@
 	import {
 		common_continue,
 		common_settingUp,
-		onboarding_continueToRegistration,
 		onboarding_daemonsActivateBody,
 		onboarding_daemonsActivateTitle,
 		onboarding_exploreDemoInstead,
@@ -48,20 +47,30 @@
 	// Track loading state during daemon setup
 	let isLoading = $state(false);
 
-	// Track whether daemon has been set up for selected network
-	let daemonConfigured = $state(false);
-
-	// API key returned after daemon setup
+	// API key returned after daemon setup (null = not yet configured)
 	let apiKey = $state<string | null>(null);
 
 	// Track skip confirmation modal
 	let showSkipConfirm = $state(false);
 
-	// Reference to CreateDaemonForm for getting daemon name
-	let daemonFormRef = $state<CreateDaemonForm | null>(null);
-
 	// Daemon setup mutation
 	const daemonSetupMutation = useDaemonSetupMutation();
+
+	// Restore daemon setup state from store on mount (for page reload persistence)
+	$effect(() => {
+		// Only run once when component mounts and no selection has been made
+		if (selectedNetworkId !== null) return;
+
+		const state = onboardingStore.getState();
+		// Find a daemon setup that has an API key (was configured to install now)
+		for (const [networkId, setup] of state.daemonSetups.entries()) {
+			if (setup.installNow && setup.apiKey) {
+				selectedNetworkId = networkId;
+				apiKey = setup.apiKey;
+				break;
+			}
+		}
+	});
 
 	// Get the selected network object
 	let selectedNetwork = $derived(networks.find((n) => n.id === selectedNetworkId));
@@ -71,41 +80,31 @@
 		selectedNetwork ? toKebabCase(selectedNetwork.name) + '-daemon' : 'daemon'
 	);
 
-	function selectNetwork(networkId: string) {
-		if (daemonConfigured && selectedNetworkId !== networkId) {
-			// Reset if changing selection after configuration
-			daemonConfigured = false;
-			apiKey = null;
-		}
+	async function selectNetwork(networkId: string) {
+		if (selectedNetworkId === networkId) return;
+
+		// Reset API key when changing selection
+		apiKey = null;
 		selectedNetworkId = networkId;
-	}
 
-	async function handleContinue() {
-		if (!selectedNetworkId) return;
+		// Immediately set up the daemon for the selected network
+		const network = networks.find((n) => n.id === networkId);
+		if (!network) return;
 
-		// If daemon already configured, just proceed
-		if (daemonConfigured) {
-			onComplete();
-			return;
-		}
-
-		// Set up the daemon for the selected network
-		const daemonName = daemonFormRef?.getDaemonName() ?? defaultDaemonName;
-
+		const daemonName = toKebabCase(network.name) + '-daemon';
 		isLoading = true;
 
 		try {
 			const result = await daemonSetupMutation.mutateAsync({
 				daemon_name: daemonName,
-				network_id: selectedNetworkId,
+				network_id: networkId,
 				install_later: false
 			});
 
 			apiKey = result.api_key ?? null;
-			daemonConfigured = true;
 
 			// Update onboarding store
-			onboardingStore.setDaemonSetup(selectedNetworkId, {
+			onboardingStore.setDaemonSetup(networkId, {
 				name: daemonName,
 				installNow: true,
 				apiKey: result.api_key ?? undefined
@@ -117,10 +116,10 @@
 			}
 
 			// Mark other networks as install later
-			for (const network of networks) {
-				if (network.id && network.id !== selectedNetworkId) {
-					onboardingStore.setDaemonSetup(network.id, {
-						name: toKebabCase(network.name) + '-daemon',
+			for (const n of networks) {
+				if (n.id && n.id !== networkId) {
+					onboardingStore.setDaemonSetup(n.id, {
+						name: toKebabCase(n.name) + '-daemon',
 						installNow: false
 					});
 				}
@@ -131,12 +130,16 @@
 				choice: 'install_now',
 				use_case: onboardingStore.getState().useCase
 			});
-
-			isLoading = false;
 		} catch {
-			isLoading = false;
 			pushError('Failed to generate daemon key. Please try again.');
-			return;
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	function handleContinue() {
+		if (apiKey) {
+			onComplete();
 		}
 	}
 
@@ -150,16 +153,11 @@
 
 	function handleExploreDemo() {
 		showSkipConfirm = false;
-		window.location.href = 'https://demo.scanopy.net';
+		window.open('https://demo.scanopy.net', '_blank');
 	}
 
-	// Determine button state
-	let canContinue = $derived(selectedNetworkId !== null);
-	let buttonText = $derived(() => {
-		if (isLoading) return common_settingUp();
-		if (daemonConfigured) return onboarding_continueToRegistration();
-		return common_continue();
-	});
+	// Determine button state - can only continue after API key is generated
+	let canContinue = $derived(apiKey !== null && !isLoading);
 </script>
 
 <GenericModal
@@ -170,87 +168,80 @@
 	showCloseButton={false}
 	preventCloseOnClickOutside={true}
 >
-	<div class="space-y-6 overflow-y-auto p-6">
-		<div class="space-y-2">
-			<p class="text-primary font-medium">{onboarding_selectDaemon()}</p>
-			<p class="text-secondary text-sm">
-				{onboarding_selectDaemonHelp()}
-			</p>
-		</div>
+	<div class="flex min-h-0 flex-1 flex-col">
+		<div class="flex-1 space-y-6 overflow-y-auto p-6">
+			<div class="space-y-2">
+				<p class="text-primary font-medium">{onboarding_selectDaemon()}</p>
+				<p class="text-secondary text-sm">
+					{onboarding_selectDaemonHelp()}
+				</p>
+			</div>
 
-		<InlineInfo title={onboarding_daemonsActivateTitle()} body={onboarding_daemonsActivateBody()} />
+			<InlineInfo
+				title={onboarding_daemonsActivateTitle()}
+				body={onboarding_daemonsActivateBody()}
+			/>
 
-		<!-- Network selection cards -->
-		<div class="space-y-2">
-			{#each networks as network (network.id)}
-				{#if network.id}
-					{@const isSelected = selectedNetworkId === network.id}
-					<button
-						type="button"
-						class="card flex w-full items-center gap-4 p-4 text-left transition-all {isSelected
-							? 'ring-2 ring-primary-500'
-							: 'hover:bg-gray-800'}"
-						onclick={() => network.id && selectNetwork(network.id)}
-					>
-						<div
-							class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg {isSelected
-								? 'text-primary-400 bg-primary-500/20'
-								: 'bg-gray-700 text-gray-400'}"
+			<!-- Network selection cards -->
+			<div class="space-y-2">
+				{#each networks as network (network.id)}
+					{#if network.id}
+						{@const isSelected = selectedNetworkId === network.id}
+						<button
+							type="button"
+							class="card flex w-full items-center gap-4 p-4 text-left transition-all {isSelected
+								? 'card-selected'
+								: ''}"
+							onclick={() => network.id && selectNetwork(network.id)}
 						>
-							{#if isSelected && daemonConfigured}
-								<Check class="h-5 w-5" />
-							{:else}
+							<div
+								class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-700 text-gray-400"
+							>
 								<Network class="h-5 w-5" />
-							{/if}
-						</div>
-						<div class="flex-1">
-							<div class="text-primary font-medium">{network.name}</div>
-							{#if isSelected && daemonConfigured}
-								<div class="text-xs text-success">Daemon configured</div>
-							{/if}
-						</div>
+							</div>
+							<div class="flex-1">
+								<div class="text-primary font-medium">{network.name}</div>
+							</div>
+							<div
+								class="flex h-5 w-5 items-center justify-center rounded-full border-2 {isSelected
+									? 'border-primary-500 bg-primary-500'
+									: 'border-gray-500'}"
+							>
+								{#if isSelected}
+									<div class="h-2 w-2 rounded-full bg-white"></div>
+								{/if}
+							</div>
+						</button>
+					{/if}
+				{/each}
+			</div>
+
+			<!-- Show loading state while daemon is being set up -->
+			{#if selectedNetworkId && isLoading}
+				<div class="card flex items-center justify-center p-8">
+					<div class="text-secondary flex items-center gap-2">
 						<div
-							class="flex h-5 w-5 items-center justify-center rounded-full border-2 {isSelected
-								? 'border-primary-500 bg-primary-500'
-								: 'border-gray-500'}"
-						>
-							{#if isSelected}
-								<div class="h-2 w-2 rounded-full bg-white"></div>
-							{/if}
-						</div>
-					</button>
-				{/if}
-			{/each}
+							class="h-4 w-4 animate-spin rounded-full border-2 border-gray-500 border-t-primary-500"
+						></div>
+						<span>{common_settingUp()}...</span>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Show installation commands after API key is generated -->
+			{#if selectedNetworkId && apiKey && !isLoading}
+				<div class="card space-y-4">
+					<CreateDaemonForm
+						daemon={null}
+						networkId={selectedNetworkId}
+						{apiKey}
+						showAdvanced={true}
+						initialName={defaultDaemonName}
+						showModeSelect={false}
+					/>
+				</div>
+			{/if}
 		</div>
-
-		<!-- Show daemon form when network is selected and not yet configured -->
-		{#if selectedNetworkId && selectedNetwork && !daemonConfigured}
-			<div class="card space-y-4">
-				<CreateDaemonForm
-					bind:this={daemonFormRef}
-					daemon={null}
-					networkId={selectedNetworkId}
-					apiKey={null}
-					showAdvanced={false}
-					initialName={defaultDaemonName}
-					showModeSelect={false}
-				/>
-			</div>
-		{/if}
-
-		<!-- Show installation commands after daemon is configured -->
-		{#if selectedNetworkId && daemonConfigured && apiKey}
-			<div class="card space-y-4">
-				<CreateDaemonForm
-					daemon={null}
-					networkId={selectedNetworkId}
-					{apiKey}
-					showAdvanced={true}
-					initialName={defaultDaemonName}
-					showModeSelect={false}
-				/>
-			</div>
-		{/if}
 	</div>
 
 	{#snippet footer()}
@@ -263,13 +254,8 @@
 				>
 					{onboarding_skipDaemonSetup()}
 				</button>
-				<button
-					type="button"
-					class="btn-primary"
-					disabled={!canContinue || isLoading}
-					onclick={handleContinue}
-				>
-					{buttonText()}
+				<button type="button" class="btn-primary" disabled={!canContinue} onclick={handleContinue}>
+					{common_continue()}
 				</button>
 			</div>
 		</div>
@@ -285,5 +271,6 @@
 	cancelLabel={onboarding_exploreDemoInstead()}
 	onConfirm={handleSkipCancel}
 	onCancel={handleExploreDemo}
+	onClose={() => (showSkipConfirm = false)}
 	variant="warning"
 />

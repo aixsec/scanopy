@@ -16,9 +16,12 @@ use rand::{Rng, SeedableRng};
 use rsntp::AsyncSntpClient;
 use snmp2::{AsyncSession, Oid};
 use std::collections::HashMap;
+use std::io::ErrorKind;
 use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;
-use std::time::Duration;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::time::{Duration, Instant};
 use tokio::net::UdpSocket;
 use tokio::{net::TcpStream, time::timeout};
 use tokio_util::sync::CancellationToken;
@@ -26,10 +29,195 @@ use tokio_util::sync::CancellationToken;
 use crate::server::ports::r#impl::base::{PortType, TransportProtocol};
 
 pub const SCAN_TIMEOUT: Duration = Duration::from_millis(800);
-pub const PORT_SCAN_BATCH_MAX: usize = 400;
-pub const PORT_SCAN_BATCH_HIGH: usize = 200;
-pub const PORT_SCAN_BATCH_MED: usize = 128;
-pub const PORT_SCAN_BATCH_LOW: usize = 64;
+
+/// Default port scan batch size - number of ports scanned concurrently per host
+pub const PORT_SCAN_BATCH_SIZE: usize = 200;
+
+/// Minimum batch size floor to prevent degradation to unusably slow scanning
+pub const PORT_SCAN_BATCH_MIN: usize = 16;
+
+/// Number of consecutive successes required before attempting recovery
+const RECOVERY_THRESHOLD: usize = 50;
+
+/// Minimum time between degradation events (milliseconds) to prevent cascading
+const DEGRADATION_COOLDOWN_MS: u64 = 500;
+
+/// EMFILE error code on Unix systems (Too many open files)
+#[cfg(unix)]
+const EMFILE: i32 = 24;
+
+/// Controller for dynamically adjusting scan concurrency when FD exhaustion occurs.
+///
+/// This provides graceful degradation: when "Too many open files" errors are detected,
+/// the batch size is halved (down to a minimum floor). After sustained success,
+/// batch size gradually recovers.
+#[derive(Debug)]
+pub struct ScanConcurrencyController {
+    /// Current active batch size
+    current_batch_size: AtomicUsize,
+    /// Original target batch size (for recovery)
+    target_batch_size: usize,
+    /// Whether we're currently in degraded mode
+    degraded: AtomicBool,
+    /// Consecutive successful operations since last degradation
+    success_streak: AtomicUsize,
+    /// Timestamp of last degradation (ms since controller creation) for rate limiting
+    last_degradation_ms: AtomicU64,
+    /// Controller creation time for computing relative timestamps
+    created_at: Instant,
+}
+
+impl ScanConcurrencyController {
+    /// Create a new controller with the given initial batch size
+    pub fn new(initial_batch_size: usize) -> Arc<Self> {
+        Arc::new(Self {
+            current_batch_size: AtomicUsize::new(initial_batch_size),
+            target_batch_size: initial_batch_size,
+            degraded: AtomicBool::new(false),
+            success_streak: AtomicUsize::new(0),
+            last_degradation_ms: AtomicU64::new(0),
+            created_at: Instant::now(),
+        })
+    }
+
+    /// Get the current recommended batch size
+    pub fn batch_size(&self) -> usize {
+        self.current_batch_size.load(Ordering::Relaxed)
+    }
+
+    /// Check if currently operating in degraded mode
+    pub fn is_degraded(&self) -> bool {
+        self.degraded.load(Ordering::Relaxed)
+    }
+
+    /// Called when an FD exhaustion error (EMFILE) is detected.
+    /// Halves the batch size (minimum PORT_SCAN_BATCH_MIN) and resets success streak.
+    /// Uses compare-and-swap to ensure only one caller succeeds per degradation level.
+    /// Rate-limited to prevent cascading degradation from concurrent errors.
+    pub fn on_fd_exhaustion(&self) {
+        let now_ms = self.created_at.elapsed().as_millis() as u64;
+        let last_ms = self.last_degradation_ms.load(Ordering::Relaxed);
+
+        // Rate limit: skip if we degraded very recently (concurrent errors from same spike)
+        // Allow first degradation by checking if last_ms > 0 (meaning we've degraded before)
+        if last_ms > 0 && now_ms.saturating_sub(last_ms) < DEGRADATION_COOLDOWN_MS {
+            // Still mark as degraded and reset streak, but don't reduce further
+            self.degraded.store(true, Ordering::Relaxed);
+            self.success_streak.store(0, Ordering::Relaxed);
+            tracing::debug!(
+                "FD exhaustion skipped (rate limited), {} errors within cooldown period",
+                DEGRADATION_COOLDOWN_MS
+            );
+            return;
+        }
+
+        // Use compare_exchange to atomically reduce - only the "winner" logs
+        loop {
+            let current = self.current_batch_size.load(Ordering::Relaxed);
+            let new_size = (current / 2).max(PORT_SCAN_BATCH_MIN);
+
+            // If already at floor, just ensure we're marked as degraded
+            if current == new_size && current == PORT_SCAN_BATCH_MIN {
+                self.degraded.store(true, Ordering::Relaxed);
+                return;
+            }
+
+            // Try to be the one to reduce the batch size
+            match self.current_batch_size.compare_exchange(
+                current,
+                new_size,
+                Ordering::SeqCst,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => {
+                    // We won the race - log and update state
+                    self.degraded.store(true, Ordering::Relaxed);
+                    self.success_streak.store(0, Ordering::Relaxed);
+                    // Use max(1, now_ms) so we never store 0 (which means "never degraded")
+                    self.last_degradation_ms
+                        .store(now_ms.max(1), Ordering::Relaxed);
+
+                    tracing::warn!(
+                        previous_batch_size = current,
+                        new_batch_size = new_size,
+                        floor = PORT_SCAN_BATCH_MIN,
+                        "FD exhaustion detected, reducing batch size"
+                    );
+                    return;
+                }
+                Err(_) => {
+                    // Another thread already reduced it, retry with new value
+                    continue;
+                }
+            }
+        }
+    }
+
+    /// Called after a successful batch of operations.
+    /// Tracks success streak and attempts gradual recovery after threshold.
+    pub fn on_success(&self) {
+        if !self.degraded.load(Ordering::Relaxed) {
+            return;
+        }
+
+        let streak = self.success_streak.fetch_add(1, Ordering::Relaxed) + 1;
+
+        if streak >= RECOVERY_THRESHOLD {
+            let current = self.current_batch_size.load(Ordering::Relaxed);
+
+            // Recover by 25%, but don't exceed target
+            let new_size = ((current * 125) / 100).min(self.target_batch_size);
+
+            if new_size > current {
+                self.current_batch_size.store(new_size, Ordering::Relaxed);
+                self.success_streak.store(0, Ordering::Relaxed);
+
+                // Check if we've fully recovered
+                if new_size >= self.target_batch_size {
+                    self.degraded.store(false, Ordering::Relaxed);
+                    tracing::info!(
+                        previous_batch_size = current,
+                        recovered_batch_size = new_size,
+                        "Batch size fully recovered from FD exhaustion"
+                    );
+                } else {
+                    tracing::info!(
+                        previous_batch_size = current,
+                        new_batch_size = new_size,
+                        target = self.target_batch_size,
+                        "Batch size partially recovering after sustained success"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Check if an error indicates FD exhaustion and handle it.
+    /// Returns true if this was an FD exhaustion error that was handled.
+    #[cfg(unix)]
+    pub fn check_and_handle_error(&self, error: &std::io::Error) -> bool {
+        if error.raw_os_error() == Some(EMFILE) || error.kind() == ErrorKind::Other {
+            // Also check error message for "Too many open files"
+            let msg = error.to_string().to_lowercase();
+            if error.raw_os_error() == Some(EMFILE) || msg.contains("too many open files") {
+                self.on_fd_exhaustion();
+                return true;
+            }
+        }
+        false
+    }
+
+    #[cfg(not(unix))]
+    pub fn check_and_handle_error(&self, error: &std::io::Error) -> bool {
+        // On Windows, check for equivalent error
+        let msg = error.to_string().to_lowercase();
+        if msg.contains("too many open files") || msg.contains("no more file handles") {
+            self.on_fd_exhaustion();
+            return true;
+        }
+        false
+    }
+}
 
 /// Generic batch scanner that maintains constant parallelism with rate limiting
 /// This is the core RustScan pattern extracted into a reusable function
@@ -131,113 +319,6 @@ pub fn can_arp_scan(use_npcap: bool) -> bool {
     available
 }
 
-/// Result of probing a host's connection capacity
-#[derive(Debug, Clone, Copy)]
-pub struct HostCapacityProbe {
-    /// Recommended batch size for this host
-    pub recommended_batch_size: usize,
-    /// Number of probe ports that responded
-    pub responsive_ports: usize,
-}
-
-impl Default for HostCapacityProbe {
-    fn default() -> Self {
-        Self {
-            recommended_batch_size: PORT_SCAN_BATCH_LOW, // Conservative default
-            responsive_ports: 0,
-        }
-    }
-}
-
-/// Probe a host with a small set of common ports to estimate its connection capacity.
-/// This helps determine an appropriate batch size before the full port scan.
-///
-/// # Arguments
-/// * `ip` - The IP address to probe
-/// * `timeout_ms` - Timeout per connection attempt in milliseconds
-///
-/// # Returns
-/// HostCapacityProbe with recommended batch size based on response pattern
-pub async fn probe_host_capacity(ip: IpAddr, timeout_ms: u64) -> HostCapacityProbe {
-    use std::time::Instant;
-
-    // Common TCP ports to probe - mix of services found on different device types
-    // Using PortType enum for named constants
-    let probe_ports = [
-        PortType::Ssh,      // 22
-        PortType::Telnet,   // 23
-        PortType::Http,     // 80
-        PortType::Https,    // 443
-        PortType::Samba,    // 445 - Windows/NAS
-        PortType::Http8080, // 8080 - alternate web
-        PortType::Rdp,      // 3389
-    ];
-
-    let probe_timeout = Duration::from_millis(timeout_ms);
-    let mut response_times: Vec<Duration> = Vec::new();
-    let mut responsive_count = 0;
-
-    // Send all probes concurrently
-    let start = Instant::now();
-    let mut futures: FuturesUnordered<Pin<Box<dyn Future<Output = Option<Duration>> + Send>>> =
-        FuturesUnordered::new();
-
-    for port_type in &probe_ports {
-        let socket = SocketAddr::new(ip, port_type.number());
-        let probe_start = start;
-
-        futures.push(Box::pin(async move {
-            match timeout(probe_timeout, TcpStream::connect(socket)).await {
-                Ok(Ok(_stream)) => Some(probe_start.elapsed()),
-                Ok(Err(_)) => None, // Connection refused - port closed but host responsive
-                Err(_) => None,     // Timeout - port filtered or host slow
-            }
-        }));
-    }
-
-    while let Some(result) = futures.next().await {
-        if let Some(duration) = result {
-            response_times.push(duration);
-            responsive_count += 1;
-        }
-    }
-
-    // Check response time consistency
-    let avg_response_time = if !response_times.is_empty() {
-        response_times.iter().sum::<Duration>() / response_times.len() as u32
-    } else {
-        Duration::from_millis(500)
-    };
-
-    // Determine host capacity based on probe results
-    let recommended_batch_size =
-        if responsive_count >= 3 && avg_response_time < Duration::from_millis(100) {
-            // Multiple services + very fast = robust server
-            PORT_SCAN_BATCH_MAX
-        } else if responsive_count >= 2 && avg_response_time < Duration::from_millis(200) {
-            // Good responsiveness
-            PORT_SCAN_BATCH_HIGH
-        } else if responsive_count >= 1 && avg_response_time < Duration::from_millis(500) {
-            // Some response, moderate speed
-            PORT_SCAN_BATCH_MED
-        } else {
-            // Slow, filtered, or no response - likely constrained device
-            PORT_SCAN_BATCH_LOW
-        };
-
-    tracing::debug!(
-        ip = %ip,
-        responsive_ports = responsive_count,
-        recommended_batch_size = recommended_batch_size,
-        "Host capacity probe complete"
-    );
-
-    HostCapacityProbe {
-        recommended_batch_size,
-        responsive_ports: responsive_count,
-    }
-}
-
 pub async fn scan_ports_and_endpoints(
     ip: IpAddr,
     cancel: CancellationToken,
@@ -255,12 +336,14 @@ pub async fn scan_ports_and_endpoints(
     let mut endpoint_responses = Vec::new();
 
     // Scan TCP ports with batching and rate limiting
+    let controller = ScanConcurrencyController::new(port_scan_batch_size);
     let tcp_ports = scan_tcp_ports(
         ip,
         cancel.clone(),
         port_scan_batch_size,
         scan_rate_pps,
         tcp_ports_to_check,
+        controller,
     )
     .await?;
 
@@ -336,109 +419,117 @@ pub async fn scan_ports_and_endpoints(
     Ok((open_ports, endpoint_responses))
 }
 
+/// Scan TCP ports with graceful FD exhaustion handling.
+///
+/// When FD exhaustion is detected, the controller automatically reduces batch size
+/// and logs a warning. The scan continues with reduced concurrency rather than failing.
 pub async fn scan_tcp_ports(
     ip: IpAddr,
     cancel: CancellationToken,
     batch_size: usize,
     scan_rate_pps: u32,
     tcp_ports_to_check: Vec<u16>,
+    controller: Arc<ScanConcurrencyController>,
 ) -> Result<Vec<(PortType, bool)>, Error> {
     let ports: Vec<PortType> = tcp_ports_to_check
         .iter()
         .map(|p| PortType::new_tcp(*p))
         .collect();
 
+    // Use controller's batch size if in degraded mode
+    let effective_batch_size = batch_size.min(controller.batch_size());
+    let controller_for_log = controller.clone();
+
     let open_ports = batch_scan(
         ports.clone(),
-        batch_size,
+        effective_batch_size,
         scan_rate_pps,
         cancel,
-        move |port| async move {
-            let socket = SocketAddr::new(ip, port.number());
+        move |port| {
+            let controller = controller.clone();
+            async move {
+                let socket = SocketAddr::new(ip, port.number());
 
-            // Try connection with timeout, retry once on timeout for slow hosts
-            let mut attempts = 0;
-            let max_attempts = 2;
+                // Try connection with timeout, retry once on timeout for slow hosts
+                let mut attempts = 0;
+                let max_attempts = 2;
 
-            loop {
-                attempts += 1;
-                let start = std::time::Instant::now();
+                loop {
+                    attempts += 1;
+                    let start = std::time::Instant::now();
 
-                match timeout(SCAN_TIMEOUT, TcpStream::connect(socket)).await {
-                    Ok(Ok(stream)) => {
-                        let connect_time = start.elapsed();
+                    match timeout(SCAN_TIMEOUT, TcpStream::connect(socket)).await {
+                        Ok(Ok(stream)) => {
+                            controller.on_success();
 
-                        // Try to peek at the connection to detect immediate disconnects
-                        let mut buf = [0u8; 1];
-                        let peek_result =
-                            timeout(Duration::from_millis(50), stream.peek(&mut buf)).await;
+                            let connect_time = start.elapsed();
 
-                        let use_https = match peek_result {
-                            Ok(Ok(0)) => {
-                                // Port open - HTTPS (immediate close)"
-                                true
-                            }
-                            Ok(Ok(_)) => {
-                                // Port open - got bytes
-                                false
-                            }
-                            Ok(Err(_)) => {
-                                // Port open - peek error
-                                false
-                            }
-                            Err(_) => {
-                                // Port open - no immediate response
-                                false
-                            }
-                        };
+                            // Try to peek at the connection to detect immediate disconnects
+                            let mut buf = [0u8; 1];
+                            let peek_result =
+                                timeout(Duration::from_millis(50), stream.peek(&mut buf)).await;
 
-                        tracing::debug!(
-                            "Found open TCP port {}:{} (took {:?})",
-                            ip,
-                            port,
-                            connect_time
-                        );
+                            let use_https = match peek_result {
+                                Ok(Ok(0)) => true,   // HTTPS (immediate close)
+                                Ok(Ok(_)) => false,  // Got bytes
+                                Ok(Err(_)) => false, // Peek error
+                                Err(_) => false,     // No immediate response
+                            };
 
-                        drop(stream);
-                        return Some((
-                            PortType::new_tcp(port.number()),
-                            use_https || port.is_https(),
-                        ));
-                    }
-                    Ok(Err(e)) => {
-                        if DiscoveryCriticalError::is_critical_error(e.to_string()) {
-                            tracing::error!(
-                                "Critical error scanning {}:{}: {}",
-                                socket.ip(),
+                            tracing::debug!(
+                                "Found open TCP port {}:{} (took {:?})",
+                                ip,
                                 port,
-                                e
+                                connect_time
                             );
+
+                            drop(stream);
+                            return Some((
+                                PortType::new_tcp(port.number()),
+                                use_https || port.is_https(),
+                            ));
                         }
-                        return None;
-                    }
-                    Err(_) => {
-                        let elapsed = start.elapsed();
+                        Ok(Err(e)) => {
+                            // Check for FD exhaustion and handle gracefully
+                            if controller.check_and_handle_error(&e) {
+                                // FD exhaustion - continue scanning with reduced batch
+                                // Return None for this port but don't fail the scan
+                                return None;
+                            }
 
-                        if attempts < max_attempts {
-                            tracing::trace!(
-                                "Port {}:{} timeout attempt {}/{} (took {:?}), retrying...",
-                                ip,
-                                port,
-                                attempts,
-                                max_attempts,
-                                elapsed
-                            );
-                            // Small delay before retry
-                            tokio::time::sleep(Duration::from_millis(100)).await;
-                            continue;
-                        } else {
-                            tracing::trace!(
-                                "Port {}:{} timeout after {} attempts",
-                                ip,
-                                port,
-                                attempts
-                            );
+                            if DiscoveryCriticalError::is_critical_error(e.to_string()) {
+                                tracing::error!(
+                                    "Critical error scanning {}:{}: {}",
+                                    socket.ip(),
+                                    port,
+                                    e
+                                );
+                            }
                             return None;
+                        }
+                        Err(_) => {
+                            let elapsed = start.elapsed();
+
+                            if attempts < max_attempts {
+                                tracing::trace!(
+                                    "Port {}:{} timeout attempt {}/{} (took {:?}), retrying...",
+                                    ip,
+                                    port,
+                                    attempts,
+                                    max_attempts,
+                                    elapsed
+                                );
+                                tokio::time::sleep(Duration::from_millis(100)).await;
+                                continue;
+                            } else {
+                                tracing::trace!(
+                                    "Port {}:{} timeout after {} attempts",
+                                    ip,
+                                    port,
+                                    attempts
+                                );
+                                return None;
+                            }
                         }
                     }
                 }
@@ -451,6 +542,8 @@ pub async fn scan_tcp_ports(
         ip = %ip,
         ports_scanned = %ports.len(),
         responses = %open_ports.len(),
+        effective_batch_size,
+        degraded = controller_for_log.is_degraded(),
         "TCP ports scanned"
     );
 
@@ -947,5 +1040,173 @@ pub async fn test_bacnet_service(ip: IpAddr) -> Result<Option<u16>, Error> {
         }
         Ok(Err(_)) => Ok(None),
         Err(_) => Ok(None), // Timeout
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scan_controller_initial_state() {
+        let controller = ScanConcurrencyController::new(200);
+        assert_eq!(controller.batch_size(), 200);
+        assert!(!controller.is_degraded());
+    }
+
+    #[test]
+    fn test_scan_controller_degradation_halves_batch_size() {
+        let controller = ScanConcurrencyController::new(200);
+
+        controller.on_fd_exhaustion();
+        assert_eq!(controller.batch_size(), 100);
+        assert!(controller.is_degraded());
+
+        // Wait for cooldown before next degradation (rate limiting prevents cascading)
+        std::thread::sleep(std::time::Duration::from_millis(
+            DEGRADATION_COOLDOWN_MS + 10,
+        ));
+
+        controller.on_fd_exhaustion();
+        assert_eq!(controller.batch_size(), 50);
+
+        std::thread::sleep(std::time::Duration::from_millis(
+            DEGRADATION_COOLDOWN_MS + 10,
+        ));
+
+        controller.on_fd_exhaustion();
+        assert_eq!(controller.batch_size(), 25);
+
+        std::thread::sleep(std::time::Duration::from_millis(
+            DEGRADATION_COOLDOWN_MS + 10,
+        ));
+
+        controller.on_fd_exhaustion();
+        assert_eq!(controller.batch_size(), 16); // Minimum floor
+    }
+
+    #[test]
+    fn test_scan_controller_min_floor_enforced() {
+        let controller = ScanConcurrencyController::new(32);
+
+        controller.on_fd_exhaustion();
+        assert_eq!(controller.batch_size(), 16); // 32/2 = 16, at floor
+
+        std::thread::sleep(std::time::Duration::from_millis(
+            DEGRADATION_COOLDOWN_MS + 10,
+        ));
+
+        controller.on_fd_exhaustion();
+        assert_eq!(controller.batch_size(), 16); // Should stay at floor
+    }
+
+    #[test]
+    fn test_scan_controller_recovery_after_threshold() {
+        let controller = ScanConcurrencyController::new(200);
+
+        // Degrade to 100
+        controller.on_fd_exhaustion();
+        assert_eq!(controller.batch_size(), 100);
+        assert!(controller.is_degraded());
+
+        // 49 successes - not enough
+        for _ in 0..49 {
+            controller.on_success();
+        }
+        assert_eq!(controller.batch_size(), 100); // No change yet
+
+        // 50th success triggers recovery (25% increase: 100 -> 125)
+        controller.on_success();
+        assert_eq!(controller.batch_size(), 125);
+        assert!(controller.is_degraded()); // Still degraded, not at target
+
+        // More successes to continue recovery
+        for _ in 0..50 {
+            controller.on_success();
+        }
+        assert_eq!(controller.batch_size(), 156); // 125 * 1.25 = 156
+
+        // Keep going until full recovery
+        for _ in 0..50 {
+            controller.on_success();
+        }
+        assert_eq!(controller.batch_size(), 195); // 156 * 1.25 = 195
+
+        for _ in 0..50 {
+            controller.on_success();
+        }
+        assert_eq!(controller.batch_size(), 200); // Capped at target
+        assert!(!controller.is_degraded()); // Fully recovered
+    }
+
+    #[test]
+    fn test_scan_controller_success_resets_streak_on_degradation() {
+        let controller = ScanConcurrencyController::new(200);
+
+        // Degrade
+        controller.on_fd_exhaustion();
+        assert_eq!(controller.batch_size(), 100);
+
+        // Build up a streak
+        for _ in 0..40 {
+            controller.on_success();
+        }
+
+        // Wait for cooldown before another degradation
+        std::thread::sleep(std::time::Duration::from_millis(
+            DEGRADATION_COOLDOWN_MS + 10,
+        ));
+
+        // Another FD exhaustion resets everything
+        controller.on_fd_exhaustion();
+        assert_eq!(controller.batch_size(), 50);
+
+        // Need full 50 successes again
+        for _ in 0..49 {
+            controller.on_success();
+        }
+        assert_eq!(controller.batch_size(), 50); // Not recovered yet
+
+        controller.on_success();
+        assert_eq!(controller.batch_size(), 62); // 50 * 1.25 = 62
+    }
+
+    #[test]
+    fn test_scan_controller_success_ignored_when_not_degraded() {
+        let controller = ScanConcurrencyController::new(200);
+        assert!(!controller.is_degraded());
+
+        // Success calls should be no-ops when not degraded
+        for _ in 0..100 {
+            controller.on_success();
+        }
+
+        assert_eq!(controller.batch_size(), 200);
+        assert!(!controller.is_degraded());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_scan_controller_emfile_detection() {
+        let controller = ScanConcurrencyController::new(200);
+
+        // Create an EMFILE error (error code 24)
+        let emfile_error = std::io::Error::from_raw_os_error(24);
+
+        assert!(controller.check_and_handle_error(&emfile_error));
+        assert_eq!(controller.batch_size(), 100);
+        assert!(controller.is_degraded());
+    }
+
+    #[test]
+    fn test_scan_controller_non_emfile_error_ignored() {
+        let controller = ScanConcurrencyController::new(200);
+
+        // Connection refused error - should not trigger degradation
+        let conn_refused = std::io::Error::new(ErrorKind::ConnectionRefused, "connection refused");
+
+        assert!(!controller.check_and_handle_error(&conn_refused));
+        assert_eq!(controller.batch_size(), 200);
+        assert!(!controller.is_degraded());
     }
 }

@@ -467,7 +467,8 @@ impl AuthenticatedEntity {
                         .ok_or_else(|| AuthError(ApiError::daemon_required()))?;
 
                     // Check if key exists
-                    let api_key_filter = StorableFilter::<DaemonApiKey>::new().api_key(hashed_key);
+                    let api_key_filter =
+                        StorableFilter::<DaemonApiKey>::new_from_api_key(hashed_key);
                     if let Ok(Some(mut api_key)) = app_state
                         .services
                         .daemon_api_key_service
@@ -578,8 +579,7 @@ impl AuthenticatedEntity {
             user.base.permissions,
             UserOrgPermissions::Owner | UserOrgPermissions::Admin
         ) {
-            let org_filter =
-                StorableFilter::<Network>::new().organization_id(&user.base.organization_id);
+            let org_filter = StorableFilter::<Network>::new_from_org_id(&user.base.organization_id);
 
             app_state
                 .services

@@ -9,7 +9,7 @@ use crate::server::{
     email::{plunk::PlunkEmailProvider, smtp::SmtpEmailProvider, traits::EmailService},
     groups::{group_bindings::GroupBindingStorage, service::GroupService},
     hosts::service::HostService,
-    hubspot::service::HubSpotService,
+    hubspot::{metrics_subscriber::HubSpotMetricsSubscriber, service::HubSpotService},
     if_entries::service::IfEntryService,
     interfaces::service::InterfaceService,
     invites::service::InviteService,
@@ -334,7 +334,16 @@ impl ServiceFactory {
         }
 
         if let Some(hubspot_service) = hubspot_service.clone() {
-            event_bus.register_subscriber(hubspot_service).await;
+            event_bus.register_subscriber(hubspot_service.clone()).await;
+
+            // Register metrics subscriber with access to entity services
+            let metrics_subscriber = Arc::new(HubSpotMetricsSubscriber::new(
+                hubspot_service,
+                network_service.clone(),
+                host_service.clone(),
+                user_service.clone(),
+            ));
+            event_bus.register_subscriber(metrics_subscriber).await;
         }
 
         // Register DaemonService as subscriber for discovery events

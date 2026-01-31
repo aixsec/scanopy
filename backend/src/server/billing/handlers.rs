@@ -1,8 +1,8 @@
-use crate::server::auth::middleware::permissions::{Authorized, Owner};
+use crate::server::auth::middleware::permissions::{Authorized, Owner, Viewer};
 use crate::server::billing::types::api::CreateCheckoutRequest;
 use crate::server::billing::types::base::BillingPlan;
 use crate::server::config::AppState;
-use crate::server::hubspot::types::{CompanyProperties, ContactProperties};
+use crate::server::hubspot::types::HubSpotFormField;
 use crate::server::shared::types::ErrorCode;
 use crate::server::shared::types::api::{ApiError, ApiResult};
 use crate::server::shared::types::api::{ApiErrorResponse, ApiResponse, EmptyApiResponse};
@@ -32,9 +32,9 @@ pub struct EnterpriseInquiryRequest {
     /// Urgency: immediately, 1-3 months, 3-6 months, exploring
     #[serde(default)]
     pub urgency: Option<String>,
-    /// Network count: 1-5, 6-20, 21-50, 50+
+    /// Number of networks/sites
     #[serde(default)]
-    pub network_count: Option<String>,
+    pub network_count: Option<i64>,
     /// Plan type being inquired about
     #[serde(default)]
     pub plan_type: Option<String>,
@@ -194,7 +194,7 @@ async fn create_portal_session(
 /// Submit enterprise plan inquiry
 ///
 /// Creates a contact and company in HubSpot for sales follow-up.
-/// This endpoint does not require authentication.
+/// Requires authentication to link the inquiry to an organization.
 #[utoipa::path(
     post,
     path = "/inquiry",
@@ -203,12 +203,20 @@ async fn create_portal_session(
     responses(
         (status = 200, description = "Inquiry submitted successfully", body = EmptyApiResponse),
         (status = 400, description = "Invalid request or HubSpot not configured", body = ApiErrorResponse),
-    )
+        (status = 401, description = "Authentication required", body = ApiErrorResponse),
+    ),
+    security(("user_api_key" = []), ("session" = []))
 )]
 async fn submit_enterprise_inquiry(
     State(state): State<Arc<AppState>>,
+    auth: Authorized<Viewer>,
     Json(request): Json<EnterpriseInquiryRequest>,
 ) -> ApiResult<Json<ApiResponse<()>>> {
+    // Get organization_id from auth context
+    let organization_id = auth
+        .organization_id()
+        .ok_or_else(ApiError::organization_required)?;
+
     // Validate required fields
     if request.email.is_empty() || request.name.is_empty() || request.company.is_empty() {
         return Err(ApiError::validation(ErrorCode::ValidationRequired {
@@ -223,46 +231,46 @@ async fn submit_enterprise_inquiry(
         .as_ref()
         .ok_or_else(|| ApiError::bad_request("Enterprise inquiries are not enabled"))?;
 
-    // Build contact properties
-    let mut contact_props = ContactProperties::new()
-        .with_email(&request.email)
-        .with_signup_source("enterprise_inquiry");
+    // Build form fields to match HubSpot form
+    // Field names must match exactly what's configured in the HubSpot form
+    let mut fields = vec![
+        HubSpotFormField::new("email", &request.email),
+        HubSpotFormField::new("firstname", &request.name),
+        HubSpotFormField::new("company", &request.company),
+        HubSpotFormField::new("company_size", &request.team_size),
+        HubSpotFormField::new("use_case", &request.use_case),
+        HubSpotFormField::new("scanopy_org_id", organization_id.to_string()),
+    ];
 
-    // Split name into first/last if possible
-    let name_parts: Vec<&str> = request.name.split_whitespace().collect();
-    if let Some(first) = name_parts.first() {
-        contact_props.firstname = Some(first.to_string());
-    }
-    if name_parts.len() > 1 {
-        contact_props.lastname = Some(name_parts[1..].join(" "));
-    }
-
-    // Build company properties
-    let mut company_props = CompanyProperties::new()
-        .with_name(&request.company)
-        .with_company_size(&request.team_size);
-
-    // Add optional fields to metadata
     if let Some(urgency) = &request.urgency {
-        // Store urgency in a note or custom property
-        company_props = company_props.with_org_type(format!("inquiry_urgency:{}", urgency));
+        fields.push(HubSpotFormField::new("urgency", urgency));
+    }
+    if let Some(network_count) = request.network_count {
+        fields.push(HubSpotFormField::new(
+            "network_count",
+            network_count.to_string(),
+        ));
+    }
+    if let Some(plan_type) = &request.plan_type {
+        fields.push(HubSpotFormField::new("plan_type", plan_type));
     }
 
-    // Sync to HubSpot
+    // Submit to HubSpot form - this triggers workflows and email notifications
     hubspot_service
         .client
-        .upsert_contact_with_company(contact_props, company_props)
+        .submit_enterprise_inquiry_form(fields)
         .await
         .map_err(|e| {
-            tracing::error!(error = %e, "Failed to sync enterprise inquiry to HubSpot");
+            tracing::error!(error = %e, "Failed to submit inquiry to HubSpot form");
             ApiError::internal_error("Failed to submit inquiry")
         })?;
 
     tracing::info!(
         email = %request.email,
         company = %request.company,
+        organization_id = %organization_id,
         plan_type = ?request.plan_type,
-        "Enterprise inquiry submitted to HubSpot"
+        "Enterprise inquiry submitted to HubSpot form"
     );
 
     Ok(Json(ApiResponse::success(())))

@@ -5,8 +5,7 @@ use crate::daemon::discovery::types::base::{DiscoveryCriticalError, DiscoverySes
 use crate::daemon::utils::arp::{self, ArpScanResult};
 use crate::daemon::utils::base::ConcurrentPipelineOps;
 use crate::daemon::utils::scanner::{
-    PORT_SCAN_BATCH_MAX, can_arp_scan, probe_host_capacity, scan_endpoints, scan_tcp_ports,
-    scan_udp_ports,
+    ScanConcurrencyController, can_arp_scan, scan_endpoints, scan_tcp_ports, scan_udp_ports,
 };
 use crate::daemon::utils::snmp::{self, IfTableEntry};
 use crate::server::discovery::r#impl::types::{DiscoveryType, HostNamingFallback};
@@ -84,15 +83,14 @@ pub struct DeepScanParams<'a> {
     phase1_ports: Vec<PortType>,
     cancel: CancellationToken,
     scan_rate_pps: u32,
+    port_scan_batch_size: usize,
     gateway_ips: &'a [IpAddr],
     /// Optional counter for batch-level progress tracking
     batches_completed: Option<&'a Arc<AtomicUsize>>,
-    /// Total batches counter for adjusting after adaptive batch sizing
-    total_batches: Option<&'a Arc<AtomicUsize>>,
-    /// Initially estimated batches per host (used to adjust total after probing)
-    estimated_batches_per_host: usize,
     /// SNMP credential for this host (from default or IP-specific override)
     snmp_credential: Option<SnmpQueryCredential>,
+    /// Shared concurrency controller for graceful FD exhaustion handling
+    scan_controller: Arc<ScanConcurrencyController>,
 }
 
 impl CreatesDiscoveredEntities for DiscoveryRunner<NetworkScanDiscovery> {}
@@ -232,7 +230,6 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         let total_ips = all_ips_with_subnets.len();
 
         // Pre-compute values used in streams
-        let port_scan_batch_size = self.as_ref().utils.get_optimal_port_batch_size().await?;
         let discovery_ports: Vec<u16> = Service::all_discovery_ports()
             .iter()
             .filter(|p| p.is_tcp())
@@ -246,6 +243,20 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
 
         // Get port scan rate limit
         let scan_rate_pps = self.as_ref().config_store.get_scan_rate_pps().await?;
+
+        // Get scan concurrency params (concurrent_scans and port_batch_size calculated together)
+        let concurrent_scans_config = self.as_ref().config_store.get_concurrent_scans().await?;
+        let port_batch_size_config = self
+            .as_ref()
+            .config_store
+            .get_port_scan_batch_size()
+            .await?;
+        let scan_params = self
+            .as_ref()
+            .utils
+            .get_optimal_concurrent_scans(concurrent_scans_config, port_batch_size_config)
+            .await?;
+        let port_scan_batch_size = scan_params.port_batch_size;
 
         // Check ARP capability once before partitioning
         let arp_available = can_arp_scan(use_npcap);
@@ -298,30 +309,47 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             unique_cidrs.len()
         };
 
-        // Pre-compute non-interfaced port concurrency if needed
+        // Use pre-computed concurrency if non-interfaced IPs exist
         let non_interfaced_scan_concurrency = if !non_interfaced_ips.is_empty() {
-            let configured = self.as_ref().config_store.get_concurrent_scans().await?;
-            self.as_ref()
-                .utils
-                .get_optimal_concurrent_scans(configured)
-                .await?
+            scan_params.concurrent_scans
         } else {
             0
         };
 
-        // Get deep scan parameters with precise FD budget
-        // Batch size varies per host, use max value as estimate for FD budget to ensure we don't hit FD limits
-        let estimated_ports_per_host_batch = PORT_SCAN_BATCH_MAX;
+        // Use the port batch size from the coordinated calculation
+        let effective_batch_size = port_scan_batch_size;
+
+        // First pass: estimate deep scan concurrency without considering its own FD usage
+        // This gives us a starting point for calculating the full FD budget
+        let initial_concurrent_ops = ConcurrentPipelineOps {
+            arp_subnet_count,
+            non_interfaced_scan_concurrency,
+            discovery_ports_count: discovery_ports.len(),
+            port_scan_batch_size,
+            deep_scan_concurrency: 0,
+            deep_scan_batch_size: 0,
+        };
+        let initial_deep_scan_concurrency = self
+            .as_ref()
+            .utils
+            .get_optimal_deep_scan_concurrency(effective_batch_size, initial_concurrent_ops)?;
+
+        // Second pass: recalculate with deep scan FD usage included
         let concurrent_ops = ConcurrentPipelineOps {
             arp_subnet_count,
             non_interfaced_scan_concurrency,
             discovery_ports_count: discovery_ports.len(),
             port_scan_batch_size,
+            deep_scan_concurrency: initial_deep_scan_concurrency,
+            deep_scan_batch_size: effective_batch_size,
         };
         let deep_scan_concurrency = self
             .as_ref()
             .utils
-            .get_optimal_deep_scan_concurrency(estimated_ports_per_host_batch, concurrent_ops)?;
+            .get_optimal_deep_scan_concurrency(effective_batch_size, concurrent_ops)?;
+
+        // Create shared concurrency controller for graceful degradation
+        let scan_controller = ScanConcurrencyController::new(effective_batch_size);
 
         let gateway_ips = self
             .as_ref()
@@ -497,6 +525,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             let host_tx = host_tx.clone();
             let discovery_ports = discovery_ports.clone();
             let cancel = cancel.clone();
+            let scan_controller_clone = scan_controller.clone();
 
             // Spawn port scanning as a parallel task
             tokio::spawn(async move {
@@ -504,6 +533,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                     .map(|(ip, subnet)| {
                         let cancel = cancel.clone();
                         let discovery_ports = discovery_ports.clone();
+                        let controller = scan_controller_clone.clone();
 
                         async move {
                             let result = scan_tcp_ports(
@@ -512,6 +542,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                 port_scan_batch_size,
                                 scan_rate_pps,
                                 discovery_ports,
+                                controller,
                             )
                             .await;
 
@@ -553,8 +584,8 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         let mut results: Vec<Host> = Vec::new();
 
         // Batch-level progress tracking for smoother UX
-        // TCP port scanning is the bulk of deep scan work (~256 batches per host for 65535 ports at 256 batch size)
-        let batches_per_host = 65535_usize.div_ceil(estimated_ports_per_host_batch);
+        // TCP port scanning is the bulk of deep scan work
+        let batches_per_host = 65535_usize.div_ceil(effective_batch_size);
         let total_batches = Arc::new(AtomicUsize::new(0));
         let batches_completed = Arc::new(AtomicUsize::new(0));
 
@@ -628,6 +659,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                 let last_activity = last_activity.clone();
                                 let batches_completed = batches_completed.clone();
                                 let total_batches = total_batches.clone();
+                                let scan_controller = scan_controller.clone();
 
                                 total_batches.fetch_add(batches_per_host, Ordering::Relaxed);
                                 let snmp_credential = self.domain.snmp_credentials.get_credential_for_ip(&ip);
@@ -640,11 +672,11 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                             phase1_ports: Vec::new(),
                                             cancel,
                                             scan_rate_pps,
+                                            port_scan_batch_size: effective_batch_size,
                                             gateway_ips: &gateway_ips,
                                             batches_completed: Some(&batches_completed),
-                                            total_batches: Some(&total_batches),
-                                            estimated_batches_per_host: batches_per_host,
                                             snmp_credential,
+                                            scan_controller,
                                         })
                                         .await;
 
@@ -690,8 +722,8 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                         let hosts_scanned = hosts_scanned.clone();
                         let last_activity = last_activity.clone();
                         let batches_completed = batches_completed.clone();
-                        let total_batches = total_batches.clone();
                         let snmp_credential = self.domain.snmp_credentials.get_credential_for_ip(&ip);
+                        let scan_controller = scan_controller.clone();
 
                         pending_scans.push(Box::pin(async move {
                             let result = self
@@ -702,11 +734,11 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
                                     phase1_ports: Vec::new(),
                                     cancel,
                                     scan_rate_pps,
+                                    port_scan_batch_size: effective_batch_size,
                                     gateway_ips: &gateway_ips,
                                     batches_completed: Some(&batches_completed),
-                                    total_batches: Some(&total_batches),
-                                    estimated_batches_per_host: batches_per_host,
                                     snmp_credential,
+                                    scan_controller,
                                 })
                                 .await;
 
@@ -837,59 +869,37 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             phase1_ports,
             cancel,
             scan_rate_pps,
+            port_scan_batch_size,
             gateway_ips,
             batches_completed,
-            total_batches,
-            estimated_batches_per_host,
             snmp_credential,
+            scan_controller,
         } = params;
 
         if cancel.is_cancelled() {
             return Err(Error::msg("Discovery was cancelled"));
         }
 
-        // Probe host to determine optimal batch size
-        let probe_result = probe_host_capacity(ip, 200).await;
-        let port_scan_batch_size = probe_result.recommended_batch_size;
+        // Use fixed batch size, limited by scan controller if FD exhaustion has occurred
+        let effective_batch_size = port_scan_batch_size.min(scan_controller.batch_size());
 
         let phase1_port_nums: HashSet<u16> = phase1_ports.iter().map(|p| p.number()).collect();
         let remaining_tcp_ports: Vec<u16> = (1..=65535)
             .filter(|p| !phase1_port_nums.contains(p))
             .collect();
 
-        // Adjust total_batches to reflect actual batch size (vs initial estimate)
-        // This ensures progress calculation uses accurate batch counts
-        let actual_batches = remaining_tcp_ports.len().div_ceil(port_scan_batch_size);
-        if let Some(total) = total_batches {
-            if actual_batches > estimated_batches_per_host {
-                // Add the difference (actual is more than estimated)
-                total.fetch_add(
-                    actual_batches - estimated_batches_per_host,
-                    Ordering::Relaxed,
-                );
-            } else if actual_batches < estimated_batches_per_host {
-                // Subtract the difference (actual is less than estimated)
-                total.fetch_sub(
-                    estimated_batches_per_host - actual_batches,
-                    Ordering::Relaxed,
-                );
-            }
-        }
-
         tracing::debug!(
             ip = %ip,
             phase1_ports = phase1_ports.len(),
             remaining_ports = remaining_tcp_ports.len(),
             snmp_enabled = snmp_credential.is_some(),
-            port_scan_batch_size,
-            estimated_batches = estimated_batches_per_host,
-            actual_batches,
-            "Starting deep scan with adaptive batch size"
+            effective_batch_size,
+            "Starting deep scan"
         );
 
-        // Scan in batches with rate limiting
+        // Scan in batches with rate limiting and graceful degradation
         let mut all_tcp_ports = Vec::new();
-        for chunk in remaining_tcp_ports.chunks(port_scan_batch_size) {
+        for chunk in remaining_tcp_ports.chunks(effective_batch_size) {
             if cancel.is_cancelled() {
                 return Err(Error::msg("Discovery was cancelled"));
             }
@@ -897,9 +907,10 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             let open_ports = scan_tcp_ports(
                 ip,
                 cancel.clone(),
-                port_scan_batch_size,
+                effective_batch_size,
                 scan_rate_pps,
                 chunk.to_vec(),
+                scan_controller.clone(),
             )
             .await?;
             all_tcp_ports.extend(open_ports);
@@ -925,7 +936,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
         let udp_ports = scan_udp_ports(
             ip,
             cancel.clone(),
-            port_scan_batch_size,
+            effective_batch_size,
             scan_rate_pps,
             subnet.base.cidr,
             gateway_ips.to_vec(),
@@ -944,7 +955,7 @@ impl DiscoveryRunner<NetworkScanDiscovery> {
             cancel.clone(),
             Some(ports_to_check),
             Some(use_https_ports),
-            port_scan_batch_size,
+            effective_batch_size,
         )
         .await?;
 

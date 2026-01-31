@@ -6,8 +6,7 @@ use mac_address::MacAddress;
 use uuid::Uuid;
 
 use crate::server::{
-    shared::{entities::EntityDiscriminants, storage::traits::SqlValue},
-    users::r#impl::permissions::UserOrgPermissions,
+    daemons::r#impl::base::DaemonMode, shared::{entities::EntityDiscriminants, storage::traits::SqlValue}, users::r#impl::permissions::UserOrgPermissions
 };
 
 use super::traits::Storable;
@@ -24,14 +23,8 @@ pub struct StorableFilter<T: Storable> {
     joins: Vec<String>,
 }
 
-impl<T: Storable> Default for StorableFilter<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl<T: Storable> StorableFilter<T> {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             _marker: PhantomData,
             conditions: Vec::new(),
@@ -40,6 +33,98 @@ impl<T: Storable> StorableFilter<T> {
             offset_value: None,
             joins: Vec::new(),
         }
+    }
+
+    pub fn new_from_org_id(org_id: &Uuid) -> Self {
+        Self::new().organization_id(org_id)
+    }
+
+    pub fn new_from_network_ids(network_ids: &[Uuid]) -> Self {
+        Self::new().network_ids(network_ids)
+    }
+
+    pub fn new_from_entity_id(entity_id: &Uuid) -> Self {
+        Self::new().entity_id(entity_id)
+    }
+
+    pub fn new_from_entity_ids(entity_ids: &[Uuid]) -> Self {
+        Self::new().entity_ids(entity_ids)
+    }
+
+    pub fn new_from_api_key(api_key: String) -> Self {
+        Self::new().api_key(api_key)
+    }
+
+    pub fn new_from_email(email: &EmailAddress) -> Self {
+        Self::new().email(email)
+    }
+
+    pub fn new_from_oidc_subject(oidc_subject: String) -> Self {
+        Self::new().oidc_subject(oidc_subject)
+    }
+
+    pub fn new_from_password_reset_token(token: &str) -> Self {
+        Self::new().password_reset_token(token)
+    }
+
+    pub fn new_from_email_verification_token(token: &str) -> Self {
+        Self::new().email_verification_token(token)
+    }
+
+    pub fn new_from_host_ids(host_ids: &[Uuid]) -> Self {
+        Self::new().host_ids(host_ids)
+    }
+
+    pub fn new_from_service_id(service_id: &Uuid) -> Self {
+        Self::new().service_id(service_id)
+    }
+
+    pub fn new_from_subnet_id(subnet_id: &Uuid) -> Self {
+        Self::new().subnet_id(subnet_id)
+    }
+
+    pub fn new_from_binding_id(binding_id: &Uuid) -> Self {
+        Self::new().binding_id(binding_id)
+    }
+
+    pub fn new_from_user_id(user_id: &Uuid) -> Self {
+        Self::new().user_id(user_id)
+    }
+
+    pub fn new_from_user_ids(user_ids: &[Uuid]) -> Self {
+        Self::new().user_ids(user_ids)
+    }
+
+    pub fn new_from_interface_id(interface_id: &Uuid) -> Self {
+        Self::new().interface_id(interface_id)
+    }
+
+    pub fn new_from_group_ids(group_ids: &[Uuid]) -> Self {
+        Self::new().group_ids(group_ids)
+    }
+
+    pub fn new_from_uuid_column(column: &str, id: &Uuid) -> Self {
+        Self::new().uuid_column(column, id)
+    }
+
+    pub fn new_from_uuids_column(column: &str, ids: &[Uuid]) -> Self {
+        Self::new().uuids_column(column, ids)
+    }
+
+    pub fn new_for_scheduled_discoveries() -> Self {
+        Self::new().scheduled_discovery()
+    }
+
+    pub fn new_for_unresolved_lldp_in_network(network_id: Uuid) -> Self {
+        Self::new().unresolved_lldp_in_network(network_id)
+    }
+
+    pub fn new_with_expiry_before(timestamp: DateTime<Utc>) -> Self {
+        Self::new().expires_before(timestamp)
+    }
+
+    pub fn new_for_daemon_poller_system_job() -> Self {
+        Self::new().daemon_mode(DaemonMode::ServerPoll).is_unreachable(false)
     }
 
     /// Qualify a column name with the table name.
@@ -180,6 +265,30 @@ impl<T: Storable> StorableFilter<T> {
         self
     }
 
+    pub fn user_ids(mut self, ids: &[Uuid]) -> Self {
+        if ids.is_empty() {
+            // Empty IN clause should match nothing
+            self.conditions.push("FALSE".to_string());
+            return self;
+        }
+
+        let col = self.qualify_column("user_id");
+        let placeholders: Vec<String> = ids
+            .iter()
+            .enumerate()
+            .map(|(i, _)| format!("${}", self.values.len() + i + 1))
+            .collect();
+
+        self.conditions
+            .push(format!("{} IN ({})", col, placeholders.join(", ")));
+
+        for id in ids {
+            self.values.push(SqlValue::Uuid(*id));
+        }
+
+        self
+    }
+
     pub fn hidden_is(mut self, hidden: bool) -> Self {
         let col = self.qualify_column("hidden");
         self.conditions
@@ -209,6 +318,22 @@ impl<T: Storable> StorableFilter<T> {
         self.conditions
             .push(format!("{} = ${}", col, self.values.len() + 1));
         self.values.push(SqlValue::MacAddress(*mac));
+        self
+    }
+
+    pub fn password_reset_token(mut self, token: &str) -> Self {
+        let col = self.qualify_column("password_reset_token");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::String(token.to_string()));
+        self
+    }
+
+    pub fn email_verification_token(mut self, token: &str) -> Self {
+        let col = self.qualify_column("email_verification_token");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::String(token.to_string()));
         self
     }
 
@@ -362,7 +487,7 @@ impl<T: Storable> StorableFilter<T> {
 
     /// Generic UUID IN filter for any column name.
     /// Used by generic child entity services to filter by parent_column dynamically.
-    pub fn uuid_columns(mut self, column: &str, ids: &[Uuid]) -> Self {
+    pub fn uuids_column(mut self, column: &str, ids: &[Uuid]) -> Self {
         if ids.is_empty() {
             self.conditions.push("FALSE".to_string());
             return self;
@@ -391,6 +516,24 @@ impl<T: Storable> StorableFilter<T> {
         self.conditions
             .push(format!("{} = ${}", col, self.values.len() + 1));
         self.values.push(SqlValue::Uuid(*id));
+        self
+    }
+
+    /// Filter by mode (for daemons)
+    pub fn daemon_mode(mut self, mode: DaemonMode) -> Self {
+        let col = self.qualify_column("mode");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::DaemonMode(mode));
+        self
+    }
+
+    /// Filter by mode (for daemons)
+    pub fn is_unreachable(mut self, is_unreachable: bool) -> Self {
+        let col = self.qualify_column("is_unreachable");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::Bool(is_unreachable));
         self
     }
 
@@ -489,11 +632,11 @@ impl<T: Storable> StorableFilter<T> {
     }
 
     /// Filter by interface_id FK (for if_entries table)
-    pub fn interface_id(mut self, interface_id: Uuid) -> Self {
+    pub fn interface_id(mut self, interface_id: &Uuid) -> Self {
         let col = self.qualify_column("interface_id");
         self.conditions
             .push(format!("{} = ${}", col, self.values.len() + 1));
-        self.values.push(SqlValue::Uuid(interface_id));
+        self.values.push(SqlValue::Uuid(*interface_id));
         self
     }
 

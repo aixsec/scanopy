@@ -1,7 +1,7 @@
 use crate::server::hubspot::types::{
     CompanyProperties, ContactProperties, HubSpotAssociationInput, HubSpotAssociationObject,
     HubSpotAssociationRequest, HubSpotAssociationType, HubSpotFilter, HubSpotFilterGroup,
-    HubSpotObjectResponse, HubSpotSearchRequest, HubSpotSearchResponse,
+    HubSpotFormField, HubSpotObjectResponse, HubSpotSearchRequest, HubSpotSearchResponse,
 };
 use anyhow::{Result, anyhow};
 use backon::{ExponentialBuilder, Retryable};
@@ -11,6 +11,8 @@ use serde::Serialize;
 use std::{num::NonZeroU32, sync::Arc};
 
 const HUBSPOT_API_BASE: &str = "https://api.hubapi.com";
+const HUBSPOT_PORTAL_ID: &str = "50956550";
+const HUBSPOT_ENTERPRISE_FORM_ID: &str = "96ece46e-04cb-47fc-bb17-2a8b196f8986";
 
 /// HubSpot CRM API client with rate limiting and retries
 pub struct HubSpotClient {
@@ -478,13 +480,83 @@ impl HubSpotClient {
         self.associate_contact_to_company(&contact.id, &company.id)
             .await?;
 
-        tracing::info!(
+        tracing::debug!(
             contact_id = %contact.id,
             company_id = %company.id,
             "Successfully synced contact and company to HubSpot"
         );
 
         Ok((contact, company))
+    }
+
+    /// Submit enterprise inquiry form to HubSpot
+    ///
+    /// This triggers form submission workflows and email notifications,
+    /// unlike the CRM API which only creates/updates records.
+    pub async fn submit_enterprise_inquiry_form(
+        &self,
+        fields: Vec<HubSpotFormField>,
+    ) -> Result<()> {
+        let url = format!(
+            "https://api.hsforms.com/submissions/v3/integration/submit/{}/{}",
+            HUBSPOT_PORTAL_ID, HUBSPOT_ENTERPRISE_FORM_ID
+        );
+
+        let request_body = serde_json::json!({
+            "fields": fields,
+            "context": {
+                "pageUri": "https://app.scanopy.io/billing",
+                "pageName": "Enterprise Inquiry"
+            }
+        });
+
+        let operation = || async {
+            self.wait_for_rate_limit().await;
+
+            let response = self
+                .client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .json(&request_body)
+                .send()
+                .await
+                .map_err(|e| anyhow!("HubSpot form submission failed: {}", e))?;
+
+            let status = response.status();
+
+            if status.is_success() {
+                return Ok(());
+            }
+
+            let error_body = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+
+            if Self::is_retryable_error(status) {
+                return Err(anyhow!(
+                    "HubSpot form submission error (retryable) {}: {}",
+                    status,
+                    error_body
+                ));
+            }
+
+            Err(anyhow!(
+                "HubSpot form submission error {}: {}",
+                status,
+                error_body
+            ))
+        };
+
+        operation
+            .retry(
+                ExponentialBuilder::default()
+                    .with_max_times(3)
+                    .with_min_delay(std::time::Duration::from_millis(500))
+                    .with_max_delay(std::time::Duration::from_secs(10)),
+            )
+            .when(|e| e.to_string().contains("retryable"))
+            .await
     }
 }
 

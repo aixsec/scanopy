@@ -499,7 +499,18 @@ impl DiscoveryRunner<DockerScanDiscovery> {
                 .filter_map(|v| PortType::from_str(v).ok())
                 .collect();
 
-            let port_scan_batch_size = self.as_ref().utils.get_optimal_port_batch_size().await?;
+            // Get FD-safe batch size for single container scanning
+            let port_batch_config = self
+                .as_ref()
+                .config_store
+                .get_port_scan_batch_size()
+                .await?;
+            let scan_params = self
+                .as_ref()
+                .utils
+                .get_optimal_concurrent_scans(1, port_batch_config)
+                .await?;
+            let port_scan_batch_size = scan_params.port_batch_size;
 
             // Scan ports and any endpoints that match open ports
             let endpoint_responses = tokio::spawn(scan_endpoints(
