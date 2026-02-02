@@ -31,6 +31,7 @@ pub enum Feature {
     UnlimitedHosts,
     ServiceDefinitions,
     DockerIntegration,
+    SnmpIntegration,
     RealTimeUpdates,
 }
 
@@ -57,6 +58,7 @@ impl HasId for Feature {
             Feature::ServiceDefinitions => "service_definitions",
             Feature::DockerIntegration => "docker_integration",
             Feature::RealTimeUpdates => "real_time_updates",
+            Feature::SnmpIntegration => "snmp_integration",
         }
     }
 }
@@ -84,6 +86,7 @@ impl TypeMetadataProvider for Feature {
             | Feature::UnlimitedHosts
             | Feature::ServiceDefinitions
             | Feature::DockerIntegration
+            | Feature::SnmpIntegration
             | Feature::RealTimeUpdates => "Core",
 
             Feature::CommunitySupport
@@ -127,6 +130,7 @@ impl TypeMetadataProvider for Feature {
             Feature::ServiceDefinitions => "200+ Service Definitions",
             Feature::DockerIntegration => "Docker Integration",
             Feature::RealTimeUpdates => "Real-time Updates",
+            Feature::SnmpIntegration => "SNMP Integration",
         }
     }
 
@@ -164,6 +168,7 @@ impl TypeMetadataProvider for Feature {
             }
             Feature::DockerIntegration => "Automatic discovery of containerized services",
             Feature::RealTimeUpdates => "Live topology updates as your network changes",
+            Feature::SnmpIntegration => "Query network devices for interface and hardware details",
         }
     }
 

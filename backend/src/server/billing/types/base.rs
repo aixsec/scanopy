@@ -166,6 +166,7 @@ pub struct BillingPlanFeatures {
     pub service_definitions: bool,
     pub docker_integration: bool,
     pub real_time_updates: bool,
+    pub snmp_integration: bool,
 }
 
 impl BillingPlan {
@@ -296,6 +297,7 @@ impl BillingPlan {
                 service_definitions: true,
                 docker_integration: true,
                 real_time_updates: true,
+                snmp_integration: true,
             },
             BillingPlan::Starter { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -318,6 +320,7 @@ impl BillingPlan {
                 service_definitions: true,
                 docker_integration: true,
                 real_time_updates: true,
+                snmp_integration: true,
             },
             BillingPlan::Pro { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -340,6 +343,7 @@ impl BillingPlan {
                 service_definitions: true,
                 docker_integration: true,
                 real_time_updates: true,
+                snmp_integration: true,
             },
             BillingPlan::Team { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -362,6 +366,7 @@ impl BillingPlan {
                 service_definitions: true,
                 docker_integration: true,
                 real_time_updates: true,
+                snmp_integration: true,
             },
             BillingPlan::Business { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -384,6 +389,7 @@ impl BillingPlan {
                 service_definitions: true,
                 docker_integration: true,
                 real_time_updates: true,
+                snmp_integration: true,
             },
             BillingPlan::Enterprise { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -406,6 +412,7 @@ impl BillingPlan {
                 service_definitions: true,
                 docker_integration: true,
                 real_time_updates: true,
+                snmp_integration: true,
             },
             BillingPlan::Demo { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -428,6 +435,7 @@ impl BillingPlan {
                 service_definitions: true,
                 docker_integration: true,
                 real_time_updates: true,
+                snmp_integration: true,
             },
             BillingPlan::CommercialSelfHosted { .. } => BillingPlanFeatures {
                 share_views: true,
@@ -450,6 +458,7 @@ impl BillingPlan {
                 service_definitions: true,
                 docker_integration: true,
                 real_time_updates: true,
+                snmp_integration: true,
             },
         }
     }
@@ -481,6 +490,7 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
             service_definitions,
             docker_integration,
             real_time_updates,
+            snmp_integration
         } = self;
 
         if share_views {
@@ -561,6 +571,10 @@ impl Into<Vec<Feature>> for BillingPlanFeatures {
 
         if real_time_updates {
             features.push(Feature::RealTimeUpdates)
+        }
+
+        if snmp_integration {
+            features.push(Feature::SnmpIntegration)
         }
 
         features
