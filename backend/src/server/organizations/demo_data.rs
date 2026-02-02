@@ -58,6 +58,18 @@ pub struct HostWithServices {
     pub services: Vec<Service>,
 }
 
+/// Deferred neighbor update to apply after all if_entries exist.
+/// Uses host_name + if_index to identify entries (stable across creation)
+/// instead of pre-generated UUIDs (which may not be preserved by storage).
+pub struct NeighborUpdate {
+    /// Source if_entry identifier
+    pub source_host_name: String,
+    pub source_if_index: i32,
+    /// Target if_entry identifier (for IfEntry neighbors)
+    pub target_host_name: String,
+    pub target_if_index: i32,
+}
+
 /// Container for all demo data entities
 pub struct DemoData {
     pub tags: Vec<Tag>,
@@ -66,6 +78,7 @@ pub struct DemoData {
     pub subnets: Vec<Subnet>,
     pub hosts_with_services: Vec<HostWithServices>,
     pub if_entries: Vec<IfEntry>,
+    pub neighbor_updates: Vec<NeighborUpdate>,
     pub daemons: Vec<Daemon>,
     pub api_keys: Vec<DaemonApiKey>,
     pub groups: Vec<Group>,
@@ -93,7 +106,8 @@ impl DemoData {
             .flat_map(|h| h.interfaces.iter())
             .collect();
 
-        let if_entries = generate_if_entries(&networks, &hosts, &interfaces, now);
+        let (if_entries, neighbor_updates) =
+            generate_if_entries(&networks, &hosts, &interfaces, now);
         let daemons = generate_daemons(&networks, &hosts, &subnets, now, user_id);
         let api_keys = generate_api_keys(&networks, now);
         let topologies = generate_topologies(&networks, now);
@@ -109,6 +123,7 @@ impl DemoData {
             subnets,
             hosts_with_services,
             if_entries,
+            neighbor_updates,
             daemons,
             api_keys,
             groups,
@@ -1436,8 +1451,9 @@ fn generate_if_entries(
     hosts: &[&Host],
     interfaces: &[&Interface],
     now: DateTime<Utc>,
-) -> Vec<IfEntry> {
+) -> (Vec<IfEntry>, Vec<NeighborUpdate>) {
     let mut if_entries = Vec::new();
+    let mut neighbor_updates = Vec::new();
 
     // Find network devices that would have SNMP data
     let find_host = |name: &str| hosts.iter().find(|h| h.base.name == name).copied();
@@ -1500,6 +1516,7 @@ fn generate_if_entries(
         });
 
         // LAN interface - connected to switch port 1
+        // Defer the neighbor reference since switch ports are created later
         if_entries.push(IfEntry {
             id: pfsense_lan_id,
             created_at: now,
@@ -1516,7 +1533,7 @@ fn generate_if_entries(
                 oper_status: IfOperStatus::Up,
                 mac_address: None,
                 interface_id: interface.map(|i| i.id),
-                neighbor: Some(Neighbor::IfEntry(switch_port1_id)),
+                neighbor: None, // Deferred - switch port doesn't exist yet
                 lldp_chassis_id: Some(LldpChassisId::MacAddress(switch_mac.to_string())),
                 lldp_port_id: Some(LldpPortId::InterfaceName("Port 1/0/1".to_string())),
                 lldp_sys_name: Some("unifi-usw-24".to_string()),
@@ -1528,6 +1545,12 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
             },
+        });
+        neighbor_updates.push(NeighborUpdate {
+            source_host_name: "pfsense-fw01".to_string(),
+            source_if_index: 2, // igb1 LAN interface
+            target_host_name: "unifi-usw-24".to_string(),
+            target_if_index: 1, // Port 1/0/1
         });
 
         // OPT1 interface (disabled)
@@ -1571,6 +1594,7 @@ fn generate_if_entries(
         let interface = find_interface(host.id);
 
         // Bond interface
+        // Defer the neighbor reference since switch ports are created later
         if_entries.push(IfEntry {
             id: truenas_lagg0_id,
             created_at: now,
@@ -1587,7 +1611,7 @@ fn generate_if_entries(
                 oper_status: IfOperStatus::Up,
                 mac_address: None,
                 interface_id: interface.map(|i| i.id),
-                neighbor: Some(Neighbor::IfEntry(switch_port2_id)),
+                neighbor: None, // Deferred - switch port doesn't exist yet
                 lldp_chassis_id: Some(LldpChassisId::MacAddress(switch_mac.to_string())),
                 lldp_port_id: Some(LldpPortId::InterfaceName("Port 1/0/2".to_string())),
                 lldp_sys_name: Some("unifi-usw-24".to_string()),
@@ -1600,6 +1624,12 @@ fn generate_if_entries(
                 cdp_address: None,
             },
         });
+        neighbor_updates.push(NeighborUpdate {
+            source_host_name: "truenas-primary".to_string(),
+            source_if_index: 1, // lagg0
+            target_host_name: "unifi-usw-24".to_string(),
+            target_if_index: 2, // Port 1/0/2
+        });
     }
 
     // Proxmox - with loopback, connected to switch port 3
@@ -1611,6 +1641,7 @@ fn generate_if_entries(
         let interface = find_interface(host.id);
 
         // Primary interface
+        // Defer the neighbor reference since switch ports are created later
         if_entries.push(IfEntry {
             id: proxmox_eno1_id,
             created_at: now,
@@ -1627,7 +1658,7 @@ fn generate_if_entries(
                 oper_status: IfOperStatus::Up,
                 mac_address: None,
                 interface_id: interface.map(|i| i.id),
-                neighbor: Some(Neighbor::IfEntry(switch_port3_id)),
+                neighbor: None, // Deferred - switch port doesn't exist yet
                 lldp_chassis_id: Some(LldpChassisId::MacAddress(switch_mac.to_string())),
                 lldp_port_id: Some(LldpPortId::InterfaceName("Port 1/0/3".to_string())),
                 lldp_sys_name: Some("unifi-usw-24".to_string()),
@@ -1639,6 +1670,12 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
             },
+        });
+        neighbor_updates.push(NeighborUpdate {
+            source_host_name: "proxmox-hv01".to_string(),
+            source_if_index: 1, // eno1
+            target_host_name: "unifi-usw-24".to_string(),
+            target_if_index: 3, // Port 1/0/3
         });
 
         // Loopback
@@ -1688,6 +1725,7 @@ fn generate_if_entries(
         let ap_host = find_host("unifi-ap-lobby");
 
         // Port 1 - connected to pfSense
+        // Defer neighbor reference - bidirectional link set up after all entries exist
         if_entries.push(IfEntry {
             id: switch_port1_id,
             created_at: now,
@@ -1708,7 +1746,7 @@ fn generate_if_entries(
                 } else {
                     None
                 },
-                neighbor: Some(Neighbor::IfEntry(pfsense_lan_id)),
+                neighbor: None, // Deferred - bidirectional link
                 lldp_chassis_id: Some(LldpChassisId::MacAddress("00:0d:b9:4a:f2:01".to_string())),
                 lldp_port_id: Some(LldpPortId::InterfaceName("igb1".to_string())),
                 lldp_sys_name: Some("pfsense-fw01".to_string()),
@@ -1722,8 +1760,16 @@ fn generate_if_entries(
                 cdp_address: None,
             },
         });
+        neighbor_updates.push(NeighborUpdate {
+            source_host_name: "unifi-usw-24".to_string(),
+            source_if_index: 1, // Port 1/0/1
+            target_host_name: "pfsense-fw01".to_string(),
+            target_if_index: 2, // igb1 LAN interface
+        });
 
         // Port 2 - connected to TrueNAS
+        // Defer neighbor reference - TrueNAS host created after switch
+        // interface_id is None - single-interface fallback will resolve it
         if_entries.push(IfEntry {
             id: switch_port2_id,
             created_at: now,
@@ -1740,7 +1786,7 @@ fn generate_if_entries(
                 oper_status: IfOperStatus::Up,
                 mac_address: None,
                 interface_id: None,
-                neighbor: Some(Neighbor::IfEntry(truenas_lagg0_id)),
+                neighbor: None, // Deferred - TrueNAS doesn't exist yet
                 lldp_chassis_id: Some(LldpChassisId::MacAddress("3c:ec:ef:12:34:01".to_string())),
                 lldp_port_id: Some(LldpPortId::InterfaceName("lagg0".to_string())),
                 lldp_sys_name: Some("truenas-primary".to_string()),
@@ -1754,8 +1800,16 @@ fn generate_if_entries(
                 cdp_address: None,
             },
         });
+        neighbor_updates.push(NeighborUpdate {
+            source_host_name: "unifi-usw-24".to_string(),
+            source_if_index: 2, // Port 1/0/2
+            target_host_name: "truenas-primary".to_string(),
+            target_if_index: 1, // lagg0
+        });
 
         // Port 3 - connected to Proxmox
+        // Defer neighbor reference - Proxmox host created after switch
+        // interface_id is None - single-interface fallback will resolve it
         if_entries.push(IfEntry {
             id: switch_port3_id,
             created_at: now,
@@ -1772,7 +1826,7 @@ fn generate_if_entries(
                 oper_status: IfOperStatus::Up,
                 mac_address: None,
                 interface_id: None,
-                neighbor: Some(Neighbor::IfEntry(proxmox_eno1_id)),
+                neighbor: None, // Deferred - Proxmox doesn't exist yet
                 lldp_chassis_id: Some(LldpChassisId::MacAddress("d4:be:d9:56:78:01".to_string())),
                 lldp_port_id: Some(LldpPortId::InterfaceName("eno1".to_string())),
                 lldp_sys_name: Some("proxmox-hv01".to_string()),
@@ -1785,6 +1839,12 @@ fn generate_if_entries(
                 cdp_platform: None,
                 cdp_address: None,
             },
+        });
+        neighbor_updates.push(NeighborUpdate {
+            source_host_name: "unifi-usw-24".to_string(),
+            source_if_index: 3, // Port 1/0/3
+            target_host_name: "proxmox-hv01".to_string(),
+            target_if_index: 1, // eno1
         });
 
         // Port 4 - connected to UniFi AP (partial resolution - Host only since AP has no IfEntry)
@@ -1854,7 +1914,7 @@ fn generate_if_entries(
         }
     }
 
-    if_entries
+    (if_entries, neighbor_updates)
 }
 
 // ============================================================================
@@ -1895,7 +1955,7 @@ fn generate_daemons(
                     has_docker_socket: true,
                     interfaced_subnet_ids: vec![subnet.id],
                 },
-                mode: DaemonMode::ServerPoll,
+                mode: DaemonMode::DaemonPoll,
                 name: "HQ Daemon".to_string(),
                 tags: vec![],
                 version: Version::parse(env!("CARGO_PKG_VERSION"))
@@ -1926,7 +1986,7 @@ fn generate_daemons(
                     has_docker_socket: true,
                     interfaced_subnet_ids: vec![subnet.id],
                 },
-                mode: DaemonMode::ServerPoll,
+                mode: DaemonMode::DaemonPoll,
                 name: "Cloud Daemon".to_string(),
                 tags: vec![],
                 version: Version::parse(env!("CARGO_PKG_VERSION"))
@@ -1956,7 +2016,7 @@ fn generate_daemons(
                     has_docker_socket: false,
                     interfaced_subnet_ids: vec![subnet.id],
                 },
-                mode: DaemonMode::ServerPoll,
+                mode: DaemonMode::DaemonPoll,
                 name: "Denver Daemon".to_string(),
                 tags: vec![],
                 version: Version::parse(env!("CARGO_PKG_VERSION"))
@@ -1985,10 +2045,10 @@ fn generate_daemons(
                     has_docker_socket: false,
                     interfaced_subnet_ids: vec![subnet.id],
                 },
-                mode: DaemonMode::ServerPoll,
+                mode: DaemonMode::DaemonPoll,
                 name: "Riverside Daemon".to_string(),
                 tags: vec![],
-                version: None,
+                version: Some(Version::new(0, 13, 5)),
                 user_id,
                 api_key_id: None,
                 is_unreachable: false,
