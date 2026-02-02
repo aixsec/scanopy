@@ -252,6 +252,7 @@ pub mod proxmox_datacenter_manager;
 pub mod apc;
 pub mod beszel_agent;
 pub mod cadvisor;
+pub mod checkmk_agent;
 pub mod coolercontrol;
 pub mod elastic_apm;
 pub mod gatus;
