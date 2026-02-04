@@ -25,7 +25,8 @@
 		getEdgeDisplayState,
 		edgeHoverState,
 		groupHoverState,
-		isExporting
+		isExporting,
+		tagHiddenNodeIds
 	} from '../../interactions';
 	import type { Node, Edge as FlowEdge } from '@xyflow/svelte';
 
@@ -66,6 +67,13 @@
 	const nodes = $derived(topology?.nodes ?? []);
 
 	const edgeData = $derived(data as TopologyEdge | undefined);
+
+	// Check if either endpoint is hidden by tag filter
+	let isEndpointHiddenByTagFilter = $derived.by(() => {
+		const hiddenNodes = $tagHiddenNodeIds;
+		if (!edgeData) return false;
+		return hiddenNodes.has(edgeData.source as string) || hiddenNodes.has(edgeData.target as string);
+	});
 	const edgeTypeMetadata = $derived(edgeData ? edgeTypes.getMetadata(edgeData.edge_type) : null);
 
 	// Get group reactively - updates when groups store changes
@@ -122,9 +130,14 @@
 
 	// Calculate base edge properties
 	let baseStrokeWidth = $derived(!$topologyOptions.local.no_fade_edges && shouldShowFull ? 3 : 2);
-	let baseOpacity = $derived(
-		$isExporting ? 1 : !$topologyOptions.local.no_fade_edges && !shouldShowFull ? 0.4 : 1
-	);
+	let baseOpacity = $derived.by(() => {
+		if ($isExporting) return 1;
+		// Fade if either endpoint is hidden by tag filter
+		if (isEndpointHiddenByTagFilter) return 0.3;
+		// Fade based on selection state
+		if (!$topologyOptions.local.no_fade_edges && !shouldShowFull) return 0.4;
+		return 1;
+	});
 
 	// Calculate edge style for primary layer (dashed white overlay for group edges, or normal edge)
 	let edgeStyle = $derived.by(() => {

@@ -233,6 +233,7 @@ impl ServiceFactory {
             port_service.clone(),
             binding_service.clone(),
             if_entry_service.clone(),
+            tag_service.clone(),
             storage.topologies.clone(),
             event_bus.clone(),
         ));
@@ -302,6 +303,10 @@ impl ServiceFactory {
                     host_service.clone(),
                     user_service.clone(),
                     organization_service.clone(),
+                    daemon_service.clone(),
+                    tag_service.clone(),
+                    user_api_key_service.clone(),
+                    snmp_credential_service.clone(),
                 ))
             })
         });

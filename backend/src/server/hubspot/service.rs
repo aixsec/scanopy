@@ -1,8 +1,10 @@
 use crate::server::{
     auth::middleware::auth::AuthenticatedEntity,
+    daemons::{r#impl::base::Daemon, service::DaemonService},
     hosts::{r#impl::base::Host, service::HostService},
     hubspot::{
         client::HubSpotClient,
+        freemail::is_work_email,
         types::{CompanyProperties, ContactProperties},
     },
     networks::{r#impl::Network, service::NetworkService},
@@ -12,10 +14,14 @@ use crate::server::{
         services::traits::CrudService,
         storage::filter::StorableFilter,
     },
+    snmp_credentials::{r#impl::base::SnmpCredential, service::SnmpCredentialService},
+    tags::{r#impl::base::Tag, service::TagService},
+    user_api_keys::{r#impl::base::UserApiKey, service::UserApiKeyService},
     users::{r#impl::base::User, r#impl::permissions::UserOrgPermissions, service::UserService},
 };
 use anyhow::Result;
 use chrono::Utc;
+use email_address::EmailAddress;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -27,16 +33,26 @@ pub struct HubSpotService {
     host_service: Arc<HostService>,
     user_service: Arc<UserService>,
     organization_service: Arc<OrganizationService>,
+    // Additional services for telemetry backfill
+    daemon_service: Arc<DaemonService>,
+    tag_service: Arc<TagService>,
+    user_api_key_service: Arc<UserApiKeyService>,
+    snmp_credential_service: Arc<SnmpCredentialService>,
 }
 
 impl HubSpotService {
     /// Create a new HubSpot service
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         api_key: String,
         network_service: Arc<NetworkService>,
         host_service: Arc<HostService>,
         user_service: Arc<UserService>,
         organization_service: Arc<OrganizationService>,
+        daemon_service: Arc<DaemonService>,
+        tag_service: Arc<TagService>,
+        user_api_key_service: Arc<UserApiKeyService>,
+        snmp_credential_service: Arc<SnmpCredentialService>,
     ) -> Self {
         Self {
             client: Arc::new(HubSpotClient::new(api_key)),
@@ -44,6 +60,10 @@ impl HubSpotService {
             host_service,
             user_service,
             organization_service,
+            daemon_service,
+            tag_service,
+            user_api_key_service,
+            snmp_credential_service,
         }
     }
 
@@ -124,12 +144,45 @@ impl HubSpotService {
         Ok(())
     }
 
+    /// Check if an organization should be synced to HubSpot.
+    /// Only sync organizations with commercial plans OR business email domains.
+    fn should_sync_to_hubspot(&self, org: &Organization, owner_email: &EmailAddress) -> bool {
+        // Commercial plans always sync
+        if let Some(plan) = &org.base.plan
+            && plan.is_commercial()
+        {
+            return true;
+        }
+        // Work/business email domains sync (not Gmail, Yahoo, etc.)
+        is_work_email(owner_email)
+    }
+
     /// Handle org created - create contact and company, store company ID on org
     async fn handle_org_created(&self, event: &TelemetryEvent) -> Result<()> {
         let (email, user_id) = match &event.authentication {
-            AuthenticatedEntity::User { email, user_id, .. } => (email.to_string(), *user_id),
+            AuthenticatedEntity::User { email, user_id, .. } => (email.clone(), *user_id),
             _ => return Ok(()),
         };
+
+        // Get the organization to check eligibility
+        let org = match self
+            .organization_service
+            .get_by_id(&event.organization_id)
+            .await?
+        {
+            Some(org) => org,
+            None => return Ok(()),
+        };
+
+        // Check if this org should be synced to HubSpot
+        if !self.should_sync_to_hubspot(&org, &email) {
+            tracing::debug!(
+                organization_id = %event.organization_id,
+                email = %email,
+                "Skipping HubSpot sync - non-commercial org with free email domain"
+            );
+            return Ok(());
+        }
 
         // Extract metadata
         let org_name = event
@@ -160,7 +213,7 @@ impl HubSpotService {
 
         // Build contact properties
         let mut contact_props = ContactProperties::new()
-            .with_email(&email)
+            .with_email(email.to_string())
             .with_user_id(user_id)
             .with_org_id(event.organization_id)
             .with_role("owner")
@@ -583,65 +636,196 @@ impl HubSpotService {
         }
     }
 
-    /// Sync all organizations that don't have a HubSpot company ID.
-    /// Called on server startup.
+    /// Sync all organizations to HubSpot on server startup.
+    /// This performs two operations:
+    /// 1. Flag and clear non-commercial orgs that were already synced (before filtering)
+    /// 2. Sync eligible orgs that don't have HubSpot IDs yet (with backfilled telemetry)
     pub async fn sync_existing_organizations(&self) -> Result<()> {
-        tracing::info!("Starting HubSpot organization sync check");
+        tracing::info!("Starting HubSpot organization sync");
 
+        // Step 1: Flag and clear non-commercial orgs that were already synced
+        self.cleanup_non_commercial_hubspot_records().await?;
+
+        // Step 2: Sync eligible orgs without HubSpot IDs
+        self.sync_eligible_organizations().await?;
+
+        tracing::info!("HubSpot organization sync complete");
+
+        Ok(())
+    }
+
+    /// Flag non-commercial orgs in HubSpot and clear their hubspot_company_id.
+    /// This allows bulk-deleting these records in HubSpot.
+    async fn cleanup_non_commercial_hubspot_records(&self) -> Result<()> {
+        let filter = StorableFilter::<Organization>::new_with_hubspot_company_id();
+        let orgs = self.organization_service.get_all(filter).await?;
+
+        let mut flagged_count = 0;
+
+        for org in orgs {
+            // Get the owner user for this org
+            let filter = StorableFilter::<User>::new_from_org_id(&org.id)
+                .user_permissions(&UserOrgPermissions::Owner);
+            let owners = self.user_service.get_all(filter).await?;
+
+            let owner = match owners.first() {
+                Some(owner) => owner,
+                None => {
+                    tracing::warn!(
+                        organization_id = %org.id,
+                        "No owner found for organization during cleanup"
+                    );
+                    continue;
+                }
+            };
+
+            // Check if this is a non-commercial org that should not be synced
+            if self.should_sync_to_hubspot(&org, &owner.base.email) {
+                // This org is eligible - skip cleanup
+                continue;
+            }
+
+            // Flag the HubSpot record as non-commercial
+            if let Some(hubspot_id) = &org.base.hubspot_company_id {
+                let company_props = CompanyProperties::new().with_non_commercial(true);
+
+                if let Err(e) = self.client.update_company(hubspot_id, company_props).await {
+                    tracing::warn!(
+                        organization_id = %org.id,
+                        hubspot_company_id = %hubspot_id,
+                        error = %e,
+                        "Failed to flag non-commercial org in HubSpot"
+                    );
+                    continue;
+                }
+
+                // Clear the hubspot_company_id from the org so it won't be synced again
+                let mut org = org.clone();
+                org.base.hubspot_company_id = None;
+                if let Err(e) = self
+                    .organization_service
+                    .update(&mut org, AuthenticatedEntity::System)
+                    .await
+                {
+                    tracing::error!(
+                        organization_id = %org.id,
+                        error = %e,
+                        "Failed to clear hubspot_company_id from non-commercial org"
+                    );
+                    continue;
+                }
+
+                tracing::info!(
+                    organization_id = %org.id,
+                    hubspot_company_id = %hubspot_id,
+                    email = %owner.base.email,
+                    "Flagged non-commercial org in HubSpot and cleared ID"
+                );
+                flagged_count += 1;
+            }
+        }
+
+        if flagged_count > 0 {
+            tracing::info!(
+                count = flagged_count,
+                "Flagged and cleared non-commercial orgs from HubSpot"
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Sync eligible organizations (commercial plan OR work email) that don't have HubSpot IDs.
+    async fn sync_eligible_organizations(&self) -> Result<()> {
         let filter = StorableFilter::<Organization>::new_without_hubspot_company_id();
         let orgs = self.organization_service.get_all(filter).await?;
 
         if orgs.is_empty() {
-            tracing::info!("All organizations have HubSpot company IDs");
+            tracing::info!("All eligible organizations have HubSpot company IDs");
             return Ok(());
         }
 
-        tracing::info!(
-            count = orgs.len(),
-            "Syncing existing organizations to HubSpot"
-        );
+        let mut synced_count = 0;
+        let mut skipped_count = 0;
 
         for org in orgs {
+            // Get the owner user for this org
+            let filter = StorableFilter::<User>::new_from_org_id(&org.id)
+                .user_permissions(&UserOrgPermissions::Owner);
+            let owners = self.user_service.get_all(filter).await?;
+
+            let owner = match owners.first() {
+                Some(owner) => owner,
+                None => {
+                    tracing::warn!(
+                        organization_id = %org.id,
+                        "No owner found for organization"
+                    );
+                    continue;
+                }
+            };
+
+            // Check if this org should be synced to HubSpot
+            if !self.should_sync_to_hubspot(&org, &owner.base.email) {
+                tracing::debug!(
+                    organization_id = %org.id,
+                    email = %owner.base.email,
+                    "Skipping non-commercial org with free email domain"
+                );
+                skipped_count += 1;
+                continue;
+            }
+
             tracing::info!(
                 organization_id = %org.id,
                 org_name = %org.base.name,
-                "Syncing organization to HubSpot"
+                "Syncing organization to HubSpot with backfilled telemetry"
             );
-            if let Err(e) = self.sync_organization(org).await {
+
+            if let Err(e) = self.sync_organization_with_backfill(org, owner).await {
                 tracing::error!(
                     error = %e,
                     "Failed to sync organization to HubSpot"
                 );
                 // Continue with other orgs
+            } else {
+                synced_count += 1;
             }
         }
 
-        tracing::info!("HubSpot organization sync check complete");
+        tracing::info!(
+            synced = synced_count,
+            skipped = skipped_count,
+            "Completed syncing eligible organizations"
+        );
 
         Ok(())
     }
 
-    /// Sync a single organization to HubSpot
-    async fn sync_organization(&self, mut org: Organization) -> Result<()> {
-        // Get the owner user for this org
-        let filter = StorableFilter::<User>::new_from_org_id(&org.id)
-            .user_permissions(&UserOrgPermissions::Owner);
-        let owners = self.user_service.get_all(filter).await?;
-        let owner = owners
-            .first()
-            .ok_or_else(|| anyhow::anyhow!("No owner found for organization {}", org.id))?;
-
-        // Build properties
+    /// Sync a single organization to HubSpot with backfilled telemetry data.
+    async fn sync_organization_with_backfill(
+        &self,
+        mut org: Organization,
+        owner: &User,
+    ) -> Result<()> {
+        // Build contact properties
         let contact_props = ContactProperties::new()
             .with_email(owner.base.email.to_string())
             .with_user_id(owner.id)
             .with_org_id(org.id)
-            .with_role("owner");
+            .with_role("owner")
+            .with_signup_date(owner.created_at);
 
-        let company_props = CompanyProperties::new()
+        // Build company properties with backfilled telemetry
+        let mut company_props = CompanyProperties::new()
             .with_name(&org.base.name)
             .with_org_id(org.id)
             .with_created_date(org.created_at);
+
+        // Backfill telemetry data
+        company_props = self
+            .backfill_company_telemetry(org.id, company_props)
+            .await?;
 
         // Sync and get company ID
         let (_contact, company_id) = self
@@ -658,9 +842,72 @@ impl HubSpotService {
         tracing::info!(
             organization_id = %org.id,
             hubspot_company_id = %company_id,
-            "Synced existing organization to HubSpot"
+            "Synced organization to HubSpot with backfilled telemetry"
         );
 
         Ok(())
+    }
+
+    /// Backfill telemetry/onboarding fields for an organization's HubSpot company.
+    async fn backfill_company_telemetry(
+        &self,
+        org_id: Uuid,
+        mut props: CompanyProperties,
+    ) -> Result<CompanyProperties> {
+        // Get networks for this org
+        let network_filter = StorableFilter::<Network>::new_from_org_id(&org_id);
+        let networks = self.network_service.get_all(network_filter).await?;
+        let network_ids: Vec<Uuid> = networks.iter().map(|n| n.id).collect();
+        let network_count = networks.len() as i64;
+
+        // First network date
+        if let Some(first_network) = networks.iter().min_by_key(|n| n.created_at) {
+            props = props.with_first_network_date(first_network.created_at);
+        }
+
+        // Get hosts count
+        let host_filter = StorableFilter::<Host>::new_from_network_ids(&network_ids);
+        let hosts = self.host_service.get_all(host_filter).await?;
+        let host_count = hosts.len() as i64;
+
+        // Get users count
+        let user_filter = StorableFilter::<User>::new_from_org_id(&org_id);
+        let users = self.user_service.get_all(user_filter).await?;
+        let user_count = users.len() as i64;
+
+        props = props
+            .with_network_count(network_count)
+            .with_host_count(host_count)
+            .with_user_count(user_count);
+
+        // First daemon date
+        let daemon_filter = StorableFilter::<Daemon>::new_from_network_ids(&network_ids);
+        let daemons = self.daemon_service.get_all(daemon_filter).await?;
+        if let Some(first_daemon) = daemons.iter().min_by_key(|d| d.created_at) {
+            props = props.with_first_daemon_date(first_daemon.created_at);
+        }
+
+        // First tag date
+        let tag_filter = StorableFilter::<Tag>::new_from_org_id(&org_id);
+        let tags = self.tag_service.get_all(tag_filter).await?;
+        if let Some(first_tag) = tags.iter().min_by_key(|t| t.created_at) {
+            props = props.with_first_tag_date(first_tag.created_at);
+        }
+
+        // First API key date (user API keys)
+        let api_key_filter = StorableFilter::<UserApiKey>::new_from_org_id(&org_id);
+        let api_keys = self.user_api_key_service.get_all(api_key_filter).await?;
+        if let Some(first_api_key) = api_keys.iter().min_by_key(|k| k.created_at) {
+            props = props.with_first_api_key_date(first_api_key.created_at);
+        }
+
+        // First SNMP credential date
+        let snmp_filter = StorableFilter::<SnmpCredential>::new_from_network_ids(&network_ids);
+        let snmp_creds = self.snmp_credential_service.get_all(snmp_filter).await?;
+        if let Some(first_snmp) = snmp_creds.iter().min_by_key(|s| s.created_at) {
+            props = props.with_first_snmp_credential_date(first_snmp.created_at);
+        }
+
+        Ok(props)
     }
 }

@@ -911,6 +911,8 @@
 	"topology_staleDataBody": "Entities have been updated, and the diagram layout may need to change to fit them.",
 	"topology_startFresh": "Start fresh",
 	"topology_submitToCommunity": "Submit to Community Showcase",
+	"topology_tagFilter": "Tag Filter",
+	"topology_tagFilterHelp": "Click tags to toggle visibility. Hidden tags will fade out their associated entities.",
 	"userApiKeys_confirmBulkDelete": "Are you sure you want to delete {count} API keys?",
 	"userApiKeys_confirmDelete": "Are you sure you want to delete API key \"{name}\"?",
 	"userApiKeys_createApiKey": "Create API Key",

@@ -2637,7 +2637,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.14.1"
+         *       "server_version": "0.14.2"
          *     }
          */
         ApiMeta: {
@@ -2648,7 +2648,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.14.1
+             * @example 0.14.2
              */
             server_version: string;
         };
@@ -2662,14 +2662,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-02-02T22:03:48.338209Z",
-             *       "id": "a4ff1f51-bbad-43e9-956c-a6198f992f16",
+             *       "created_at": "2026-02-04T00:43:18.244861Z",
+             *       "id": "d3b7aac5-4eb0-4819-b266-2d98d0bff490",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-02-02T22:03:48.338209Z"
+             *       "updated_at": "2026-02-04T00:43:18.244861Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2900,14 +2900,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-02-02T22:03:48.325766Z",
-             *               "id": "801c6702-62e7-46ae-8794-51f617ee2654",
+             *               "created_at": "2026-02-04T00:43:18.229742Z",
+             *               "id": "36a5ea72-5869-4593-bae1-27ea182774e8",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-02-02T22:03:48.325766Z"
+             *               "updated_at": "2026-02-04T00:43:18.229742Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -2916,7 +2916,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Traefik",
+             *           "service_definition": "NextCloud",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3190,14 +3190,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-02-02T22:03:48.334755Z",
-             *           "id": "c39d0e0a-7055-452d-b644-b19f4806f6dc",
+             *           "created_at": "2026-02-04T00:43:18.240132Z",
+             *           "id": "2b978448-db5a-4cd1-bf4c-bd507cf83e2f",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-02-02T22:03:48.334755Z"
+             *           "updated_at": "2026-02-04T00:43:18.240132Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3206,7 +3206,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Traefik",
+             *       "service_definition": "NextCloud",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3502,14 +3502,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-02-02T22:03:48.326010Z",
-         *       "id": "8cd0cbe0-a510-4a64-9af4-364b2c1d992a",
+         *       "created_at": "2026-02-04T00:43:18.229976Z",
+         *       "id": "96ac1253-fdba-4ab5-a63c-291b118954e2",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-02-02T22:03:48.326010Z"
+         *       "updated_at": "2026-02-04T00:43:18.229976Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3674,7 +3674,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Traefik",
+         *           "service_definition": "NextCloud",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4315,14 +4315,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-02-02T22:03:48.325432Z",
-         *               "id": "8a775be7-1d58-4862-95bc-ca0aabd0d2a0",
+         *               "created_at": "2026-02-04T00:43:18.229404Z",
+         *               "id": "dd65e20e-1d69-466f-ba69-2a5afc4e5f3f",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-02-02T22:03:48.325432Z"
+         *               "updated_at": "2026-02-04T00:43:18.229404Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4331,7 +4331,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Traefik",
+         *           "service_definition": "NextCloud",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -4868,7 +4868,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.14.1"
+         *       "server_version": "0.14.2"
          *     }
          */
         PaginatedApiMeta: {
@@ -4881,7 +4881,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.14.1
+             * @example 0.14.2
              */
             server_version: string;
         };
@@ -5272,14 +5272,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-02-02T22:03:48.325931Z",
-         *           "id": "305a811d-eb11-401d-acfe-81a9025882a3",
+         *           "created_at": "2026-02-04T00:43:18.229895Z",
+         *           "id": "18da2340-86a9-4bbf-a408-855bdc20dea9",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-02-02T22:03:48.325931Z"
+         *           "updated_at": "2026-02-04T00:43:18.229895Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5288,7 +5288,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Traefik",
+         *       "service_definition": "NextCloud",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5555,6 +5555,7 @@ export interface components {
         TopologyBase: {
             bindings: components["schemas"]["Binding"][];
             edges: components["schemas"]["Edge"][];
+            entity_tags: components["schemas"]["Tag"][];
             groups: components["schemas"]["Group"][];
             hosts: components["schemas"]["Host"][];
             if_entries: components["schemas"]["IfEntry"][];
@@ -5615,6 +5616,7 @@ export interface components {
             hide_resize_handles: boolean;
             left_zone_title: string;
             no_fade_edges: boolean;
+            tag_filter?: components["schemas"]["TopologyTagFilter"];
         };
         /**
          * @description Lightweight request type for updating topology metadata.
@@ -5713,6 +5715,15 @@ export interface components {
             hide_vm_title_on_docker_container: boolean;
             left_zone_service_categories: components["schemas"]["ServiceCategory"][];
             show_gateway_in_left_zone: boolean;
+        };
+        /** @description Filter settings for hiding entities by tag in topology visualization. */
+        TopologyTagFilter: {
+            /** @description Host tag IDs to hide (hosts with these tags will fade out) */
+            hidden_host_tag_ids?: string[];
+            /** @description Service tag IDs to hide (services with these tags will be hidden from nodes) */
+            hidden_service_tag_ids?: string[];
+            /** @description Subnet tag IDs to hide (subnets with these tags will fade out) */
+            hidden_subnet_tag_ids?: string[];
         };
         /** @enum {string} */
         TransportProtocol: "Udp" | "Tcp";
