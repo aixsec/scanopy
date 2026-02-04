@@ -5,7 +5,12 @@
 	import { queryClient, queryKeys } from '$lib/api/query-client';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
-	import { identifyUser, trackPlunkEvent, trackEvent } from '$lib/shared/utils/analytics';
+	import {
+		identifyUser,
+		trackPlunkEvent,
+		trackEvent,
+		flushEventQueue
+	} from '$lib/shared/utils/analytics';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import { resolve } from '$app/paths';
 	import { resetTopologyOptions } from '$lib/features/topology/queries';
@@ -86,6 +91,7 @@
 
 					loaded: () => {
 						posthogInstance = posthog;
+						flushEventQueue();
 					}
 				});
 			});
@@ -100,6 +106,7 @@
 			const hsq = ((window as unknown as { _hsq: unknown[] })._hsq =
 				(window as unknown as { _hsq: unknown[] })._hsq || []);
 			hsq.push(['setContentType', 'standard-page']);
+			hsq.push(['setCollectedForms', { enabled: false }]);
 
 			const script = document.createElement('script');
 			script.id = 'hs-script-loader';

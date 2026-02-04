@@ -6,6 +6,37 @@ import type { components } from '$lib/api/schema';
 
 type TelemetryOperation = components['schemas']['TelemetryOperation'];
 
+// Event queue for events that fire before PostHog loads
+type QueuedEvent =
+	| { type: 'capture'; event: string; properties?: Record<string, unknown> }
+	| { type: 'identify'; userId: string; traits: Record<string, unknown> }
+	| { type: 'reset' };
+
+let eventQueue: QueuedEvent[] = [];
+
+/**
+ * Flush queued events to PostHog.
+ * Called from AppShell when PostHog finishes loading.
+ */
+export function flushEventQueue() {
+	if (!posthog.__loaded) return;
+	const queue = eventQueue;
+	eventQueue = [];
+	for (const item of queue) {
+		switch (item.type) {
+			case 'capture':
+				posthog.capture(item.event, item.properties);
+				break;
+			case 'identify':
+				posthog.identify(item.userId, item.traits);
+				break;
+			case 'reset':
+				posthog.reset();
+				break;
+		}
+	}
+}
+
 /**
  * Check if the current organization is in demo mode.
  * Demo users should not have their data tracked.
@@ -38,6 +69,8 @@ export function hasCompletedOnboarding(operation: TelemetryOperation): boolean {
 export function trackEvent(event: string, properties?: Record<string, unknown>) {
 	if (posthog.__loaded) {
 		posthog.capture(event, properties);
+	} else {
+		eventQueue.push({ type: 'capture', event, properties });
 	}
 }
 
@@ -71,6 +104,12 @@ export function identifyUser(userId: string, email: string, organizationId: stri
 			email,
 			organization_id: organizationId
 		});
+	} else {
+		eventQueue.push({
+			type: 'identify',
+			userId,
+			traits: { email, organization_id: organizationId }
+		});
 	}
 }
 
@@ -81,6 +120,8 @@ export function identifyUser(userId: string, email: string, organizationId: stri
 export function resetIdentity() {
 	if (posthog.__loaded) {
 		posthog.reset();
+	} else {
+		eventQueue.push({ type: 'reset' });
 	}
 }
 
