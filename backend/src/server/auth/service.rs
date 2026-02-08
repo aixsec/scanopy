@@ -215,11 +215,17 @@ impl AuthService {
                 vec![]
             };
 
-            // Set billing plan if billing is disabled (self-hosted)
-            let plan = if !billing_enabled {
-                Some(crate::server::billing::types::base::BillingPlan::default())
+            // Set billing plan: Free for Cloud (billing enabled), default for self-hosted
+            let (plan, plan_status) = if billing_enabled {
+                (
+                    Some(crate::server::billing::plans::get_free_plan()),
+                    Some("active".to_string()),
+                )
             } else {
-                None
+                (
+                    Some(crate::server::billing::types::base::BillingPlan::default()),
+                    None,
+                )
             };
 
             // Create new organization for this user
@@ -230,7 +236,7 @@ impl AuthService {
                         stripe_customer_id: None,
                         name: org_name,
                         plan,
-                        plan_status: None,
+                        plan_status,
                         onboarding,
                         has_payment_method: false,
                         trial_end_date: None,

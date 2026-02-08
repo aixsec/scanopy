@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { createForm } from '@tanstack/svelte-form';
 	import { AlertTriangle, Home, Building2, Users } from 'lucide-svelte';
 	import { type UseCase, USE_CASES } from '../../types/base';
@@ -46,6 +47,7 @@
 
 	let selectedUseCase: UseCase | null = null;
 	let showLicenseWarning = false;
+	let qualFieldsEl: HTMLElement;
 
 	// Role options
 	const roleOptions = [
@@ -125,6 +127,11 @@
 		} else {
 			showLicenseWarning = false;
 		}
+
+		// Auto-scroll to qualification fields after DOM updates
+		tick().then(() => {
+			qualFieldsEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+		});
 	}
 
 	function handleLicenseAcknowledge() {
@@ -269,7 +276,7 @@
 
 					<!-- Referral Source (all use cases on Cloud) -->
 					{#if selectedUseCase}
-						<div class="card card-static">
+						<div class="card card-static" bind:this={qualFieldsEl}>
 							<form.Field name="referralSource">
 								{#snippet children(field)}
 									<SelectInput
@@ -278,23 +285,22 @@
 										{field}
 										options={referralSourceOptions}
 									/>
+									{#if field.state.value === 'other'}
+										<div class="mt-3">
+											<form.Field name="referralSourceOther">
+												{#snippet children(otherField)}
+													<TextInput
+														label=""
+														id="referral-source-other"
+														field={otherField}
+														placeholder={onboarding_referralSource_otherPlaceholder()}
+													/>
+												{/snippet}
+											</form.Field>
+										</div>
+									{/if}
 								{/snippet}
 							</form.Field>
-
-							{#if form.state.values.referralSource === 'other'}
-								<div class="mt-3">
-									<form.Field name="referralSourceOther">
-										{#snippet children(field)}
-											<TextInput
-												label=""
-												id="referral-source-other"
-												{field}
-												placeholder={onboarding_referralSource_otherPlaceholder()}
-											/>
-										{/snippet}
-									</form.Field>
-								</div>
-							{/if}
 						</div>
 					{/if}
 				{/if}

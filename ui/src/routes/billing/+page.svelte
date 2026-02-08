@@ -13,6 +13,7 @@
 	import { onboardingStore } from '$lib/features/auth/stores/onboarding';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
+	import { navigate } from '$lib/shared/utils/navigation';
 	import PlanInquiryModal from '$lib/features/billing/PlanInquiryModal.svelte';
 	import { trackEvent } from '$lib/shared/utils/analytics';
 
@@ -48,7 +49,7 @@
 	// Returning customers (have had a subscription) shouldn't see trial offers
 	let isReturningCustomer = $derived(!!organization?.plan_status);
 
-	// Checkout mutation
+	// Mutations
 	const checkoutMutation = useCheckoutMutation();
 
 	// Determine initial filter based on use case from onboarding
@@ -77,6 +78,12 @@
 				plan: plan.type,
 				is_commercial: metadata?.is_commercial ?? false
 			});
+
+			// Free plan: no checkout needed, navigate to app
+			if (plan.type === 'Free') {
+				await navigate();
+				return;
+			}
 
 			const checkoutUrl = await checkoutMutation.mutateAsync(plan);
 			if (checkoutUrl) {

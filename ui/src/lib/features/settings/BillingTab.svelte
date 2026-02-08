@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { CheckCircle, AlertCircle, CreditCard } from 'lucide-svelte';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { isBillingPlanActive } from '$lib/features/organizations/types';
@@ -347,8 +348,8 @@
 					</InfoCard>
 				{/if}
 
-				<!-- Free Plan - Payment Method CTA -->
-				{#if isFree && !hasPaymentMethod}
+				<!-- Free Plan - Upgrade CTA -->
+				{#if isFree}
 					<InfoCard>
 						<div class="flex items-center justify-between">
 							<div>
@@ -357,6 +358,15 @@
 									Get scheduled discovery, DaemonPoll mode, and more hosts
 								</p>
 							</div>
+							<button
+								onclick={() => {
+									// eslint-disable-next-line svelte/no-navigation-without-resolve
+									goto('/billing');
+								}}
+								class="btn-primary whitespace-nowrap text-sm"
+							>
+								View Plans
+							</button>
 						</div>
 					</InfoCard>
 				{/if}

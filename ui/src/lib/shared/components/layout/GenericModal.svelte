@@ -8,6 +8,7 @@
 		id: string;
 		label: string;
 		icon?: IconComponent;
+		notification?: boolean;
 	}
 </script>
 
@@ -177,7 +178,13 @@
 							>
 								<div class="flex items-center gap-2">
 									{#if tab.icon}
-										<tab.icon class="h-4 w-4" />
+										<span class="relative">
+											<tab.icon class="h-4 w-4" />
+											{#if tab.notification}
+												<span class="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-blue-500"
+												></span>
+											{/if}
+										</span>
 									{/if}
 									{tab.label}
 								</div>

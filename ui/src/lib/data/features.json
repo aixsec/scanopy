@@ -165,9 +165,9 @@
 		}
 	},
 	{
-		"id": "unlimited_scans",
-		"name": "Unlimited Scans",
-		"description": "No limits on network discovery scans",
+		"id": "scheduled_discovery",
+		"name": "Scheduled Discovery",
+		"description": "Schedule automatic network discovery scans",
 		"category": "Core",
 		"icon": "sparkle",
 		"color": "Gray",
@@ -176,9 +176,9 @@
 		}
 	},
 	{
-		"id": "unlimited_hosts",
-		"name": "Unlimited Hosts",
-		"description": "Visualize as many hosts as your network has",
+		"id": "daemon_poll",
+		"name": "DaemonPoll Mode",
+		"description": "Daemon-initiated polling — no open ports required on the daemon",
 		"category": "Core",
 		"icon": "sparkle",
 		"color": "Gray",
