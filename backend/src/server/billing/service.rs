@@ -194,8 +194,14 @@ impl BillingService {
         };
 
         for plan in plans {
-            // Skip $0 plans (Free, Community) — they don't need Stripe products
-            if plan.config().base_cents == 0 {
+            // Skip self-hosted/contact-only plans — they don't need Stripe products
+            if matches!(
+                plan,
+                BillingPlan::Community(_)
+                    | BillingPlan::CommercialSelfHosted(_)
+                    | BillingPlan::Enterprise(_)
+                    | BillingPlan::Demo(_)
+            ) {
                 continue;
             }
 
@@ -383,8 +389,8 @@ impl BillingService {
             Some(plan.config().trial_days)
         };
 
-        // Allow trial without requiring credit card upfront for new customers
-        let payment_method_collection = if trial_days.is_some() {
+        // Allow trial or $0 plans without requiring credit card
+        let payment_method_collection = if trial_days.is_some() || plan.config().base_cents == 0 {
             CreateCheckoutSessionPaymentMethodCollection::IfRequired
         } else {
             CreateCheckoutSessionPaymentMethodCollection::Always

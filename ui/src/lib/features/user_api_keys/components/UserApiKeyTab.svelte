@@ -32,12 +32,22 @@
 		userApiKeys_noApiKeysYet,
 		userApiKeys_subtitle
 	} from '$lib/paraglide/messages';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
+	import { billingPlans } from '$lib/shared/stores/metadata';
 
 	let { isReadOnly = false }: TabProps = $props();
 
+	// Check if plan has api_access feature before querying
+	const organizationQuery = useOrganizationQuery();
+	let hasApiAccess = $derived.by(() => {
+		const org = organizationQuery.data;
+		if (!org?.plan) return false;
+		return billingPlans.getMetadata(org.plan.type).features.api_access;
+	});
+
 	// Queries
 	const tagsQuery = useTagsQuery();
-	const userApiKeysQuery = useUserApiKeysQuery();
+	const userApiKeysQuery = useUserApiKeysQuery({ enabled: () => hasApiAccess });
 	const networksQuery = useNetworksQuery();
 
 	// Mutations

@@ -215,12 +215,10 @@ impl AuthService {
                 vec![]
             };
 
-            // Set billing plan: Free for Cloud (billing enabled), default for self-hosted
+            // Cloud: no plan until user selects one via billing modal → Stripe checkout → webhook
+            // Self-hosted: set default plan immediately
             let (plan, plan_status) = if billing_enabled {
-                (
-                    Some(crate::server::billing::plans::get_free_plan()),
-                    Some("active".to_string()),
-                )
+                (None, None)
             } else {
                 (
                     Some(crate::server::billing::types::base::BillingPlan::default()),

@@ -8,6 +8,11 @@
 	import { getMetadata } from '$lib/shared/stores/metadata';
 	import { topologySSEManager } from '$lib/features/topology/queries';
 	import { useDaemonsQuery } from '$lib/features/daemons/queries';
+	import BillingPlanModal from '$lib/features/billing/BillingPlanModal.svelte';
+	import { useConfigQuery } from '$lib/shared/stores/config-query';
+	import { useOrganizationQuery } from '$lib/features/organizations/queries';
+	import { isBillingPlanActive } from '$lib/features/organizations/types';
+	import { showBillingPlanModal } from '$lib/features/billing/stores';
 
 	// Read hash immediately during script initialization, before onMount
 	const initialHash = typeof window !== 'undefined' ? window.location.hash.substring(1) : '';
@@ -23,6 +28,16 @@
 	// TanStack Query for daemons - used to determine default tab
 	// Only fetch when authenticated to avoid 401 errors during onboarding
 	const daemonsQuery = useDaemonsQuery({ enabled: () => isAuthenticated });
+
+	// Billing modal: show when billing is enabled but user has no active plan
+	const configQuery = useConfigQuery();
+	const organizationQuery = useOrganizationQuery();
+	let billingEnabled = $derived(configQuery.data?.billing_enabled ?? false);
+	let organization = $derived(organizationQuery.data);
+	let needsPlanSelection = $derived(
+		billingEnabled && organization != null && !isBillingPlanActive(organization)
+	);
+	let showBillingModal = $derived(needsPlanSelection || $showBillingPlanModal);
 
 	let activeTab = $state(shouldShowDaemonSetup ? 'daemons' : initialHash || 'topology');
 	let appInitialized = $state(false);
@@ -100,6 +115,12 @@
 </script>
 
 {#if appInitialized}
+	<BillingPlanModal
+		isOpen={showBillingModal}
+		dismissible={!needsPlanSelection}
+		onClose={() => showBillingPlanModal.set(false)}
+	/>
+
 	<div class="flex h-screen">
 		<!-- Sidebar -->
 		<div class="flex-shrink-0">

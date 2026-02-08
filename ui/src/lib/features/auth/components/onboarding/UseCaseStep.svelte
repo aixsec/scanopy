@@ -35,19 +35,26 @@
 		onboarding_yesLetsGo
 	} from '$lib/paraglide/messages';
 
+	let {
+		isOpen,
+		onNext,
+		onBlockerFlow,
+		onClose,
+		onSwitchToLogin = null
+	}: {
+		isOpen: boolean;
+		onNext: () => void;
+		onBlockerFlow: () => void;
+		onClose: () => void;
+		onSwitchToLogin?: (() => void) | null;
+	} = $props();
+
 	const configQuery = useConfigQuery();
-	// eslint-disable-next-line svelte/no-immutable-reactive-statements -- configQuery.data changes when query resolves
-	$: configData = configQuery.data;
+	let configData = $derived(configQuery.data);
 
-	export let isOpen: boolean;
-	export let onNext: () => void;
-	export let onBlockerFlow: () => void;
-	export let onClose: () => void;
-	export let onSwitchToLogin: (() => void) | null = null;
-
-	let selectedUseCase: UseCase | null = null;
-	let showLicenseWarning = false;
-	let qualFieldsEl: HTMLElement;
+	let selectedUseCase = $state<UseCase | null>(null);
+	let showLicenseWarning = $state(false);
+	let qualFieldsEl = $state<HTMLElement | undefined>(undefined);
 
 	// Role options
 	const roleOptions = [
@@ -98,10 +105,10 @@
 	const useCaseIds: UseCase[] = ['homelab', 'company', 'msp'];
 
 	// Show business fields for company/msp
-	$: showBusinessFields = selectedUseCase === 'company' || selectedUseCase === 'msp';
+	let showBusinessFields = $derived(selectedUseCase === 'company' || selectedUseCase === 'msp');
 
 	// Show Cloud-only qualification fields
-	$: showCloudFields = configData && isCloud(configData);
+	let showCloudFields = $derived(configData && isCloud(configData));
 
 	// Form for business qualification fields
 	const form = createForm(() => ({
@@ -112,6 +119,9 @@
 			referralSourceOther: ''
 		}
 	}));
+
+	// Track referral source value reactively for the "other" text field
+	let referralSourceValue = $derived(form.state.values.referralSource);
 
 	function selectUseCase(useCase: UseCase) {
 		selectedUseCase = useCase;
@@ -195,8 +205,8 @@
 		onBlockerFlow();
 	}
 
-	$: isCloudDeployment = configData && isCloud(configData);
-	$: canProceed = selectedUseCase !== null && !showLicenseWarning;
+	let isCloudDeployment = $derived(configData && isCloud(configData));
+	let canProceed = $derived(selectedUseCase !== null && !showLicenseWarning);
 </script>
 
 <GenericModal
@@ -229,14 +239,14 @@
 							class="card flex items-center gap-4 p-4 text-left transition-all {isSelected
 								? `ring-2 ${useCaseConfig.colors.ring}`
 								: 'hover:bg-gray-800'}"
-							on:click={() => selectUseCase(useCaseId)}
+							onclick={() => selectUseCase(useCaseId)}
 						>
 							<div
 								class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg {isSelected
 									? `${useCaseConfig.colors.bg} ${useCaseConfig.colors.text}`
 									: 'bg-gray-700 text-gray-400'}"
 							>
-								<svelte:component this={Icon} class="h-5 w-5" />
+								<Icon class="h-5 w-5" />
 							</div>
 							<div>
 								<div class="text-primary font-medium">{useCaseConfig.label}</div>
@@ -285,7 +295,7 @@
 										{field}
 										options={referralSourceOptions}
 									/>
-									{#if field.state.value === 'other'}
+									{#if referralSourceValue === 'other'}
 										<div class="mt-3">
 											<form.Field name="referralSourceOther">
 												{#snippet children(otherField)}
@@ -315,7 +325,7 @@
 								<p class="mt-1 text-sm text-warning">
 									{@html onboarding_commercialNoticeBody()}
 								</p>
-								<button type="button" class="btn-primary mt-4" on:click={handleLicenseAcknowledge}>
+								<button type="button" class="btn-primary mt-4" onclick={handleLicenseAcknowledge}>
 									{onboarding_understandContinue()}
 								</button>
 							</div>
@@ -337,7 +347,7 @@
 							type="button"
 							class="btn-secondary flex-1"
 							disabled={!canProceed}
-							on:click={handleReadyNo}
+							onclick={handleReadyNo}
 						>
 							{onboarding_haveQuestionsFirst()}
 						</button>
@@ -345,7 +355,7 @@
 							type="button"
 							class="btn-primary flex-1"
 							disabled={!canProceed}
-							on:click={handleReadyYes}
+							onclick={handleReadyYes}
 						>
 							{onboarding_yesLetsGo()}
 						</button>
@@ -357,7 +367,7 @@
 							type="button"
 							class="btn-primary"
 							disabled={!canProceed}
-							on:click={handleContinue}
+							onclick={handleContinue}
 						>
 							{common_continue()}
 						</button>
@@ -369,7 +379,7 @@
 						{onboarding_alreadyHaveAccount()}
 						<button
 							type="button"
-							on:click={onSwitchToLogin}
+							onclick={onSwitchToLogin}
 							class="font-medium text-blue-400 hover:text-blue-300"
 						>
 							{onboarding_logInHere()}

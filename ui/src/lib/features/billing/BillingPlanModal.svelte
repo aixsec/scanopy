@@ -1,7 +1,6 @@
 <script lang="ts">
 	import billingPlansJson from '$lib/data/billing-plans.json';
 	import featuresJson from '$lib/data/features.json';
-	import Toast from '$lib/shared/components/feedback/Toast.svelte';
 	import BillingPlanForm from '$lib/features/billing/BillingPlanForm.svelte';
 	import type { BillingPlan } from '$lib/features/billing/types';
 	import {
@@ -13,9 +12,19 @@
 	import { onboardingStore } from '$lib/features/auth/stores/onboarding';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
-	import { navigate } from '$lib/shared/utils/navigation';
 	import PlanInquiryModal from '$lib/features/billing/PlanInquiryModal.svelte';
 	import { trackEvent } from '$lib/shared/utils/analytics';
+	import GenericModal from '$lib/shared/components/layout/GenericModal.svelte';
+
+	let {
+		isOpen = false,
+		dismissible = true,
+		onClose
+	}: {
+		isOpen?: boolean;
+		dismissible?: boolean;
+		onClose: () => void;
+	} = $props();
 
 	// Create helpers from static fixtures (no API calls needed)
 	const billingPlanHelpers = createStaticHelpers<BillingPlanMetadata>(billingPlansJson);
@@ -53,7 +62,6 @@
 	const checkoutMutation = useCheckoutMutation();
 
 	// Determine initial filter based on use case from onboarding
-	// homelab = personal, company/msp = commercial
 	let useCase = $derived($onboardingStore.useCase);
 	let networkCount = $derived($onboardingStore.networks.length);
 
@@ -65,7 +73,6 @@
 	);
 
 	// Recommended plan based on use case
-	// company → Team, msp → Business
 	let recommendedPlan = $derived<string | null>(
 		useCase === 'company' ? 'Team' : useCase === 'msp' ? 'Business' : null
 	);
@@ -79,12 +86,7 @@
 				is_commercial: metadata?.is_commercial ?? false
 			});
 
-			// Free plan: no checkout needed, navigate to app
-			if (plan.type === 'Free') {
-				await navigate();
-				return;
-			}
-
+			// All plans go through Stripe checkout (including Free)
 			const checkoutUrl = await checkoutMutation.mutateAsync(plan);
 			if (checkoutUrl) {
 				window.location.href = checkoutUrl;
@@ -104,34 +106,26 @@
 	}
 </script>
 
-<div class="relative min-h-dvh bg-gray-900">
-	<!-- Background image with overlay -->
-	<div class="absolute inset-0 z-0">
-		<div
-			class="h-full w-full bg-cover bg-center bg-no-repeat"
-			style="background-image: url('/images/diagram.png')"
-		></div>
-		<div class="absolute inset-0 bg-black/70"></div>
+<GenericModal
+	{isOpen}
+	onClose={dismissible ? onClose : null}
+	size="xl"
+	preventCloseOnClickOutside={!dismissible}
+	showCloseButton={dismissible}
+>
+	<div class="p-2">
+		<BillingPlanForm
+			plans={plansData}
+			{billingPlanHelpers}
+			{featureHelpers}
+			onPlanSelect={handlePlanSelect}
+			onPlanInquiry={handlePlanInquiry}
+			{initialPlanFilter}
+			{recommendedPlan}
+			{forceCommercial}
+			{isReturningCustomer}
+		/>
 	</div>
-
-	<!-- Content (sits above background) -->
-	<section class="py-10 pb-24 lg:pb-10">
-		<div class="container mx-auto px-2">
-			<BillingPlanForm
-				plans={plansData}
-				{billingPlanHelpers}
-				{featureHelpers}
-				onPlanSelect={handlePlanSelect}
-				onPlanInquiry={handlePlanInquiry}
-				{initialPlanFilter}
-				{recommendedPlan}
-				{forceCommercial}
-				{isReturningCustomer}
-			/>
-		</div>
-	</section>
-
-	<Toast />
 
 	<PlanInquiryModal
 		isOpen={inquiryModalOpen}
@@ -142,4 +136,4 @@
 		companySize={$onboardingStore.companySize ?? ''}
 		onClose={() => (inquiryModalOpen = false)}
 	/>
-</div>
+</GenericModal>

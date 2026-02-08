@@ -742,6 +742,7 @@ After Brevo module is complete and tested:
 ### Files Changed (key files)
 **Backend:** `billing/types/base.rs`, `billing/types/features.rs`, `billing/types/api.rs`, `billing/plans.rs`, `billing/service.rs`, `billing/handlers.rs`, `shared/types/error_codes.rs`, `shared/storage/filter.rs`, `shared/services/factory.rs`, `auth/middleware/billing.rs`, `hosts/service.rs`, `hosts/handlers.rs`, `discovery/handlers.rs`, `daemons/service.rs`, `daemons/handlers.rs`, `daemons/impl/base.rs`, `daemon/runtime/service.rs`, `organizations/impl/base.rs`, `email/templates.rs`, `email/traits.rs`, `email/plunk.rs`, `email/smtp.rs`, migration file
 **Frontend:** `stores/metadata.ts`, `billing/queries.ts`, `billing/types.ts`, `UpgradeBadge.svelte`, `BillingTab.svelte`, `DiscoveryTypeForm.svelte`, `CreateDaemonForm.svelte`, `HostTab.svelte`, `Sidebar.svelte`, `billing-plans-next.json`, `features-next.json`, `OrgNetworksModal.svelte`, `onboarding/+page.svelte`, `+page.svelte`, `DaemonTab.svelte`, `messages/en.json`
+<<<<<<< HEAD
 =======
 ### What was implemented
 - Full replacement of HubSpot CRM integration with Brevo
@@ -769,3 +770,33 @@ After Brevo module is complete and tested:
 ### Migration note
 Migration clears all existing `brevo_company_id` values (formerly `hubspot_company_id`) so every org gets re-synced to Brevo on next startup.
 >>>>>>> brevo-integration
+=======
+
+### Phase 10: Fix Billing Experience (Modal, Backend Errors, UI Bugs)
+
+**Fix 1: Daemon default mode** — Changed default from `daemon_poll` to `server_poll` in `daemons/config.ts`
+
+**Fix 2: Free plan as $0 Stripe plan** — Eliminated special cases:
+- `billing/service.rs`: Skip only self-hosted plans (Community/CommercialSelfHosted/Enterprise/Demo) in Stripe sync instead of all $0 plans; Free now gets a Stripe product/price
+- `billing/service.rs`: `IfRequired` payment method collection for $0 plans (Free checkout skips card)
+- `billing/subscriber.rs`: Guard `update_addon_prices` by checking metered addons (seat_cents/network_cents) instead of plan existence — prevents errors for Free plan
+- `auth/service.rs`: New Cloud orgs start with `plan: None` — users pick plan via billing modal → Stripe checkout → webhook sets plan
+
+**Fix 3: Billing plan selection as modal** — Replaced gating page with modal:
+- New `billing/stores.ts` with `showBillingPlanModal` store
+- New `BillingPlanModal.svelte` wrapping BillingPlanForm in GenericModal; all plans (including Free) go through Stripe checkout
+- `+page.svelte`: Mounted modal (non-dismissible when no plan, dismissible from settings)
+- `navigation.ts`: Removed billing check from `getRoute()` — billing handled by modal
+- `BillingTab.svelte`: "View Plans" uses store instead of `goto('/billing')`
+- Deleted `routes/billing/+page.svelte`
+- `billing/handlers.rs`: Fixed cancel_url (was `{url}/billing`, now `url.clone()`)
+- `organizations/types.ts`: Removed `plan?.type === 'Free'` special case from `isBillingPlanActive`
+
+**Fix 4: UseCaseStep Svelte 5 conversion** — Full runes migration:
+- `export let` → `$props()`, `$:` → `$derived`, `on:click` → `onclick`, `svelte:component` → direct component
+- Used `$derived(form.state.values.referralSource)` for reactive "Other" text field
+
+**Fix 5: API access error guard** — Prevented 402 errors for Free plan:
+- `user_api_keys/queries.ts`: Added `enabled` option to `useUserApiKeysQuery`
+- `UserApiKeyTab.svelte`: Guard query with `enabled: () => hasApiAccess` based on plan features
+>>>>>>> billing-overhaul

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { CheckCircle, AlertCircle, CreditCard } from 'lucide-svelte';
+	import { showBillingPlanModal } from '$lib/features/billing/stores';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { isBillingPlanActive } from '$lib/features/organizations/types';
 	import { billingPlans } from '$lib/shared/stores/metadata';
@@ -360,8 +360,8 @@
 							</div>
 							<button
 								onclick={() => {
-									// eslint-disable-next-line svelte/no-navigation-without-resolve
-									goto('/billing');
+									showBillingPlanModal.set(true);
+									onClose();
 								}}
 								class="btn-primary whitespace-nowrap text-sm"
 							>
