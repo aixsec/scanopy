@@ -11966,14 +11966,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-02-07T20:28:38.260440Z",
-              "id": "17a1fdb4-eb60-4c21-a722-44f2a4da1433",
+              "created_at": "2026-02-09T01:18:27.245678Z",
+              "id": "7a1db85a-ca04-4a36-ab92-37e21f5ea044",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-07T20:28:38.260440Z"
+              "updated_at": "2026-02-09T01:18:27.245678Z"
             }
           },
           "error": {
@@ -12751,14 +12751,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-02-07T20:28:38.248411Z",
-                      "id": "06b17e43-3af5-47fd-969e-8ebc59e2d8f2",
+                      "created_at": "2026-02-09T01:18:27.228576Z",
+                      "id": "4dadc2c8-8225-45db-99e8-2b63f5af62de",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-02-07T20:28:38.248411Z"
+                      "updated_at": "2026-02-09T01:18:27.228576Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -12767,7 +12767,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Philips Hue Bridge",
+                  "service_definition": "CheckMK Agent",
                   "source": {
                     "type": "Manual"
                   },
@@ -13583,14 +13583,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-02-07T20:28:38.255798Z",
-                  "id": "341079a1-b8f9-44a6-9d65-15926d467b09",
+                  "created_at": "2026-02-09T01:18:27.241267Z",
+                  "id": "1cebf7d2-2599-4b7e-90a1-006b26e71dd8",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-07T20:28:38.255798Z"
+                  "updated_at": "2026-02-09T01:18:27.241267Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -13599,7 +13599,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Philips Hue Bridge",
+              "service_definition": "CheckMK Agent",
               "source": {
                 "type": "Manual"
               },
@@ -14801,14 +14801,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-02-07T20:28:38.248600Z",
-          "id": "031d218b-4c45-4079-af1f-0b67950d55c5",
+          "created_at": "2026-02-09T01:18:27.228787Z",
+          "id": "2807d149-d060-4c66-ac43-6f15c1bfb4be",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-02-07T20:28:38.248600Z"
+          "updated_at": "2026-02-09T01:18:27.228787Z"
         }
       },
       "BindingBase": {
@@ -15302,7 +15302,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Philips Hue Bridge",
+              "service_definition": "CheckMK Agent",
               "tags": [],
               "virtualization": null
             }
@@ -17192,14 +17192,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-02-07T20:28:38.248131Z",
-                  "id": "f900b31a-43f3-4b7e-89f8-6c3eaed06f32",
+                  "created_at": "2026-02-09T01:18:27.228284Z",
+                  "id": "49e52790-f4d9-4fea-8ec3-561f80cd74cd",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-07T20:28:38.248131Z"
+                  "updated_at": "2026-02-09T01:18:27.228284Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -17208,7 +17208,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Philips Hue Bridge",
+              "service_definition": "CheckMK Agent",
               "source": {
                 "type": "Manual"
               },
@@ -19134,14 +19134,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-02-07T20:28:38.241726Z",
-                        "id": "ec784163-3ed9-4d1d-a22b-cd865884e301",
+                        "created_at": "2026-02-09T01:18:27.215045Z",
+                        "id": "bd75d790-9bc7-4832-9ae4-e8555b71ffe2",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-02-07T20:28:38.241726Z"
+                        "updated_at": "2026-02-09T01:18:27.215045Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -19150,7 +19150,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Philips Hue Bridge",
+                    "service_definition": "CheckMK Agent",
                     "source": {
                       "type": "Manual"
                     },
@@ -19227,14 +19227,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-02-07T20:28:38.254790Z",
-                    "id": "7edfa126-3ffd-49b0-8953-af0845cc8dd4",
+                    "created_at": "2026-02-09T01:18:27.240189Z",
+                    "id": "b8a46769-3ae2-4668-8542-5605dc7f617f",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-02-07T20:28:38.254790Z"
+                    "updated_at": "2026-02-09T01:18:27.240189Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -19243,7 +19243,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Philips Hue Bridge",
+                "service_definition": "CheckMK Agent",
                 "source": {
                   "type": "Manual"
                 },
@@ -20231,14 +20231,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-02-07T20:28:38.248535Z",
-              "id": "4dae3316-3e63-4a31-96e1-031f0724b085",
+              "created_at": "2026-02-09T01:18:27.228716Z",
+              "id": "a205d5c4-23fe-437e-8ff5-9653b3b74545",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-07T20:28:38.248535Z"
+              "updated_at": "2026-02-09T01:18:27.228716Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -20247,7 +20247,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Philips Hue Bridge",
+          "service_definition": "CheckMK Agent",
           "source": {
             "type": "Manual"
           },

@@ -149,10 +149,8 @@ export function createEmptyDiscoveryFormData(daemon: Daemon | null): Discovery {
 			host_naming_fallback: 'Ip'
 		},
 		run_type: {
-			type: 'Scheduled',
-			last_run: null,
-			cron_schedule: '0 0 * * * *',
-			enabled: true
+			type: 'AdHoc',
+			last_run: null
 		},
 		name: '',
 		daemon_id: daemon ? daemon.id : uuidv4Sentinel,
