@@ -5,12 +5,7 @@
 	import { queryClient, queryKeys } from '$lib/api/query-client';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
-	import {
-		identifyUser,
-		trackPlunkEvent,
-		trackEvent,
-		flushEventQueue
-	} from '$lib/shared/utils/analytics';
+	import { identifyUser, trackEvent, flushEventQueue } from '$lib/shared/utils/analytics';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import { resolve } from '$app/paths';
 	import { resetTopologyOptions } from '$lib/features/topology/queries';
@@ -181,13 +176,6 @@
 					goto(`${resolve('/verify-email')}?email=${encodeURIComponent(currentUser.email)}`);
 				}
 				return;
-			}
-
-			// Handle Plunk tracking
-			const pendingPlunk = sessionStorage.getItem('pendingPlunkRegistration');
-			if (pendingPlunk && currentUser) {
-				sessionStorage.removeItem('pendingPlunkRegistration');
-				trackPlunkEvent('register', currentUser.email, pendingPlunk === 'true');
 			}
 		}
 	});

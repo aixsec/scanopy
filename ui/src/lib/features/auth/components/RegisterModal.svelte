@@ -91,11 +91,6 @@
 	}
 
 	function handleOidcRegister(providerSlug: string) {
-		// Store subscribed preference for post-registration Plunk tracking
-		if (form.state.values.subscribed) {
-			sessionStorage.setItem('pendingPlunkRegistration', 'true');
-		}
-
 		const returnUrl = encodeURIComponent(window.location.origin);
 		window.location.href = `/api/auth/oidc/${providerSlug}/authorize?flow=register&return_url=${returnUrl}&terms_accepted=${enableTermsCheckbox && form.state.values.terms_accepted}&marketing_opt_in=${form.state.values.subscribed}`;
 	}

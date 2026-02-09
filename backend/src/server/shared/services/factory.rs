@@ -7,7 +7,7 @@ use crate::server::{
     daemon_api_keys::service::DaemonApiKeyService,
     daemons::service::DaemonService,
     discovery::service::DiscoveryService,
-    email::{plunk::PlunkEmailProvider, smtp::SmtpEmailProvider, traits::EmailService},
+    email::{brevo::BrevoEmailProvider, smtp::SmtpEmailProvider, traits::EmailService},
     groups::{group_bindings::GroupBindingStorage, service::GroupService},
     hosts::service::HostService,
     if_entries::service::IfEntryService,
@@ -239,11 +239,9 @@ impl ServiceFactory {
         ));
 
         let email_service = config.clone().and_then(|c| {
-            // Prefer Plunk if API key is provided
-            if let Some(plunk_secret) = c.plunk_secret
-                && let Some(plunk_key) = c.plunk_key
-            {
-                let provider = Box::new(PlunkEmailProvider::new(plunk_secret, plunk_key));
+            // Prefer Brevo if API key is provided
+            if let Some(ref brevo_api_key) = c.brevo_api_key {
+                let provider = Box::new(BrevoEmailProvider::new(brevo_api_key.clone()));
                 return Some(Arc::new(EmailService::new(provider, user_service.clone())));
             }
 
@@ -341,10 +339,6 @@ impl ServiceFactory {
 
         if let Some(billing_service) = billing_service.clone() {
             event_bus.register_subscriber(billing_service).await;
-        }
-
-        if let Some(email_service) = email_service.clone() {
-            event_bus.register_subscriber(email_service).await;
         }
 
         if let Some(brevo_service) = brevo_service.clone() {

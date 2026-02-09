@@ -81,12 +81,6 @@ pub struct ServerCli {
     #[arg(long)]
     public_url: Option<String>,
 
-    #[arg(long)]
-    pub plunk_secret: Option<String>,
-
-    #[arg(long)]
-    pub plunk_key: Option<String>,
-
     /// Configure what proxy (if any) is providing IP address for requests, ie in a reverse proxy setup, for accurate IP in auth event logging
     #[arg(long)]
     pub client_ip_source: Option<String>,
@@ -125,8 +119,6 @@ pub struct ServerConfig {
     pub oidc_providers: Option<Vec<OidcProviderConfig>>,
 
     // Used in SaaS deployment
-    pub plunk_key: Option<String>,
-    pub plunk_secret: Option<String>,
     pub stripe_key: Option<String>,
     pub stripe_secret: Option<String>,
     pub stripe_webhook_secret: Option<String>,
@@ -170,7 +162,6 @@ pub struct PublicConfigResponse {
     pub posthog_key: Option<String>,
     pub needs_cookie_consent: bool,
     pub deployment_type: DeploymentType,
-    pub plunk_key: Option<String>,
 }
 
 impl Default for ServerConfig {
@@ -192,8 +183,6 @@ impl Default for ServerConfig {
             smtp_password: None,
             smtp_email: None,
             smtp_relay: None,
-            plunk_secret: None,
-            plunk_key: None,
             client_ip_source: None,
             oidc_providers: None,
             posthog_key: None,
@@ -251,12 +240,6 @@ impl ServerConfig {
         }
         if let Some(public_url) = cli_args.public_url {
             figment = figment.merge(("public_url", public_url));
-        }
-        if let Some(plunk_secret) = cli_args.plunk_secret {
-            figment = figment.merge(("plunk_secret", plunk_secret));
-        }
-        if let Some(plunk_key) = cli_args.plunk_key {
-            figment = figment.merge(("plunk_key", plunk_key));
         }
         if let Some(client_ip_source) = cli_args.client_ip_source {
             figment = figment.merge(("client_ip_source", client_ip_source));
@@ -393,18 +376,17 @@ pub async fn get_public_config(State(state): State<Arc<AppState>>) -> impl IntoR
             oidc_providers,
             billing_enabled: state.config.stripe_secret.is_some(),
             has_integrated_daemon: state.config.integrated_daemon_url.is_some(),
-            has_email_service: (state.config.smtp_password.is_some()
-                && state.config.smtp_username.is_some()
-                && state.config.smtp_email.is_some()
-                && state.config.smtp_relay.is_some())
-                || (state.config.plunk_secret.is_some() && state.config.plunk_key.is_some()),
+            has_email_service: state.config.brevo_api_key.is_some()
+                || (state.config.smtp_password.is_some()
+                    && state.config.smtp_username.is_some()
+                    && state.config.smtp_email.is_some()
+                    && state.config.smtp_relay.is_some()),
             public_url: state.config.public_url.clone(),
-            has_email_opt_in: state.config.plunk_secret.is_some(),
+            has_email_opt_in: state.config.brevo_api_key.is_some(),
             posthog_key: state.config.posthog_key.clone(),
             needs_cookie_consent: state.config.posthog_key.is_some()
                 || state.config.brevo_api_key.is_some(),
             deployment_type,
-            plunk_key: state.config.plunk_key.clone(),
         })),
     )
 }

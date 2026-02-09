@@ -1,7 +1,6 @@
 import posthog from 'posthog-js';
 import { queryClient, queryKeys } from '$lib/api/query-client';
 import type { Organization } from '$lib/features/organizations/types';
-import type { PublicServerConfig } from '$lib/shared/stores/config-query';
 import type { components } from '$lib/api/schema';
 
 type TelemetryOperation = components['schemas']['TelemetryOperation'];
@@ -135,42 +134,4 @@ export function getPosthogDistinctId(): string | null {
 		return (window as { posthog?: typeof posthog }).posthog?.get_distinct_id?.() ?? null;
 	}
 	return null;
-}
-
-/**
- * Track a user event in Plunk for email marketing.
- * Uses the public key from server config.
- * Skips tracking in demo mode.
- */
-export async function trackPlunkEvent(
-	event: string,
-	email: string,
-	subscribed: boolean
-): Promise<void> {
-	if (isDemo()) return;
-
-	const cfg = queryClient.getQueryData<PublicServerConfig>(queryKeys.config.all);
-	const plunkKey = cfg?.plunk_key;
-
-	if (!plunkKey) {
-		return;
-	}
-
-	try {
-		await fetch('https://next-api.useplunk.com/v1/track', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${plunkKey}`
-			},
-			body: JSON.stringify({
-				event,
-				email,
-				subscribed
-			})
-		});
-	} catch (error) {
-		// Silently fail - email tracking is not critical
-		console.warn('Failed to track Plunk event:', error);
-	}
 }
