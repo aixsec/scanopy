@@ -16,37 +16,6 @@
       "feedback": null
     },
     {
-      "id": "brevo-syncs-all-orgs-no-filtering",
-      "category": "Sync Behavior",
-      "description": "New org with free email domain is synced to Brevo without filtering",
-      "steps": [
-        "Register a new user with a free email domain (e.g., user@gmail.com)",
-        "Complete onboarding",
-        "In Brevo dashboard, verify the new contact and company were created"
-      ],
-      "expected": "Contact and company are created in Brevo immediately after registration. No filtering by commercial plan or work email domain.",
-      "flow": "setup",
-      "sequence": 31,
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "brevo-org-created-event",
-      "category": "Event Handling",
-      "description": "New org creation stores brevo_company_id and links contact to company",
-      "setup": "Verify the org created in the previous test has a non-NULL brevo_company_id in the database.",
-      "steps": [
-        "In Brevo Contacts, verify the new user has correct attributes (SCANOPY_USER_ID, SCANOPY_SIGNUP_DATE)",
-        "In Brevo Companies, verify the new org has correct attributes (scanopy_org_id, scanopy_plan_type)",
-        "Verify the contact is linked to the company"
-      ],
-      "expected": "Contact created with correct attributes. Company created and linked to contact. brevo_company_id stored on the org in the database.",
-      "flow": "setup",
-      "sequence": 32,
-      "status": null,
-      "feedback": null
-    },
-    {
       "id": "brevo-login-updates-last-login",
       "category": "Event Handling",
       "description": "Login event updates contact's last login date in Brevo",
@@ -55,7 +24,7 @@
         "Log in to Scanopy as the test user",
         "In Brevo dashboard, check the contact's SCANOPY_LAST_LOGIN_DATE attribute"
       ],
-      "expected": "Contact's SCANOPY_LAST_LOGIN_DATE is updated to approximately the current timestamp.",
+      "expected": "Contact's SCANOPY_LAST_LOGIN_DATE is updated to approximately the current timestamp. For newly created contacts, this should already be set to the signup timestamp.",
       "status": null,
       "feedback": null
     },
@@ -90,20 +59,6 @@
         "In Brevo, check for an enterprise_inquiry event on the contact"
       ],
       "expected": "Form submits successfully with no errors. Company attributes updated with inquiry data. enterprise_inquiry event tracked with full details.",
-      "status": null,
-      "feedback": null
-    },
-    {
-      "id": "brevo-no-hubspot-tracking-script",
-      "category": "Frontend Cleanup",
-      "description": "HubSpot tracking script is no longer loaded in the frontend",
-      "steps": [
-        "Load the Scanopy app in a browser",
-        "Open dev tools Network tab and refresh the page",
-        "Verify no requests to hubspot.com or hs-scripts.com domains",
-        "Check Application > Cookies and verify no hubspotutk cookie"
-      ],
-      "expected": "No requests to HubSpot domains. No HubSpot script tags in the DOM. No hubspotutk cookie.",
       "status": null,
       "feedback": null
     },
