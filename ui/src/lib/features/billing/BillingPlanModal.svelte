@@ -126,6 +126,7 @@
 	size="full"
 	preventCloseOnClickOutside={!dismissible}
 	showCloseButton={dismissible}
+	borderless={true}
 >
 	<div class="flex min-h-0 flex-1 flex-col overflow-y-auto p-2">
 		<BillingPlanForm

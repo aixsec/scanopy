@@ -16,9 +16,6 @@
 
 	// Read hash immediately during script initialization, before onMount
 	const initialHash = typeof window !== 'undefined' ? window.location.hash.substring(1) : '';
-	const hadInitialHash = initialHash !== '';
-	const shouldShowDaemonSetup =
-		typeof sessionStorage !== 'undefined' && sessionStorage.getItem('showDaemonSetup') === 'true';
 
 	// TanStack Query for current user
 	const currentUserQuery = useCurrentUserQuery();
@@ -39,7 +36,7 @@
 	);
 	let showBillingModal = $derived(needsPlanSelection || $showBillingPlanModal);
 
-	let activeTab = $state(shouldShowDaemonSetup ? 'daemons' : initialHash || 'topology');
+	let activeTab = $state(initialHash || 'topology');
 	let appInitialized = $state(false);
 	let sidebarCollapsed = $state(false);
 	let dataLoadingStarted = $state(false);
@@ -57,9 +54,12 @@
 	// Suppress when billing modal is showing — user must pick a plan first
 	let initialTabSet = $state(false);
 	$effect(() => {
-		if (!hadInitialHash && !initialTabSet && daemonsQuery.isSuccess && !showBillingModal) {
+		if (!initialHash && !initialTabSet && daemonsQuery.isSuccess && !showBillingModal) {
 			const hasDaemons = (daemonsQuery.data?.length ?? 0) > 0;
-			activeTab = hasDaemons ? 'topology' : 'daemons';
+			const wantsDaemonSetup =
+				typeof sessionStorage !== 'undefined' &&
+				sessionStorage.getItem('showDaemonSetup') === 'true';
+			activeTab = hasDaemons && !wantsDaemonSetup ? 'topology' : 'daemons';
 			initialTabSet = true;
 		}
 	});
@@ -116,12 +116,6 @@
 </script>
 
 {#if appInitialized}
-	<BillingPlanModal
-		isOpen={showBillingModal}
-		dismissible={!needsPlanSelection}
-		onClose={() => showBillingPlanModal.set(false)}
-	/>
-
 	<div class="flex h-screen">
 		<!-- Sidebar -->
 		<div class="flex-shrink-0">
@@ -146,6 +140,13 @@
 			<Toast />
 		</main>
 	</div>
+
+	<!-- Billing modal rendered last so it stacks on top of other modals -->
+	<BillingPlanModal
+		isOpen={showBillingModal}
+		dismissible={!needsPlanSelection}
+		onClose={() => showBillingPlanModal.set(false)}
+	/>
 {:else}
 	<!-- Data still loading -->
 	<Loading />

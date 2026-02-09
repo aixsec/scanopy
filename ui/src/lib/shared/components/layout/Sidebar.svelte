@@ -59,13 +59,13 @@
 	let showSettings = $state(false);
 	let showSupport = $state(false);
 
-	// Show notification on settings when payment method is needed
+	// Show notification on settings only when trialing without payment method
+	// Free plan users don't need a payment method, so no dot for them
 	let showBillingNotification = $derived.by(() => {
 		if (!organization) return false;
-		const isFree = organization.plan?.type === 'Free';
 		const isTrialing = organization.plan_status === 'trialing';
 		const hasPayment = organization.has_payment_method ?? false;
-		return (isFree || isTrialing) && !hasPayment;
+		return isTrialing && !hasPayment;
 	});
 
 	interface NavItem {

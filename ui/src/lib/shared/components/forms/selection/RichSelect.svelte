@@ -294,6 +294,7 @@
 							{@const isLastInGroup = optionIndex === group.options.length - 1}
 							{@const isLastGroup = groupIndex === groupedOptions.length - 1}
 							{@const isDisabled = displayComponent.getDisabled?.(option, context) ?? false}
+							{@const isClickableDisabled = isDisabled && onDisabledClick != null}
 							<button
 								type="button"
 								on:click={(e) => {
@@ -306,7 +307,11 @@
 									}
 								}}
 								class="w-full px-3 py-3 text-left transition-colors
-                       {isDisabled ? 'cursor-not-allowed opacity-60' : 'hover:bg-gray-600'}
+                       {isDisabled
+									? isClickableDisabled
+										? 'cursor-pointer opacity-80 hover:bg-gray-600'
+										: 'cursor-not-allowed opacity-60'
+									: 'hover:bg-gray-600'}
                        {!isLastInGroup || !isLastGroup ? 'border-b border-gray-600' : ''}"
 							>
 								<ListSelectItem {context} item={option} {displayComponent} />

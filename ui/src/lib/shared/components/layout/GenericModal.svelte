@@ -26,6 +26,7 @@
 		preventCloseOnClickOutside = false,
 		showCloseButton = true,
 		showBackdrop = true,
+		borderless = false,
 		tabs = [],
 		activeTab = $bindable(''),
 		onTabChange = null,
@@ -43,6 +44,7 @@
 		preventCloseOnClickOutside?: boolean;
 		showCloseButton?: boolean;
 		showBackdrop?: boolean;
+		borderless?: boolean;
 		tabs?: ModalTab[];
 		activeTab?: string;
 		onTabChange?: ((tabId: string) => void) | null;
@@ -126,9 +128,9 @@
 	>
 		<!-- Modal content -->
 		<div
-			class="modal-container {sizeClasses[size]} {size === 'full'
+			class="{borderless ? '' : 'modal-container'} {sizeClasses[size]} {size === 'full'
 				? 'h-[calc(100vh-8rem)]'
-				: 'max-h-[calc(100vh-8rem)]'} flex flex-col"
+				: 'max-h-[calc(100vh-8rem)]'} flex w-full flex-col"
 		>
 			<!-- Header (hidden when no title, no close button, and no tabs) -->
 			{#if title || showCloseButton || tabs.length > 0}

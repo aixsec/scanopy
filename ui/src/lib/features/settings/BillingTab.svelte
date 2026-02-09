@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle, AlertCircle, CreditCard } from 'lucide-svelte';
+	import { CheckCircle, AlertCircle, CreditCard, AlertTriangle } from 'lucide-svelte';
 	import { showBillingPlanModal } from '$lib/features/billing/stores';
 	import { useOrganizationQuery } from '$lib/features/organizations/queries';
 	import { isBillingPlanActive } from '$lib/features/organizations/types';
@@ -153,6 +153,36 @@
 	<div class="flex-1 overflow-auto p-6">
 		{#if org}
 			<div class="space-y-6">
+				<!-- Trial Countdown (shown above current plan when trialing without payment) -->
+				{#if org.plan_status === 'trialing' && trialDaysLeft !== null && !hasPaymentMethod}
+					<InfoCard>
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-3">
+								<span class="relative">
+									<AlertTriangle class="h-5 w-5 text-amber-500" />
+									<span class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500"
+									></span>
+								</span>
+								<div>
+									<p class="text-primary text-sm font-medium">
+										Trial ends in {trialDaysLeft} days
+									</p>
+									<p class="text-secondary mt-1 text-xs">
+										Add a payment method to continue after the trial
+									</p>
+								</div>
+							</div>
+							<button
+								onclick={handleSetupPayment}
+								class="btn-primary flex items-center gap-1.5 text-sm"
+							>
+								<CreditCard size={14} />
+								Add Payment Method
+							</button>
+						</div>
+					</InfoCard>
+				{/if}
+
 				<!-- Current Plan -->
 				<InfoCard>
 					<svelte:fragment slot="default">
@@ -322,31 +352,6 @@
 						</div>
 					</svelte:fragment>
 				</InfoCard>
-
-				<!-- Trial Countdown -->
-				{#if org.plan_status === 'trialing' && trialDaysLeft !== null}
-					<InfoCard>
-						<div class="flex items-center justify-between">
-							<div>
-								<p class="text-primary text-sm font-medium">Trial ends in {trialDaysLeft} days</p>
-								{#if !hasPaymentMethod}
-									<p class="text-secondary mt-1 text-xs">
-										Add a payment method to continue after the trial
-									</p>
-								{/if}
-							</div>
-							{#if !hasPaymentMethod}
-								<button
-									onclick={handleSetupPayment}
-									class="btn-primary flex items-center gap-1.5 text-sm"
-								>
-									<CreditCard size={14} />
-									Add Payment Method
-								</button>
-							{/if}
-						</div>
-					</InfoCard>
-				{/if}
 
 				<!-- View Plans -->
 				<InfoCard>
