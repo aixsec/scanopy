@@ -2,34 +2,34 @@
   "branch": "discovery-poll-bug",
   "tests": [
     {
-      "id": "server-poll-no-repeated-auto-create",
+      "id": "server-poll-no-duplicate-discoveries",
       "category": "Discovery",
-      "description": "After a ServerPoll daemon completes Network Discovery, the server should NOT repeatedly log 'Auto-creating session from daemon update' on subsequent poll cycles",
+      "description": "After a ServerPoll daemon completes Network Discovery, no duplicate historical Discovery records should appear",
       "steps": [
-        "Start a Network Discovery scan on a ServerPoll daemon",
-        "Wait for discovery to complete",
-        "Watch the server logs for 30-60 seconds after completion",
-        "Verify 'Auto-creating session from daemon update' does NOT appear repeatedly"
+        "Open the Discoveries page in the UI",
+        "Verify there is exactly one historical Discovery record for the scan that was just run",
+        "Wait 60 seconds and refresh the page",
+        "Verify no additional duplicate Discovery records have appeared"
       ],
-      "setup": "Ensure a ServerPoll daemon is connected and reachable. The daemon must be on the updated version with the terminal payload clearing fix.",
-      "expected": "Server logs show the terminal completion once. No repeated 'Auto-creating session' entries. No duplicate historical Discovery records appear in the Discoveries list.",
+      "setup": "Using a ServerPoll daemon, trigger a Network Discovery scan via the API and wait for it to complete. After completion, wait 30 seconds for several poll cycles to elapse. Then check the server logs and confirm that 'Auto-creating session from daemon update' does NOT appear repeatedly after the initial completion.",
+      "expected": "Exactly one historical Discovery record exists for the completed scan. No duplicates appear after waiting and refreshing.",
       "flow": null,
       "sequence": null,
       "status": null,
       "feedback": null
     },
     {
-      "id": "server-restart-recovery",
+      "id": "server-restart-recovery-ui",
       "category": "Discovery",
-      "description": "If the server restarts while a discovery is running, it should still correctly process the terminal completion when it comes in via the next poll",
+      "description": "If the server restarts mid-discovery, the completion should still produce exactly one historical record",
       "steps": [
-        "Start a Network Discovery scan on a ServerPoll daemon",
-        "While discovery is still running (Scanning phase), restart the server",
-        "Wait for discovery to complete",
-        "Verify the discovery completes normally in the UI with a historical record"
+        "Open the Discoveries page in the UI",
+        "Verify the discovery that was running during the server restart completed successfully with exactly one historical record",
+        "Wait 60 seconds and refresh the page",
+        "Verify no duplicate Discovery records have appeared"
       ],
-      "setup": "Ensure a ServerPoll daemon is connected and reachable. The daemon must be on the updated version.",
-      "expected": "After server restart, the terminal completion is auto-created and processed correctly. Exactly one historical Discovery record is created. No repeated auto-create log entries.",
+      "setup": "Using a ServerPoll daemon, trigger a Network Discovery scan via the API. While the scan is still in the Scanning phase, restart the server process. Wait for the discovery to complete and for several poll cycles to elapse after completion. Check the server logs and confirm 'Auto-creating session from daemon update' appears at most once (for the legitimate recovery after restart) and does not repeat.",
+      "expected": "Exactly one historical Discovery record exists. The server correctly recovered the session after restart and processed the terminal state once.",
       "flow": null,
       "sequence": null,
       "status": null,
