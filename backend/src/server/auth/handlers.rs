@@ -2,13 +2,12 @@ use crate::server::{
     auth::{
         r#impl::{
             api::{
-                DaemonSetupRequest, DaemonSetupResponse, ForgotPasswordRequest, LoginRequest,
-                OidcAuthorizeParams, OidcCallbackParams, OnboardingDaemonSetupState,
+                ForgotPasswordRequest, LoginRequest, OidcAuthorizeParams, OidcCallbackParams,
                 OnboardingNetworkState, OnboardingStateResponse, OnboardingStepRequest,
                 RegisterRequest, ResendVerificationRequest, ResetPasswordRequest, SetupRequest,
                 SetupResponse, UpdateEmailPasswordRequest, VerifyEmailRequest,
             },
-            base::{LoginRegisterParams, PendingDaemonSetup, PendingNetworkSetup, PendingSetup},
+            base::{LoginRegisterParams, PendingNetworkSetup, PendingSetup},
             oidc::{OidcFlow, OidcPendingAuth, OidcProviderMetadata, OidcRegisterParams},
         },
         middleware::{
@@ -59,7 +58,6 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         // Note: /keys routes are handled separately via OpenApiRouter in factory.rs
         .routes(routes!(update_password_auth))
         .routes(routes!(setup))
-        .routes(routes!(daemon_setup))
         .routes(routes!(onboarding_step))
         .routes(routes!(onboarding_state))
         .route("/oidc/providers", get(list_oidc_providers))
@@ -145,13 +143,6 @@ async fn register(
         None
     };
 
-    // Extract pending daemon setups from session (supports multiple daemons)
-    let pending_daemon_setups = if is_new_org {
-        extract_pending_daemon_setups(&session).await
-    } else {
-        vec![]
-    };
-
     let user = state
         .services
         .auth_service
@@ -176,8 +167,8 @@ async fn register(
 
     // If this is a new org and setup was provided, create network/topology/daemon
     if is_new_org && let Some(setup) = pending_setup {
-        // Apply setup: create networks, seed data, topologies, daemons
-        apply_pending_setup(&state, &user, setup, pending_daemon_setups).await?;
+        // Apply setup: create network, seed data, topology
+        apply_pending_setup(&state, &user, setup).await?;
 
         // Clear pending setup data from session
         clear_pending_setup(&session).await;
@@ -210,54 +201,51 @@ async fn setup(
             "Organization name must be 100 characters or less",
         ));
     }
-    if request.networks.is_empty() {
-        return Err(ApiError::bad_request("At least one network is required"));
+
+    let name = request.network.name.trim();
+    if name.is_empty() {
+        return Err(ApiError::bad_request("Network name cannot be empty"));
+    }
+    if name.len() > 100 {
+        return Err(ApiError::bad_request(
+            "Network name must be 100 characters or less",
+        ));
     }
 
-    // Validate and build network list with generated IDs
-    let mut networks: Vec<PendingNetworkSetup> = Vec::with_capacity(request.networks.len());
-    for network in &request.networks {
-        let name = network.name.trim();
-        if name.is_empty() {
-            return Err(ApiError::bad_request("Network name cannot be empty"));
-        }
-        if name.len() > 100 {
+    // Validate SNMP configuration
+    if request.network.snmp_enabled {
+        if request
+            .network
+            .snmp_community
+            .as_ref()
+            .is_none_or(|c| c.is_empty())
+        {
             return Err(ApiError::bad_request(
-                "Network name must be 100 characters or less",
+                "SNMP community string is required when SNMP is enabled",
             ));
         }
-
-        // Validate SNMP configuration
-        if network.snmp_enabled {
-            if network.snmp_community.as_ref().is_none_or(|c| c.is_empty()) {
-                return Err(ApiError::bad_request(
-                    "SNMP community string is required when SNMP is enabled",
-                ));
-            }
-            if let Some(ref community) = network.snmp_community
-                && community.len() > 256
-            {
-                return Err(ApiError::bad_request(
-                    "SNMP community string must be 256 characters or less",
-                ));
-            }
+        if let Some(ref community) = request.network.snmp_community
+            && community.len() > 256
+        {
+            return Err(ApiError::bad_request(
+                "SNMP community string must be 256 characters or less",
+            ));
         }
-
-        networks.push(PendingNetworkSetup {
-            name: name.to_string(),
-            network_id: Uuid::new_v4(),
-            snmp_enabled: network.snmp_enabled,
-            snmp_version: network.snmp_version.clone(),
-            snmp_community: network.snmp_community.clone(),
-        });
     }
 
-    let network_ids: Vec<Uuid> = networks.iter().map(|n| n.network_id).collect();
+    let network_id = Uuid::new_v4();
+    let network = PendingNetworkSetup {
+        name: name.to_string(),
+        network_id,
+        snmp_enabled: request.network.snmp_enabled,
+        snmp_version: request.network.snmp_version.clone(),
+        snmp_community: request.network.snmp_community.clone(),
+    };
 
     // Store setup data in session
     let pending_setup = PendingSetup {
         org_name: request.organization_name.trim().to_string(),
-        networks,
+        network,
         use_case: None,              // Will be merged from onboarding step
         company_size: None,          // Will be merged from onboarding step
         job_title: None,             // Will be merged from onboarding step
@@ -270,56 +258,7 @@ async fn setup(
         .await
         .map_err(|e| ApiError::internal_error(&format!("Failed to save setup data: {}", e)))?;
 
-    Ok(Json(ApiResponse::success(SetupResponse { network_ids })))
-}
-
-/// Store pre-registration daemon setup data in session and generate provisional API key
-/// Supports multiple calls to configure daemons for different networks
-#[utoipa::path(
-    post,
-    path = "/daemon-setup",
-    tags = ["auth", "internal"],
-    request_body = DaemonSetupRequest,
-    responses(
-        (status = 200, description = "Daemon setup data stored", body = ApiResponse<DaemonSetupResponse>),
-        (status = 400, description = "Invalid request", body = ApiErrorResponse),
-    )
-)]
-async fn daemon_setup(
-    session: Session,
-    Json(request): Json<DaemonSetupRequest>,
-) -> ApiResult<Json<ApiResponse<DaemonSetupResponse>>> {
-    // Validate request
-    if request.daemon_name.trim().is_empty() {
-        return Err(ApiError::bad_request("Daemon name is required"));
-    }
-
-    // Generate API key only if not installing later
-    let api_key_raw = if request.install_later {
-        None
-    } else {
-        let (raw_key, _) = generate_api_key_for_storage(ApiKeyType::Daemon);
-        Some(raw_key)
-    };
-
-    // Create new daemon setup entry (replaces any previous setup - only one at a time)
-    let new_daemon_setup = PendingDaemonSetup {
-        daemon_name: request.daemon_name.trim().to_string(),
-        network_id: request.network_id,
-        api_key_raw: api_key_raw.clone(),
-    };
-
-    // Store as the only daemon setup (clearing any previous)
-    session
-        .insert("pending_daemon_setups", vec![new_daemon_setup])
-        .await
-        .map_err(|e| {
-            ApiError::internal_error(&format!("Failed to save daemon setup data: {}", e))
-        })?;
-
-    Ok(Json(ApiResponse::success(DaemonSetupResponse {
-        api_key: api_key_raw,
-    })))
+    Ok(Json(ApiResponse::success(SetupResponse { network_id })))
 }
 
 /// Extract pending setup data from session
@@ -361,22 +300,9 @@ pub async fn extract_pending_setup(session: &Session) -> Option<PendingSetup> {
     Some(setup)
 }
 
-/// Extract pending daemon setup data from session (supports multiple daemons)
-pub async fn extract_pending_daemon_setups(session: &Session) -> Vec<PendingDaemonSetup> {
-    session
-        .get("pending_daemon_setups")
-        .await
-        .ok()
-        .flatten()
-        .unwrap_or_default()
-}
-
 /// Clear all pending setup data from session
 pub async fn clear_pending_setup(session: &Session) {
     let _ = session.remove::<PendingSetup>("pending_setup").await;
-    let _ = session
-        .remove::<Vec<PendingDaemonSetup>>("pending_daemon_setups")
-        .await;
     let _ = session.remove::<String>("onboarding_step").await;
     let _ = session.remove::<String>("onboarding_use_case").await;
     let _ = session.remove::<String>("onboarding_job_title").await;
@@ -474,182 +400,125 @@ async fn onboarding_state(
     let step: Option<String> = session.get("onboarding_step").await.ok().flatten();
     let use_case: Option<String> = session.get("onboarding_use_case").await.ok().flatten();
 
-    let (org_name, networks, network_ids) = if let Some(pending_setup) = session
+    let (org_name, network, network_id) = if let Some(pending_setup) = session
         .get::<PendingSetup>("pending_setup")
         .await
         .ok()
         .flatten()
     {
-        let networks: Vec<OnboardingNetworkState> = pending_setup
-            .networks
-            .iter()
-            .map(|n| OnboardingNetworkState {
-                id: Some(n.network_id),
-                name: n.name.clone(),
-                snmp_enabled: n.snmp_enabled,
-                snmp_version: n.snmp_version.clone(),
-                snmp_community: n.snmp_community.clone(),
-            })
-            .collect();
-        let network_ids: Vec<Uuid> = pending_setup
-            .networks
-            .iter()
-            .map(|n| n.network_id)
-            .collect();
-        (Some(pending_setup.org_name), networks, network_ids)
+        let n = &pending_setup.network;
+        let network = OnboardingNetworkState {
+            id: Some(n.network_id),
+            name: n.name.clone(),
+            snmp_enabled: n.snmp_enabled,
+            snmp_version: n.snmp_version.clone(),
+            snmp_community: n.snmp_community.clone(),
+        };
+        (
+            Some(pending_setup.org_name),
+            Some(network),
+            Some(n.network_id),
+        )
     } else {
-        (None, vec![], vec![])
+        (None, None, None)
     };
-
-    // Get daemon setups from session
-    let daemon_setups = extract_pending_daemon_setups(&session)
-        .await
-        .into_iter()
-        .map(|d| OnboardingDaemonSetupState {
-            network_id: d.network_id,
-            daemon_name: d.daemon_name,
-            api_key: d.api_key_raw,
-        })
-        .collect();
 
     Ok(Json(ApiResponse::success(OnboardingStateResponse {
         step,
         use_case,
         org_name,
-        networks,
-        network_ids,
-        daemon_setups,
+        network,
+        network_id,
     })))
 }
 
-/// Apply pending setup after user registration: create networks, topologies, seed data, and daemons
+/// Apply pending setup after user registration: create network, topology, seed data
 /// Org name, onboarding status, and billing plan are now set in provision_user
 async fn apply_pending_setup(
     state: &Arc<AppState>,
     user: &User,
     setup: PendingSetup,
-    daemon_setups: Vec<PendingDaemonSetup>,
 ) -> Result<(), ApiError> {
     let organization_id = user.base.organization_id;
     let auth_entity: AuthenticatedEntity = user.clone().into();
 
-    // Track first network for integrated daemon and seed data
-    let mut first_network_id: Option<Uuid> = None;
+    let pending_network = &setup.network;
 
-    // Create each network with its pre-generated ID
-    for (i, pending_network) in setup.networks.iter().enumerate() {
-        let mut network = Network::new(NetworkBase::new(organization_id));
-        network.id = pending_network.network_id;
-        network.base.name = pending_network.name.clone();
+    // Create the network with its pre-generated ID
+    let mut network = Network::new(NetworkBase::new(organization_id));
+    network.id = pending_network.network_id;
+    network.base.name = pending_network.name.clone();
 
-        let network = state
+    let network = state
+        .services
+        .network_service
+        .create(network, auth_entity.clone())
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to create network: {}", e)))?;
+
+    state
+        .services
+        .network_service
+        .create_organizational_subnets(network.id, auth_entity.clone())
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to seed data: {}", e)))?;
+
+    // Create default topology
+    let topology = Topology::new(TopologyBase::new("My Topology".to_string(), network.id));
+    state
+        .services
+        .topology_service
+        .create(topology, auth_entity.clone())
+        .await
+        .map_err(|e| ApiError::internal_error(&format!("Failed to create topology: {}", e)))?;
+
+    // Create SNMP credential if enabled
+    if pending_network.snmp_enabled
+        && let Some(ref community) = pending_network.snmp_community
+    {
+        let version = pending_network
+            .snmp_version
+            .as_ref()
+            .and_then(|v| v.parse::<SnmpVersion>().ok())
+            .unwrap_or(SnmpVersion::V2c);
+
+        let credential_name = format!("{} SNMP Credential", pending_network.name);
+        let credential = SnmpCredential::new(SnmpCredentialBase {
+            organization_id,
+            name: credential_name,
+            version,
+            community: SecretString::new(community.clone().into()),
+            tags: Vec::new(),
+        });
+
+        let created_credential = state
             .services
-            .network_service
-            .create(network, auth_entity.clone())
+            .snmp_credential_service
+            .create(credential, auth_entity.clone())
             .await
-            .map_err(|e| ApiError::internal_error(&format!("Failed to create network: {}", e)))?;
+            .map_err(|e| {
+                ApiError::internal_error(&format!("Failed to create SNMP credential: {}", e))
+            })?;
 
-        // Track the first network
-        if i == 0 {
-            first_network_id = Some(network.id);
-        }
-
+        // Update network with the SNMP credential ID
+        let mut updated_network = network.clone();
+        updated_network.base.snmp_credential_id = Some(created_credential.id);
         state
             .services
             .network_service
-            .create_organizational_subnets(network.id, auth_entity.clone())
+            .update(&mut updated_network, auth_entity.clone())
             .await
-            .map_err(|e| ApiError::internal_error(&format!("Failed to seed data: {}", e)))?;
-
-        // Create default topology for each network
-        let topology = Topology::new(TopologyBase::new("My Topology".to_string(), network.id));
-        state
-            .services
-            .topology_service
-            .create(topology, auth_entity.clone())
-            .await
-            .map_err(|e| ApiError::internal_error(&format!("Failed to create topology: {}", e)))?;
-
-        // Create SNMP credential if enabled for this network
-        if pending_network.snmp_enabled
-            && let Some(ref community) = pending_network.snmp_community
-        {
-            let version = pending_network
-                .snmp_version
-                .as_ref()
-                .and_then(|v| v.parse::<SnmpVersion>().ok())
-                .unwrap_or(SnmpVersion::V2c);
-
-            let credential_name = format!("{} SNMP Credential", pending_network.name);
-            let credential = SnmpCredential::new(SnmpCredentialBase {
-                organization_id,
-                name: credential_name,
-                version,
-                community: SecretString::new(community.clone().into()),
-                tags: Vec::new(),
-            });
-
-            let created_credential = state
-                .services
-                .snmp_credential_service
-                .create(credential, auth_entity.clone())
-                .await
-                .map_err(|e| {
-                    ApiError::internal_error(&format!("Failed to create SNMP credential: {}", e))
-                })?;
-
-            // Update network with the SNMP credential ID
-            let mut updated_network = network.clone();
-            updated_network.base.snmp_credential_id = Some(created_credential.id);
-            state
-                .services
-                .network_service
-                .update(&mut updated_network, auth_entity.clone())
-                .await
-                .map_err(|e| {
-                    ApiError::internal_error(&format!(
-                        "Failed to update network with SNMP credential: {}",
-                        e
-                    ))
-                })?;
-        }
-
-        // Handle daemon setup for this network if present
-        if let Some(daemon) = daemon_setups.iter().find(|d| d.network_id == network.id) {
-            // Only create API key if user chose "Install Now" (api_key_raw is Some)
-            // Note: Daemon will auto-register when it connects with the API key
-            // No need to create daemon record here - it will be created on first registration
-            if let Some(ref api_key_raw) = daemon.api_key_raw {
-                let hashed_key = crate::server::shared::api_key_common::hash_api_key(api_key_raw);
-
-                state
-                    .services
-                    .daemon_api_key_service
-                    .create(
-                        DaemonApiKey::new(DaemonApiKeyBase {
-                            key: hashed_key,
-                            name: format!("{} API Key", daemon.daemon_name),
-                            last_used: None,
-                            expires_at: None,
-                            network_id: network.id,
-                            is_enabled: true,
-                            tags: Vec::new(),
-                            plaintext: None,
-                        }),
-                        AuthenticatedEntity::System,
-                    )
-                    .await
-                    .map_err(|e| {
-                        ApiError::internal_error(&format!("Failed to create API key: {}", e))
-                    })?;
-            }
-        }
+            .map_err(|e| {
+                ApiError::internal_error(&format!(
+                    "Failed to update network with SNMP credential: {}",
+                    e
+                ))
+            })?;
     }
 
-    // Handle integrated daemon if configured (attach to first network only)
-    if let Some(integrated_daemon_url) = &state.config.integrated_daemon_url
-        && let Some(network_id) = first_network_id
-    {
+    // Handle integrated daemon if configured
+    if let Some(integrated_daemon_url) = &state.config.integrated_daemon_url {
+        let network_id = setup.network.network_id;
         let (plaintext, hashed) = generate_api_key_for_storage(ApiKeyType::Daemon);
 
         state
@@ -695,7 +564,7 @@ async fn apply_pending_setup(
             metadata: serde_json::json!({
                 "is_onboarding_step": true,
                 "pre_registration_setup": true,
-                "network_count": setup.networks.len()
+                "network_count": 1
             }),
             authentication: auth_entity,
         })
@@ -1495,13 +1364,6 @@ async fn handle_register_flow(
         None
     };
 
-    // Extract pending daemon setups from session (supports multiple daemons)
-    let pending_daemon_setups = if is_new_org {
-        extract_pending_daemon_setups(&session).await
-    } else {
-        vec![]
-    };
-
     let billing_enabled = state.config.stripe_secret.is_some();
 
     // Register user
@@ -1551,8 +1413,7 @@ async fn handle_register_flow(
             // If this is a new org and setup was provided, apply it
             if is_new_org {
                 if let Some(setup) = pending_setup
-                    && let Err(e) =
-                        apply_pending_setup(&state, &user, setup, pending_daemon_setups).await
+                    && let Err(e) = apply_pending_setup(&state, &user, setup).await
                 {
                     tracing::error!("Failed to apply pending setup: {:?}", e);
                     // Don't fail registration, just log the error

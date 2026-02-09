@@ -9,8 +9,6 @@ import { pushError, pushSuccess } from '$lib/shared/stores/feedback';
 import { resetIdentity } from '$lib/shared/utils/analytics';
 import type { User } from '../users/types';
 import type {
-	DaemonSetupRequest,
-	DaemonSetupResponse,
 	ForgotPasswordRequest,
 	LoginRequest,
 	RegisterRequest,
@@ -190,24 +188,6 @@ export function useSetupMutation() {
 }
 
 /**
- * Mutation hook for pre-registration daemon setup
- */
-export function useDaemonSetupMutation() {
-	return createMutation(() => ({
-		mutationFn: async (request: DaemonSetupRequest) => {
-			const { data } = await apiClient.POST('/api/auth/daemon-setup', { body: request });
-			if (!data?.success || !data.data) {
-				throw new Error(data?.error || 'Failed to save daemon setup');
-			}
-			return data.data as DaemonSetupResponse;
-		},
-		onError: (error: Error) => {
-			pushError(error.message);
-		}
-	}));
-}
-
-/**
  * Mutation hook for verifying email
  */
 export function useVerifyEmailMutation() {
@@ -301,7 +281,7 @@ export function useOnboardingStateQuery() {
 		queryFn: async () => {
 			const { data } = await apiClient.GET('/api/auth/onboarding-state', {});
 			if (!data?.success || !data.data) {
-				return { step: null, use_case: null, org_name: null, networks: [], network_ids: [] };
+				return { step: null, use_case: null, org_name: null, network: null, network_id: null };
 			}
 			return data.data;
 		},

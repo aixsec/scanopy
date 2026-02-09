@@ -448,20 +448,17 @@ pub async fn setup_authenticated_user(client: &TestClient) -> Result<User, Strin
 
     let setup_request = SetupRequest {
         organization_name: "My Organization".to_string(),
-        networks: vec![NetworkSetup {
+        network: NetworkSetup {
             name: "My Network".to_string(),
             snmp_enabled: false,
             snmp_version: None,
             snmp_community: None,
-        }],
+        },
     };
 
     match client.setup(&setup_request).await {
         Ok(response) => {
-            println!(
-                "✅ Setup completed, network_ids: {:?}",
-                response.network_ids
-            );
+            println!("✅ Setup completed, network_id: {:?}", response.network_id);
         }
         Err(e) => {
             println!("⚠️  Setup failed (may already be registered): {}", e);

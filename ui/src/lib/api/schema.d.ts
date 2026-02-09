@@ -1,24 +1,4 @@
 export interface paths {
-    "/api/auth/daemon-setup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Store pre-registration daemon setup data in session and generate provisional API key
-         *     Supports multiple calls to configure daemons for different networks
-         */
-        post: operations["daemon_setup"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/auth/forgot-password": {
         parameters: {
             query?: never;
@@ -2717,14 +2697,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-02-08T14:11:00.672207Z",
-             *       "id": "8c043606-e92b-44a3-b280-b12f1ce5f9a2",
+             *       "created_at": "2026-02-08T23:37:22.040620Z",
+             *       "id": "8983fe78-3788-4947-bc5c-85cb7119f8b5",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-02-08T14:11:00.672207Z"
+             *       "updated_at": "2026-02-08T23:37:22.040620Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2816,15 +2796,6 @@ export interface components {
                 updated_at: string;
                 /** @description Computed version status including health and warnings */
                 version_status: components["schemas"]["DaemonVersionStatus"];
-            };
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_DaemonSetupResponse: {
-            /** @description Response from daemon setup endpoint */
-            data?: {
-                api_key?: string | null;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -2968,14 +2939,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-02-08T14:11:00.655163Z",
-             *               "id": "8dbba743-2222-4ead-a9f5-49a2398e7c1c",
+             *               "created_at": "2026-02-08T23:37:22.029763Z",
+             *               "id": "3871a86f-37a3-4e26-acf7-0174ab7d437c",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-02-08T14:11:00.655163Z"
+             *               "updated_at": "2026-02-08T23:37:22.029763Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -2984,7 +2955,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "Nest Thermostat",
+             *           "service_definition": "Tyk",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3132,12 +3103,12 @@ export interface components {
         ApiResponse_OnboardingStateResponse: {
             /** @description Response from onboarding state endpoint */
             data?: {
-                /** @description Daemon setups (if any) */
-                daemon_setups?: components["schemas"]["OnboardingDaemonSetupState"][];
-                /** @description Network IDs from pending setup (if any) - kept for backwards compatibility */
-                network_ids: string[];
-                /** @description Networks from pending setup (with names and IDs) */
-                networks: components["schemas"]["OnboardingNetworkState"][];
+                network?: null | components["schemas"]["OnboardingNetworkState"];
+                /**
+                 * Format: uuid
+                 * @description Network ID from pending setup (if any)
+                 */
+                network_id?: string | null;
                 /** @description Organization name from pending setup */
                 org_name?: string | null;
                 /** @description Current onboarding step (if any) */
@@ -3258,14 +3229,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-02-08T14:11:00.667172Z",
-             *           "id": "e46669d9-ea6b-409c-9fa7-1444ce34b577",
+             *           "created_at": "2026-02-08T23:37:22.037210Z",
+             *           "id": "4751c822-4b5a-4e10-9e7e-4d8d8f715568",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-02-08T14:11:00.667172Z"
+             *           "updated_at": "2026-02-08T23:37:22.037210Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3274,7 +3245,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "Nest Thermostat",
+             *       "service_definition": "Tyk",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3298,7 +3269,8 @@ export interface components {
         ApiResponse_SetupResponse: {
             /** @description Response from setup endpoint */
             data?: {
-                network_ids: string[];
+                /** Format: uuid */
+                network_id: string;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -3576,14 +3548,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-02-08T14:11:00.655522Z",
-         *       "id": "394d121b-09ac-4aa4-8171-25c417d6fc6e",
+         *       "created_at": "2026-02-08T23:37:22.029993Z",
+         *       "id": "be43c941-c89c-4291-bffb-3e378cc4ae9f",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-02-08T14:11:00.655522Z"
+         *       "updated_at": "2026-02-08T23:37:22.029993Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3760,7 +3732,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "Nest Thermostat",
+         *           "service_definition": "Tyk",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3966,17 +3938,6 @@ export interface components {
             updated_at: string;
             /** @description Computed version status including health and warnings */
             version_status: components["schemas"]["DaemonVersionStatus"];
-        };
-        /** @description Daemon setup request for pre-registration daemon configuration */
-        DaemonSetupRequest: {
-            daemon_name: string;
-            install_later?: boolean;
-            /** Format: uuid */
-            network_id: string;
-        };
-        /** @description Response from daemon setup endpoint */
-        DaemonSetupResponse: {
-            api_key?: string | null;
         };
         /** @description Sent by daemon on startup to report version */
         DaemonStartupRequest: {
@@ -4406,14 +4367,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-02-08T14:11:00.654642Z",
-         *               "id": "6aa4a15a-c9d9-42dd-bf61-4083d12dce45",
+         *               "created_at": "2026-02-08T23:37:22.029468Z",
+         *               "id": "8656c151-aa59-4f64-b000-e2475e5c1b67",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-02-08T14:11:00.654642Z"
+         *               "updated_at": "2026-02-08T23:37:22.029468Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4422,7 +4383,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "Nest Thermostat",
+         *           "service_definition": "Tyk",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -4881,18 +4842,6 @@ export interface components {
             name: string;
             slug: string;
         };
-        /** @description Daemon setup data in onboarding state response */
-        OnboardingDaemonSetupState: {
-            /** @description API key (only returned if user chose to install now) */
-            api_key?: string | null;
-            /** @description Daemon name */
-            daemon_name: string;
-            /**
-             * Format: uuid
-             * @description Network ID this daemon is for
-             */
-            network_id: string;
-        };
         /** @description Network data in onboarding state response */
         OnboardingNetworkState: {
             /**
@@ -4911,12 +4860,12 @@ export interface components {
         };
         /** @description Response from onboarding state endpoint */
         OnboardingStateResponse: {
-            /** @description Daemon setups (if any) */
-            daemon_setups?: components["schemas"]["OnboardingDaemonSetupState"][];
-            /** @description Network IDs from pending setup (if any) - kept for backwards compatibility */
-            network_ids: string[];
-            /** @description Networks from pending setup (with names and IDs) */
-            networks: components["schemas"]["OnboardingNetworkState"][];
+            network?: null | components["schemas"]["OnboardingNetworkState"];
+            /**
+             * Format: uuid
+             * @description Network ID from pending setup (if any)
+             */
+            network_id?: string | null;
             /** @description Organization name from pending setup */
             org_name?: string | null;
             /** @description Current onboarding step (if any) */
@@ -4926,6 +4875,14 @@ export interface components {
         };
         /** @description Request to save onboarding step */
         OnboardingStepRequest: {
+            /** @description Company size */
+            company_size?: string | null;
+            /** @description Job title/role */
+            job_title?: string | null;
+            /** @description Referral source (how they heard about Scanopy) */
+            referral_source?: string | null;
+            /** @description Free-text referral source (when "other" is selected) */
+            referral_source_other?: string | null;
             step: string;
             /** @description Use case selection (homelab, company, msp) */
             use_case?: string | null;
@@ -5370,14 +5327,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-02-08T14:11:00.655401Z",
-         *           "id": "7ee44626-9053-477c-8a5b-881d4777845a",
+         *           "created_at": "2026-02-08T23:37:22.029917Z",
+         *           "id": "550d4139-2100-4684-b0df-f1fabc82e0fa",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-02-08T14:11:00.655401Z"
+         *           "updated_at": "2026-02-08T23:37:22.029917Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5386,7 +5343,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "Nest Thermostat",
+         *       "service_definition": "Tyk",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5480,12 +5437,13 @@ export interface components {
         };
         /** @description Setup request for pre-registration org/network configuration */
         SetupRequest: {
-            networks: components["schemas"]["NetworkSetup"][];
+            network: components["schemas"]["NetworkSetup"];
             organization_name: string;
         };
         /** @description Response from setup endpoint */
         SetupResponse: {
-            network_ids: string[];
+            /** Format: uuid */
+            network_id: string;
         };
         Share: components["schemas"]["ShareBase"] & {
             /** Format: date-time */
@@ -5976,39 +5934,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    daemon_setup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DaemonSetupRequest"];
-            };
-        };
-        responses: {
-            /** @description Daemon setup data stored */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_DaemonSetupResponse"];
-                };
-            };
-            /** @description Invalid request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
     forgot_password: {
         parameters: {
             query?: never;

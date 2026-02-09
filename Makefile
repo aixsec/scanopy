@@ -1,4 +1,4 @@
-.PHONY: help build test clean format generate-schema generate-messages generate-fixtures seed-dev set-plan-community set-plan-starter set-plan-pro set-plan-team set-plan-business set-plan-enterprise test-plan test-merge
+.PHONY: help build test clean format generate-schema generate-messages generate-fixtures seed-dev set-plan-community set-plan-starter set-plan-pro set-plan-team set-plan-business set-plan-enterprise test-plan test-merge test-results
 
 help:
 	@echo "Scanopy Development Commands"
@@ -140,6 +140,25 @@ test-plan:
 	@echo "];" >> tools/test-plans.js
 	@echo "Opening test runner..."
 	@open tools/test-runner.html 2>/dev/null || xdg-open tools/test-runner.html 2>/dev/null || echo "Open tools/test-runner.html in your browser"
+
+test-results:
+	@if [ ! -f TEST_RESULTS.json ]; then \
+		echo "TEST_RESULTS.json not found. Export from test runner first."; \
+		exit 1; \
+	fi
+	@echo "Distributing results to worktrees..."
+	@for wt in $$(git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //'); do \
+		branch=$$(git -C "$$wt" branch --show-current 2>/dev/null); \
+		if [ -z "$$branch" ]; then continue; fi; \
+		if grep -q "\"$$branch\"" TEST_RESULTS.json 2>/dev/null; then \
+			node -e " \
+				const r = require('./TEST_RESULTS.json'); \
+				const d = r['$$branch']; \
+				if (d) { require('fs').writeFileSync('$$wt/TEST_RESULTS.json', JSON.stringify({'$$branch': d}, null, 2)); } \
+			" && echo "  $$branch -> $$wt/TEST_RESULTS.json"; \
+		fi; \
+	done
+	@echo "Done. Agents can read TEST_RESULTS.json in their worktree."
 
 dev-server:
 	@export DATABASE_URL="postgresql://postgres:password@localhost:5432/scanopy" && \

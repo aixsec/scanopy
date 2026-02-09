@@ -57,6 +57,15 @@
   .filter-btn { padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; }
   .filter-btn.active { background: var(--surface); color: var(--text); border-color: var(--blue); }
   .conflict-note { font-size: 11px; color: var(--yellow); margin-top: 4px; }
+  .branch-notes { width: 100%; min-height: 60px; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; font-family: inherit; resize: vertical; margin-top: 8px; }
+  .branch-notes::placeholder { color: var(--text-muted); }
+  .branch-notes:focus { outline: none; border-color: var(--blue); }
+  .branch-notes-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 16px; }
+  .test-setup { font-size: 12px; color: var(--text-muted); margin: 8px 0; padding: 8px; background: var(--bg); border-radius: 4px; border-left: 2px solid var(--purple); }
+  .test-setup strong { color: var(--purple); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .test-setup pre { margin-top: 4px; white-space: pre-wrap; word-break: break-all; font-family: monospace; font-size: 11px; color: var(--text); }
+  .test-setup .copy-btn { display: inline-block; padding: 1px 6px; border-radius: 3px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 10px; cursor: pointer; margin-left: 8px; }
+  .test-setup .copy-btn:hover { border-color: var(--purple); color: var(--purple); }
   .flow-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px; vertical-align: middle; }
   .flow-badge-setup { background: var(--blue); color: #000; }
   .flow-sequence { font-size: 12px; font-weight: 700; color: var(--blue); margin-right: 8px; min-width: 24px; text-align: center; }
@@ -86,6 +95,7 @@
 let plans = {};
 let filter = 'all';
 let allBranches = [];
+let branchNotes = JSON.parse(localStorage.getItem('test-branch-notes') || '{}');
 
 function showManualLoad() {
   document.getElementById('content').innerHTML =
@@ -151,6 +161,11 @@ function setFixOn(branch, testId, fixOn) {
   save(branch);
 }
 
+function setBranchNotes(branch, notes) {
+  branchNotes[branch] = notes || null;
+  localStorage.setItem('test-branch-notes', JSON.stringify(branchNotes));
+}
+
 function save(branch) {
   const results = {};
   plans[branch].tests.forEach(t => {
@@ -163,8 +178,9 @@ function exportResults() {
   const results = {};
   Object.entries(plans).forEach(([branch, data]) => {
     results[branch] = {
+      notes: branchNotes[branch] || null,
       tests: data.tests
-        .filter(t => t.status === 'failed' || t.status === 'partial')
+        .filter(t => t.status === 'failed' || t.status === 'partial' || t.status === 'passed')
         .map(t => ({
           id: t.id,
           category: t.category,
@@ -175,8 +191,8 @@ function exportResults() {
         }))
     };
   });
-  // Remove branches with no failures
-  Object.keys(results).forEach(b => { if (!results[b].tests.length) delete results[b]; });
+  // Remove branches with no results and no notes
+  Object.keys(results).forEach(b => { if (!results[b].tests.length && !results[b].notes) delete results[b]; });
   const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'TEST_RESULTS.json'; a.click();
@@ -188,6 +204,8 @@ function resetAll() {
     plans[branch].tests.forEach(t => { t.status = null; t.feedback = null; t.fix_on = null; });
     localStorage.removeItem(`test-results-${branch}`);
   });
+  branchNotes = {};
+  localStorage.removeItem('test-branch-notes');
   render();
 }
 
@@ -224,7 +242,8 @@ function render() {
   document.getElementById('filterBar').innerHTML =
     ['all','pending','passed','failed','partial','skipped'].map(f =>
       `<button class="filter-btn ${filter===f?'active':''}" onclick="setFilter('${f}')">${f}</button>`
-    ).join('') + (flowFilters.length ? '<span style="border-left:1px solid var(--border);margin:0 4px"></span>' + flowFilters.join('') : '');
+    ).join('') +
+    (flowFilters.length ? '<span style="border-left:1px solid var(--border);margin:0 4px"></span>' + flowFilters.join('') : '');
 
   let html = '';
 
@@ -271,8 +290,18 @@ function render() {
           html += renderTestCard(branch, t, { showSequence: false, showBranch: false });
         });
       });
+      html += `<div class="branch-notes-label">General feedback for ${esc(branch)}</div>`;
+      html += `<textarea class="branch-notes" placeholder="General feedback for this branch (not tied to a specific test)..." onchange="setBranchNotes('${ea(branch)}',this.value)">${esc(branchNotes[branch]||'')}</textarea>`;
       html += `</div>`;
     });
+  }
+
+  // General notes for merged branch (always shown)
+  if (!filter.startsWith('flow:')) {
+    html += `<div class="branch-group"><div class="branch-header" style="color:var(--text-muted)">General (merged branch)</div>`;
+    html += `<div class="branch-notes-label">Feedback for the merged test branch</div>`;
+    html += `<textarea class="branch-notes" placeholder="General feedback not tied to any worktree branch..." onchange="setBranchNotes('merged',this.value)">${esc(branchNotes['merged']||'')}</textarea>`;
+    html += `</div>`;
   }
 
   content.innerHTML = html || '<div class="empty"><p>No tests match the current filter.</p></div>';
@@ -294,6 +323,10 @@ function renderTestCard(branch, t, opts) {
     h += `<span class="flow-branch-tag">${esc(branch)}</span>`;
   }
   h += `</div><div class="test-id">${esc(t.id)}</div></div>`;
+  if (t.setup) {
+    const setupId = `setup-${ea(branch)}-${ea(t.id)}`;
+    h += `<div class="test-setup"><strong>Agent setup</strong><button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('${setupId}').textContent)">copy</button><pre id="${setupId}">${esc(t.setup)}</pre></div>`;
+  }
   if (t.steps && t.steps.length) {
     h += `<ol class="test-steps">${t.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>`;
   }

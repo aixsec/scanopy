@@ -121,7 +121,13 @@
 	}));
 
 	// Track referral source value reactively for the "other" text field
-	let referralSourceValue = $derived(form.state.values.referralSource);
+	// (form.state.values is NOT tracked by $derived)
+	let referralSourceValue = $state('');
+	$effect(() => {
+		return form.store.subscribe(() => {
+			referralSourceValue = form.state.values.referralSource;
+		});
+	});
 
 	function selectUseCase(useCase: UseCase) {
 		selectedUseCase = useCase;

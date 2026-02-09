@@ -67,17 +67,15 @@
 				onboardingStore.setOrganizationName(stateData.org_name);
 			}
 
-			// Restore networks (with IDs and names)
-			if (stateData.networks && stateData.networks.length > 0) {
-				onboardingStore.setNetworks(
-					stateData.networks.map((n) => ({
-						id: n.id ?? undefined,
-						name: n.name,
-						snmp_enabled: n.snmp_enabled ?? false,
-						snmp_version: n.snmp_version ?? undefined,
-						snmp_community: n.snmp_community ?? undefined
-					}))
-				);
+			// Restore network (with ID and name)
+			if (stateData.network) {
+				onboardingStore.setNetwork({
+					id: stateData.network.id ?? undefined,
+					name: stateData.network.name,
+					snmp_enabled: stateData.network.snmp_enabled ?? false,
+					snmp_version: stateData.network.snmp_version ?? undefined,
+					snmp_community: stateData.network.snmp_community ?? undefined
+				});
 			}
 
 			stepInitialized = true;
@@ -152,12 +150,12 @@
 		try {
 			// Submit setup data to backend (stored in session)
 			const result = await setupMutation.mutateAsync(formData);
-			// Update store with network IDs
-			onboardingStore.setNetworkIds(result.network_ids);
+			// Update store with network ID
+			onboardingStore.setNetworkId(result.network_id);
 
 			// Track onboarding modal completion
 			trackEvent('onboarding_modal_completed', {
-				network_count: formData.networks.length
+				network_count: 1
 			});
 
 			currentStep = 'register';

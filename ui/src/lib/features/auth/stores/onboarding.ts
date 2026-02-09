@@ -1,18 +1,11 @@
 import { writable, get } from 'svelte/store';
 import type { UseCase, BlockerType, NetworkSetup } from '../types/base';
 
-export interface DaemonSetupState {
-	name: string;
-	installNow: boolean;
-	apiKey?: string;
-}
-
 export interface OnboardingState {
 	useCase: UseCase | null;
 	readyToScan: boolean | null;
 	organizationName: string;
-	networks: NetworkSetup[];
-	daemonSetups: Map<string, DaemonSetupState>; // keyed by network id
+	network: NetworkSetup;
 	populateSeedData: boolean;
 	currentBlocker: BlockerType | null;
 	// CRM qualification data (company/msp only, not persisted to DB)
@@ -65,8 +58,7 @@ const initialState: OnboardingState = {
 	useCase: persisted.useCase,
 	readyToScan: null,
 	organizationName: '',
-	networks: [{ name: '' }],
-	daemonSetups: new Map(),
+	network: { name: '' },
 	populateSeedData: true,
 	currentBlocker: null,
 	jobTitle: null,
@@ -96,8 +88,7 @@ function createOnboardingStore() {
 		reset: () =>
 			updateAndPersist((state) => ({
 				...initialState,
-				networks: [{ name: '' }],
-				daemonSetups: new Map(),
+				network: { name: '' },
 				useCase: state.useCase, // Preserve for billing page
 				companySize: state.companySize, // Preserve for billing page
 				jobTitle: null
@@ -121,37 +112,16 @@ function createOnboardingStore() {
 				organizationName: name
 			})),
 
-		setNetworks: (networks: NetworkSetup[]) =>
+		setNetwork: (network: NetworkSetup) =>
 			update((state) => ({
 				...state,
-				networks
+				network
 			})),
 
-		addNetwork: () =>
+		setNetworkId: (networkId: string) =>
 			update((state) => ({
 				...state,
-				networks: [...state.networks, { name: '' }]
-			})),
-
-		removeNetwork: (index: number) =>
-			update((state) => ({
-				...state,
-				networks: state.networks.filter((_, i) => i !== index)
-			})),
-
-		updateNetworkName: (index: number, name: string) =>
-			update((state) => ({
-				...state,
-				networks: state.networks.map((n, i) => (i === index ? { ...n, name } : n))
-			})),
-
-		setNetworkIds: (networkIds: string[]) =>
-			update((state) => ({
-				...state,
-				networks: state.networks.map((n, i) => ({
-					...n,
-					id: networkIds[i]
-				}))
+				network: { ...state.network, id: networkId }
 			})),
 
 		setPopulateSeedData: (populate: boolean) =>
@@ -159,26 +129,6 @@ function createOnboardingStore() {
 				...state,
 				populateSeedData: populate
 			})),
-
-		setDaemonSetup: (networkId: string, setup: DaemonSetupState) =>
-			update((state) => {
-				const newDaemonSetups = new Map(state.daemonSetups);
-				newDaemonSetups.set(networkId, setup);
-				return {
-					...state,
-					daemonSetups: newDaemonSetups
-				};
-			}),
-
-		clearDaemonSetup: (networkId: string) =>
-			update((state) => {
-				const newDaemonSetups = new Map(state.daemonSetups);
-				newDaemonSetups.delete(networkId);
-				return {
-					...state,
-					daemonSetups: newDaemonSetups
-				};
-			}),
 
 		setCurrentBlocker: (blocker: BlockerType | null) =>
 			update((state) => ({

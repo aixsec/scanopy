@@ -193,7 +193,6 @@ impl BrevoService {
             .with_email(email.to_string())
             .with_user_id(user_id)
             .with_role("owner")
-            .with_signup_source("organic")
             .with_signup_date(event.timestamp)
             .with_marketing_opt_in(marketing_opt_in);
 

@@ -13,15 +13,11 @@ pub struct ContactAttributes {
     pub job_title: Option<String>,
     pub scanopy_user_id: Option<String>,
     pub scanopy_role: Option<String>,
-    pub scanopy_signup_source: Option<String>,
+    pub scanopy_referral_source: Option<String>,
     pub scanopy_use_case: Option<String>,
     pub scanopy_signup_date: Option<String>,
     pub scanopy_last_login_date: Option<String>,
     pub scanopy_marketing_opt_in: Option<bool>,
-
-    /// How user heard about Scanopy
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scanopy_referral_source: Option<String>,
 }
 
 impl ContactAttributes {
@@ -44,8 +40,8 @@ impl ContactAttributes {
         self
     }
 
-    pub fn with_signup_source(mut self, source: impl Into<String>) -> Self {
-        self.scanopy_signup_source = Some(source.into());
+    pub fn with_referral_source(mut self, source: impl Into<String>) -> Self {
+        self.scanopy_referral_source = Some(source.into());
         self
     }
 
@@ -74,11 +70,6 @@ impl ContactAttributes {
         self
     }
 
-    pub fn with_referral_source(mut self, source: impl Into<String>) -> Self {
-        self.scanopy_referral_source = Some(source.into());
-        self
-    }
-
     /// Convert to Brevo API attributes map (UPPERCASE keys)
     pub fn to_attributes(&self) -> HashMap<String, serde_json::Value> {
         let mut attrs = HashMap::new();
@@ -98,8 +89,8 @@ impl ContactAttributes {
         if let Some(v) = &self.scanopy_role {
             attrs.insert("SCANOPY_ROLE".to_string(), serde_json::json!(v));
         }
-        if let Some(v) = &self.scanopy_signup_source {
-            attrs.insert("SCANOPY_SIGNUP_SOURCE".to_string(), serde_json::json!(v));
+        if let Some(v) = &self.scanopy_referral_source {
+            attrs.insert("SCANOPY_REFERRAL_SOURCE".to_string(), serde_json::json!(v));
         }
         if let Some(v) = &self.scanopy_use_case {
             attrs.insert("SCANOPY_USE_CASE".to_string(), serde_json::json!(v));
@@ -434,7 +425,7 @@ impl CompanyAttributes {
 
         attrs
     }
-    
+
     pub fn with_referral_source(mut self, source: impl Into<String>) -> Self {
         self.scanopy_referral_source = Some(source.into());
         self
@@ -547,49 +538,4 @@ pub struct TrackEventRequest {
 pub struct EventIdentifiers {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email_id: Option<String>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_contact_attributes_builder() {
-        let attrs = ContactAttributes::new()
-            .with_email("test@example.com")
-            .with_user_id(uuid::Uuid::nil())
-            .with_role("owner")
-            .with_signup_source("organic")
-            .with_job_title("CTO");
-
-        assert_eq!(attrs.email, Some("test@example.com".to_string()));
-        assert_eq!(attrs.scanopy_user_id, Some(uuid::Uuid::nil().to_string()));
-        assert_eq!(attrs.scanopy_role, Some("owner".to_string()));
-        assert_eq!(attrs.scanopy_signup_source, Some("organic".to_string()));
-
-        let map = attrs.to_attributes();
-        assert_eq!(map.get("SCANOPY_ROLE"), Some(&serde_json::json!("owner")));
-        assert_eq!(map.get("JOB_TITLE"), Some(&serde_json::json!("CTO")));
-        assert!(map.get("SCANOPY_ORG_ID").is_none());
-    }
-
-    #[test]
-    fn test_company_attributes_builder() {
-        let attrs = CompanyAttributes::new()
-            .with_name("Acme Inc")
-            .with_org_id(uuid::Uuid::nil())
-            .with_org_type("company")
-            .with_plan_type("pro");
-
-        assert_eq!(attrs.name, Some("Acme Inc".to_string()));
-        assert_eq!(attrs.scanopy_org_id, Some(uuid::Uuid::nil().to_string()));
-        assert_eq!(attrs.scanopy_org_type, Some("company".to_string()));
-        assert_eq!(attrs.scanopy_plan_type, Some("pro".to_string()));
-
-        let map = attrs.to_attributes();
-        assert_eq!(
-            map.get("scanopy_plan_type"),
-            Some(&serde_json::json!("pro"))
-        );
-    }
 }

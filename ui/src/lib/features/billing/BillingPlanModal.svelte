@@ -63,13 +63,9 @@
 
 	// Determine initial filter based on use case from onboarding
 	let useCase = $derived($onboardingStore.useCase);
-	let networkCount = $derived($onboardingStore.networks.length);
-
-	// If user has > 3 networks, they must use commercial plans
-	let forceCommercial = $derived(networkCount > 3);
 
 	let initialPlanFilter = $derived<'commercial' | 'personal'>(
-		forceCommercial || useCase === 'company' || useCase === 'msp' ? 'commercial' : 'personal'
+		useCase === 'company' || useCase === 'msp' ? 'commercial' : 'personal'
 	);
 
 	// Recommended plan based on use case
@@ -122,7 +118,6 @@
 			onPlanInquiry={handlePlanInquiry}
 			{initialPlanFilter}
 			{recommendedPlan}
-			{forceCommercial}
 			{isReturningCustomer}
 		/>
 	</div>
