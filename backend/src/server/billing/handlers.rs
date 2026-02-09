@@ -1,7 +1,6 @@
 use crate::server::auth::middleware::permissions::{Authorized, Owner, Viewer};
 use crate::server::billing::types::api::CreateCheckoutRequest;
 use crate::server::billing::types::base::BillingPlan;
-use crate::server::brevo::types::CompanyAttributes;
 use crate::server::config::AppState;
 use crate::server::shared::services::traits::CrudService;
 use crate::server::shared::types::ErrorCode;
@@ -13,7 +12,6 @@ use axum::http::HeaderMap;
 use axum::http::header::CACHE_CONTROL;
 use axum::response::IntoResponse;
 use axum_client_ip::ClientIp;
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use utoipa::ToSchema;
@@ -233,7 +231,7 @@ async fn submit_enterprise_inquiry(
         .as_ref()
         .ok_or_else(|| ApiError::bad_request("Enterprise inquiries are not enabled"))?;
 
-    // 1. Update Company via CRM API (sets inquiry-specific properties)
+    // 1. Create a deal in the Sales pipeline
     let org = state
         .services
         .organization_service
@@ -241,30 +239,37 @@ async fn submit_enterprise_inquiry(
         .await?
         .ok_or_else(ApiError::organization_required)?;
 
-    if let Some(company_id) = &org.base.brevo_company_id {
-        let mut company_attrs = CompanyAttributes::new().with_inquiry_date(Utc::now());
+    let deal_name = format!("Enterprise Inquiry - {}", &request.company);
+    let mut deal_attrs = std::collections::HashMap::new();
+    deal_attrs.insert(
+        "team_size".to_string(),
+        serde_json::json!(&request.team_size),
+    );
+    deal_attrs.insert("message".to_string(), serde_json::json!(&request.message));
+    if let Some(urgency) = &request.urgency {
+        deal_attrs.insert("urgency".to_string(), serde_json::json!(urgency));
+    }
+    if let Some(plan_type) = &request.plan_type {
+        deal_attrs.insert("plan_type".to_string(), serde_json::json!(plan_type));
+    }
+    if let Some(network_count) = request.network_count {
+        deal_attrs.insert(
+            "network_count".to_string(),
+            serde_json::json!(network_count.to_string()),
+        );
+    }
 
-        if let Some(urgency) = &request.urgency {
-            company_attrs = company_attrs.with_inquiry_urgency(urgency);
-        }
-        if let Some(network_count) = request.network_count {
-            company_attrs = company_attrs.with_inquiry_network_count(network_count);
-        }
-        if let Some(plan_type) = &request.plan_type {
-            company_attrs = company_attrs.with_inquiry_plan_type(plan_type);
-        }
-
-        if let Err(e) = brevo_service
-            .client
-            .update_company(company_id, company_attrs)
-            .await
-        {
-            tracing::warn!(
-                error = %e,
-                organization_id = %organization_id,
-                "Failed to update Brevo company with inquiry properties"
-            );
-        }
+    let company_ids = org.base.brevo_company_id.map(|id| vec![id]);
+    if let Err(e) = brevo_service
+        .client
+        .create_deal(&deal_name, Some(deal_attrs), company_ids)
+        .await
+    {
+        tracing::warn!(
+            error = %e,
+            organization_id = %organization_id,
+            "Failed to create Brevo deal for inquiry"
+        );
     }
 
     // 2. Track event for automation triggers (notifications)

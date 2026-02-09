@@ -138,10 +138,6 @@ pub struct CompanyAttributes {
     pub scanopy_first_snmp_credential_date: Option<String>,
     pub scanopy_first_invite_sent_date: Option<String>,
     pub scanopy_first_invite_accepted_date: Option<String>,
-    pub scanopy_inquiry_plan_type: Option<String>,
-    pub scanopy_inquiry_urgency: Option<String>,
-    pub scanopy_inquiry_network_count: Option<i64>,
-    pub scanopy_inquiry_date: Option<String>,
 }
 
 impl CompanyAttributes {
@@ -274,26 +270,6 @@ impl CompanyAttributes {
         self
     }
 
-    pub fn with_inquiry_plan_type(mut self, plan_type: impl Into<String>) -> Self {
-        self.scanopy_inquiry_plan_type = Some(plan_type.into());
-        self
-    }
-
-    pub fn with_inquiry_urgency(mut self, urgency: impl Into<String>) -> Self {
-        self.scanopy_inquiry_urgency = Some(urgency.into());
-        self
-    }
-
-    pub fn with_inquiry_network_count(mut self, count: i64) -> Self {
-        self.scanopy_inquiry_network_count = Some(count);
-        self
-    }
-
-    pub fn with_inquiry_date(mut self, date: DateTime<Utc>) -> Self {
-        self.scanopy_inquiry_date = Some(date.to_rfc3339());
-        self
-    }
-
     /// Convert to Brevo API attributes map
     pub fn to_attributes(&self) -> HashMap<String, serde_json::Value> {
         let mut attrs = HashMap::new();
@@ -400,25 +376,6 @@ impl CompanyAttributes {
                 serde_json::json!(v),
             );
         }
-        if let Some(v) = &self.scanopy_inquiry_plan_type {
-            attrs.insert(
-                "scanopy_inquiry_plan_type".to_string(),
-                serde_json::json!(v),
-            );
-        }
-        if let Some(v) = &self.scanopy_inquiry_urgency {
-            attrs.insert("scanopy_inquiry_urgency".to_string(), serde_json::json!(v));
-        }
-        if let Some(v) = self.scanopy_inquiry_network_count {
-            attrs.insert(
-                "scanopy_inquiry_network_count".to_string(),
-                serde_json::json!(v.to_string()),
-            );
-        }
-        if let Some(v) = &self.scanopy_inquiry_date {
-            attrs.insert("scanopy_inquiry_date".to_string(), serde_json::json!(v));
-        }
-
         attrs
     }
 }
@@ -504,6 +461,25 @@ pub struct TrackEventRequest {
     pub event_properties: Option<HashMap<String, serde_json::Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contact_properties: Option<HashMap<String, serde_json::Value>>,
+}
+
+/// POST /crm/deals - create deal
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateDealRequest {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attributes: Option<HashMap<String, serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub linked_contacts_ids: Option<Vec<i64>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub linked_companies_ids: Option<Vec<String>>,
+}
+
+/// Response from POST /crm/deals
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateDealResponse {
+    pub id: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
