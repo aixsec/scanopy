@@ -265,38 +265,9 @@ async fn submit_enterprise_inquiry(
                 "Failed to update Brevo company with inquiry properties"
             );
         }
-
-        // 2. Create a deal for the inquiry
-        let deal_name = format!("Enterprise Inquiry - {}", &request.company);
-        let mut deal_attrs = std::collections::HashMap::new();
-        deal_attrs.insert("message".to_string(), serde_json::json!(&request.message));
-        deal_attrs.insert(
-            "team_size".to_string(),
-            serde_json::json!(&request.team_size),
-        );
-        if let Some(plan_type) = &request.plan_type {
-            deal_attrs.insert("plan_type".to_string(), serde_json::json!(plan_type));
-        }
-
-        if let Err(e) = brevo_service
-            .client
-            .create_deal(
-                &deal_name,
-                Some(deal_attrs),
-                None,
-                Some(vec![company_id.clone()]),
-            )
-            .await
-        {
-            tracing::warn!(
-                error = %e,
-                organization_id = %organization_id,
-                "Failed to create Brevo deal for inquiry"
-            );
-        }
     }
 
-    // 3. Track event for automation triggers (notifications)
+    // 2. Track event for automation triggers (notifications)
     let mut event_props = std::collections::HashMap::new();
     event_props.insert("company".to_string(), serde_json::json!(&request.company));
     event_props.insert(

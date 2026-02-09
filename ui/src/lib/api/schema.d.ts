@@ -4085,9 +4085,7 @@ export interface components {
             company: string;
             /** @description Contact email */
             email: string;
-            /** @description HubSpot tracking cookie (hutk) for linking form submission to visitor */
-            hutk?: string | null;
-            /** @description Message/use case description (maps to HubSpot "message" field) */
+            /** @description Message/use case description */
             message: string;
             /** @description Contact name */
             name: string;
@@ -6406,7 +6404,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiResponse"];
                 };
             };
-            /** @description Invalid request or HubSpot not configured */
+            /** @description Invalid request or Brevo not configured */
             400: {
                 headers: {
                     [name: string]: unknown;

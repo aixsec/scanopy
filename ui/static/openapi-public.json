@@ -9282,14 +9282,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-02-07T04:11:11.156526Z",
-              "id": "117f2afc-5bfa-495f-82a5-c33d5757cd7d",
+              "created_at": "2026-02-09T00:38:02.295262Z",
+              "id": "ee66b729-e72f-4f8b-86c0-7ee3519f9738",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-07T04:11:11.156526Z"
+              "updated_at": "2026-02-09T00:38:02.295262Z"
             }
           },
           "error": {
@@ -10021,14 +10021,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-02-07T04:11:11.142782Z",
-                      "id": "53c8504d-0756-43d8-a06b-d8f255bc7b96",
+                      "created_at": "2026-02-09T00:38:02.282247Z",
+                      "id": "05d1d1a3-f3b1-4707-b54e-00c7cd386d49",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-02-07T04:11:11.142782Z"
+                      "updated_at": "2026-02-09T00:38:02.282247Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10037,7 +10037,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "LinkStack",
+                  "service_definition": "MySQL",
                   "source": {
                     "type": "Manual"
                   },
@@ -10853,14 +10853,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-02-07T04:11:11.152427Z",
-                  "id": "087b9cd8-d5fe-49db-8ad0-0640a6bd5c1c",
+                  "created_at": "2026-02-09T00:38:02.291264Z",
+                  "id": "996d1171-be07-4336-8a27-383234fe4ffc",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-07T04:11:11.152427Z"
+                  "updated_at": "2026-02-09T00:38:02.291264Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -10869,7 +10869,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "LinkStack",
+              "service_definition": "MySQL",
               "source": {
                 "type": "Manual"
               },
@@ -12029,14 +12029,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-02-07T04:11:11.143019Z",
-          "id": "a858dc66-b821-4b9d-a4b5-f3043c51e87e",
+          "created_at": "2026-02-09T00:38:02.282474Z",
+          "id": "76129225-702b-46c7-a1c7-59ac13cd8c8c",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-02-07T04:11:11.143019Z"
+          "updated_at": "2026-02-09T00:38:02.282474Z"
         }
       },
       "BindingBase": {
@@ -12490,7 +12490,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "LinkStack",
+              "service_definition": "MySQL",
               "tags": [],
               "virtualization": null
             }
@@ -14369,14 +14369,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-02-07T04:11:11.142476Z",
-                  "id": "dd0b38b4-4994-4429-ab3d-dabfcd8eac1a",
+                  "created_at": "2026-02-09T00:38:02.281930Z",
+                  "id": "5ae7ea99-2a13-43eb-94df-1946af67dda2",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-07T04:11:11.142476Z"
+                  "updated_at": "2026-02-09T00:38:02.281930Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14385,7 +14385,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "LinkStack",
+              "service_definition": "MySQL",
               "source": {
                 "type": "Manual"
               },
@@ -16271,14 +16271,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-02-07T04:11:11.135792Z",
-                        "id": "4a76757d-b8d4-46e8-b56a-30c329fdf0d6",
+                        "created_at": "2026-02-09T00:38:02.273003Z",
+                        "id": "69924e21-6189-4a63-b5aa-9c15fa904b85",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-02-07T04:11:11.135792Z"
+                        "updated_at": "2026-02-09T00:38:02.273003Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -16287,7 +16287,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "LinkStack",
+                    "service_definition": "MySQL",
                     "source": {
                       "type": "Manual"
                     },
@@ -16364,14 +16364,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-02-07T04:11:11.151193Z",
-                    "id": "094a8b9f-4748-4de4-aa0a-fd40a3199159",
+                    "created_at": "2026-02-09T00:38:02.290133Z",
+                    "id": "beaf3cda-8027-471a-8d74-fb937d9f02ac",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-02-07T04:11:11.151193Z"
+                    "updated_at": "2026-02-09T00:38:02.290133Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -16380,7 +16380,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "LinkStack",
+                "service_definition": "MySQL",
                 "source": {
                   "type": "Manual"
                 },
@@ -17353,14 +17353,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-02-07T04:11:11.142942Z",
-              "id": "841450fe-5597-40d2-a161-1855d1b0f8aa",
+              "created_at": "2026-02-09T00:38:02.282397Z",
+              "id": "937163db-78e4-4581-b29e-3bc9ea1e03be",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-07T04:11:11.142942Z"
+              "updated_at": "2026-02-09T00:38:02.282397Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -17369,7 +17369,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "LinkStack",
+          "service_definition": "MySQL",
           "source": {
             "type": "Manual"
           },

@@ -412,7 +412,7 @@ impl CompanyAttributes {
         if let Some(v) = self.scanopy_inquiry_network_count {
             attrs.insert(
                 "scanopy_inquiry_network_count".to_string(),
-                serde_json::json!(v),
+                serde_json::json!(v.to_string()),
             );
         }
         if let Some(v) = &self.scanopy_inquiry_date {
@@ -493,25 +493,6 @@ pub struct LinkUnlinkRequest {
     pub link_contacts_ids: Option<Vec<i64>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unlink_contacts_ids: Option<Vec<i64>>,
-}
-
-/// POST /crm/deals - create deal
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateDealRequest {
-    pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub attributes: Option<HashMap<String, serde_json::Value>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub linked_contacts_ids: Option<Vec<i64>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub linked_companies_ids: Option<Vec<String>>,
-}
-
-/// Response from POST /crm/deals
-#[derive(Debug, Clone, Deserialize)]
-pub struct CreateDealResponse {
-    pub id: String,
 }
 
 /// POST /events - track event

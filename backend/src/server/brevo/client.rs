@@ -1,8 +1,7 @@
 use crate::server::brevo::types::{
     CompanyAttributes, CompanyListResponse, CompanyResponse, ContactAttributes,
-    CreateCompanyRequest, CreateContactRequest, CreateContactResponse, CreateDealRequest,
-    CreateDealResponse, EventIdentifiers, LinkUnlinkRequest, TrackEventRequest,
-    UpdateCompanyRequest, UpdateContactRequest,
+    CreateCompanyRequest, CreateContactRequest, CreateContactResponse, EventIdentifiers,
+    LinkUnlinkRequest, TrackEventRequest, UpdateCompanyRequest, UpdateContactRequest,
 };
 use anyhow::{Result, anyhow};
 use backon::{ExponentialBuilder, Retryable};
@@ -446,72 +445,6 @@ impl BrevoClient {
             }
 
             Err(anyhow!("Brevo link error {}: {}", status, error_body))
-        };
-
-        operation
-            .retry(
-                ExponentialBuilder::default()
-                    .with_max_times(3)
-                    .with_min_delay(std::time::Duration::from_millis(500))
-                    .with_max_delay(std::time::Duration::from_secs(10)),
-            )
-            .when(|e| e.to_string().contains("retryable"))
-            .await
-    }
-
-    /// Create a deal in Brevo CRM
-    pub async fn create_deal(
-        &self,
-        name: &str,
-        attributes: Option<HashMap<String, serde_json::Value>>,
-        contact_ids: Option<Vec<i64>>,
-        company_ids: Option<Vec<String>>,
-    ) -> Result<String> {
-        let url = format!("{}/crm/deals", BREVO_API_BASE);
-        let body = CreateDealRequest {
-            name: name.to_string(),
-            attributes,
-            linked_contacts_ids: contact_ids,
-            linked_companies_ids: company_ids,
-        };
-
-        let operation = || async {
-            self.wait_for_rate_limit().await;
-
-            let response = self
-                .client
-                .post(&url)
-                .header("api-key", &self.api_key)
-                .header("Content-Type", "application/json")
-                .json(&body)
-                .send()
-                .await
-                .map_err(|e| anyhow!("Brevo deal creation failed: {}", e))?;
-
-            let status = response.status();
-
-            if status.is_success() {
-                let result: CreateDealResponse = response
-                    .json()
-                    .await
-                    .map_err(|e| anyhow!("Failed to parse Brevo deal response: {}", e))?;
-                return Ok(result.id);
-            }
-
-            let error_body = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-
-            if Self::is_retryable_error(status) {
-                return Err(anyhow!(
-                    "Brevo deal error (retryable) {}: {}",
-                    status,
-                    error_body
-                ));
-            }
-
-            Err(anyhow!("Brevo deal error {}: {}", status, error_body))
         };
 
         operation
