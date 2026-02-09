@@ -129,6 +129,10 @@ impl<T: Storable> StorableFilter<T> {
         Self::new().with_brevo_company_id()
     }
 
+    pub fn new_with_stripe_customer_id(id: &str) -> Self {
+        Self::new().stripe_customer_id(id)
+    }
+
     pub fn new_with_expiry_before(timestamp: DateTime<Utc>) -> Self {
         Self::new().expires_before(timestamp)
     }
@@ -138,18 +142,6 @@ impl<T: Storable> StorableFilter<T> {
             .daemon_mode(DaemonMode::ServerPoll)
             .is_unreachable(false)
             .standby(false)
-    }
-
-    pub fn new_with_stripe_customer_id(id: &String) -> Self {
-        Self::new().stripe_customer_id(id)
-    }
-
-    pub fn stripe_customer_id(mut self, id: &String) -> Self {
-        let col = self.qualify_column("stripe_customer_id");
-        self.conditions
-            .push(format!("{} = ${}", col, self.values.len() + 1));
-        self.values.push(SqlValue::String(*id));
-        self
     }
 
     /// Qualify a column name with the table name.
@@ -755,6 +747,15 @@ impl<T: Storable> StorableFilter<T> {
     pub fn with_brevo_company_id(mut self) -> Self {
         let col = self.qualify_column("brevo_company_id");
         self.conditions.push(format!("{} IS NOT NULL", col));
+        self
+    }
+
+    /// Filter for organizations by Stripe customer ID
+    pub fn stripe_customer_id(mut self, id: &str) -> Self {
+        let col = self.qualify_column("stripe_customer_id");
+        self.conditions
+            .push(format!("{} = ${}", col, self.values.len() + 1));
+        self.values.push(SqlValue::String(id.to_string()));
         self
     }
 }
