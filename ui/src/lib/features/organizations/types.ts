@@ -6,5 +6,10 @@ export type OrganizationInvite = components['schemas']['Invite'];
 export type CreateInviteRequest = components['schemas']['CreateInviteRequest'];
 
 export function isBillingPlanActive(organization: Organization) {
-	return organization.plan_status == 'active' || organization.plan_status == 'trialing';
+	return (
+		organization.plan_status == 'active' ||
+		organization.plan_status == 'trialing' ||
+		organization.plan_status == 'pending_cancellation' ||
+		organization.plan_status == 'past_due'
+	);
 }

@@ -416,6 +416,7 @@
         "daemon_id": "bf6c81c9-9f46-4688-b79c-222f50f6ed61",
         "discovery_type": {
           "host_naming_fallback": "BestService",
+          "probe_raw_socket_ports": false,
           "snmp_credentials": {
             "default_credential": null,
             "ip_overrides": []
@@ -469,6 +470,7 @@
         "daemon_id": "f774995b-9628-4db2-843d-f5a86f4cb14c",
         "discovery_type": {
           "host_naming_fallback": "BestService",
+          "probe_raw_socket_ports": false,
           "snmp_credentials": {
             "default_credential": null,
             "ip_overrides": []
@@ -500,7 +502,7 @@
       "request_body": {
         "daemon_id": "bf6c81c9-9f46-4688-b79c-222f50f6ed61",
         "discovery_type": {
-          "host_id": "7891ed81-377c-4eca-b05e-bc8a17129f90",
+          "host_id": "d1b9d83b-0380-4e22-be6a-3b11dc06a078",
           "type": "SelfReport"
         },
         "error": null,
@@ -508,8 +510,8 @@
         "network_id": "7b14c1c7-03b7-4c80-8692-0a57c7e8273f",
         "phase": "Started",
         "progress": 0,
-        "session_id": "1a182cd9-9710-482e-8645-d95c40db018a",
-        "started_at": "2026-01-26T14:03:24.338877430Z"
+        "session_id": "332494ca-e55f-4b74-95c6-6ea62525390a",
+        "started_at": "2026-02-07T05:23:13.610809712Z"
       },
       "response_status": 200,
       "response_body": {

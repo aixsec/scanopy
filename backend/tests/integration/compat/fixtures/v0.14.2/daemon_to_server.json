@@ -416,6 +416,7 @@
         "daemon_id": "bf6c81c9-9f46-4688-b79c-222f50f6ed61",
         "discovery_type": {
           "host_naming_fallback": "BestService",
+          "probe_raw_socket_ports": false,
           "snmp_credentials": {
             "default_credential": null,
             "ip_overrides": []

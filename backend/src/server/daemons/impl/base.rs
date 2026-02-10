@@ -49,6 +49,10 @@ pub struct DaemonBase {
     /// Set to true after repeated polling failures, reset via retry-connection endpoint.
     #[serde(default)]
     pub is_unreachable: bool,
+    /// Whether the daemon is on standby due to plan restrictions (DaemonPoll on Free plan).
+    #[serde(default)]
+    #[schema(read_only)]
+    pub standby: bool,
 }
 
 #[derive(
@@ -129,10 +133,12 @@ impl Display for Daemon {
 pub enum DaemonMode {
     /// Server polls daemon (daemon cannot make outbound connections)
     #[serde(alias = "push", alias = "Push")]
+    #[value(alias = "push")]
     ServerPoll,
     /// Daemon polls server (default, firewall-friendly)
     #[default]
     #[serde(alias = "pull", alias = "Pull")]
+    #[value(alias = "pull")]
     DaemonPoll,
 }
 

@@ -9282,14 +9282,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-02-04T00:49:07.097472Z",
-              "id": "6e178f92-3ece-413a-bf66-d6dfb7c164d3",
+              "created_at": "2026-02-10T02:29:34.885483Z",
+              "id": "15e187a0-41cf-4397-9e2a-a1f6a82827f8",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-04T00:49:07.097472Z"
+              "updated_at": "2026-02-10T02:29:34.885483Z"
             }
           },
           "error": {
@@ -9361,6 +9361,52 @@
               "affected_count": {
                 "type": "integer",
                 "description": "Number of entities affected",
+                "minimum": 0
+              }
+            }
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ApiMeta"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiResponse_ChangePlanPreview": {
+        "type": "object",
+        "required": [
+          "success",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "excess_hosts",
+              "excess_networks",
+              "excess_seats"
+            ],
+            "properties": {
+              "excess_hosts": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              "excess_networks": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              "excess_seats": {
+                "type": "integer",
+                "format": "int64",
                 "minimum": 0
               }
             }
@@ -9558,39 +9604,6 @@
               }
             ],
             "description": "Daemon response for UI including computed version status"
-          },
-          "error": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ApiMeta"
-          },
-          "success": {
-            "type": "boolean"
-          }
-        }
-      },
-      "ApiResponse_DaemonSetupResponse": {
-        "type": "object",
-        "required": [
-          "success",
-          "meta"
-        ],
-        "properties": {
-          "data": {
-            "type": "object",
-            "description": "Response from daemon setup endpoint",
-            "properties": {
-              "api_key": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              }
-            }
           },
           "error": {
             "type": [
@@ -10021,14 +10034,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-02-04T00:49:07.083071Z",
-                      "id": "d7596bf4-bfb5-4bf5-bdf9-4c5f8b7cb4fe",
+                      "created_at": "2026-02-10T02:29:34.872847Z",
+                      "id": "f6486daa-8fc5-40b4-9cbd-3f47ae14ce60",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-02-04T00:49:07.083071Z"
+                      "updated_at": "2026-02-10T02:29:34.872847Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -10037,7 +10050,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Caddy",
+                  "service_definition": "Google Nest repeater",
                   "source": {
                     "type": "Manual"
                   },
@@ -10415,32 +10428,25 @@
           "data": {
             "type": "object",
             "description": "Response from onboarding state endpoint",
-            "required": [
-              "networks",
-              "network_ids"
-            ],
             "properties": {
-              "daemon_setups": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/OnboardingDaemonSetupState"
-                },
-                "description": "Daemon setups (if any)"
+              "network": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/OnboardingNetworkState",
+                    "description": "Network from pending setup (with name and ID)"
+                  }
+                ]
               },
-              "network_ids": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "description": "Network IDs from pending setup (if any) - kept for backwards compatibility"
-              },
-              "networks": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/OnboardingNetworkState"
-                },
-                "description": "Networks from pending setup (with names and IDs)"
+              "network_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Network ID from pending setup (if any)"
               },
               "org_name": {
                 "type": [
@@ -10684,12 +10690,6 @@
                   "$ref": "#/components/schemas/OidcProviderMetadata"
                 }
               },
-              "plunk_key": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
               "posthog_key": {
                 "type": [
                   "string",
@@ -10853,14 +10853,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-02-04T00:49:07.092508Z",
-                  "id": "882dcee8-ed32-4ca2-b1fc-2e40709927fc",
+                  "created_at": "2026-02-10T02:29:34.881352Z",
+                  "id": "48459dd4-fd8d-4430-8be7-8a30b8c59f55",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-04T00:49:07.092508Z"
+                  "updated_at": "2026-02-10T02:29:34.881352Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -10869,7 +10869,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Caddy",
+              "service_definition": "Google Nest repeater",
               "source": {
                 "type": "Manual"
               },
@@ -10903,15 +10903,12 @@
             "type": "object",
             "description": "Response from setup endpoint",
             "required": [
-              "network_ids"
+              "network_id"
             ],
             "properties": {
-              "network_ids": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "format": "uuid"
-                }
+              "network_id": {
+                "type": "string",
+                "format": "uuid"
               }
             }
           },
@@ -11431,6 +11428,27 @@
                         "type": {
                           "type": "string",
                           "enum": [
+                            "Free"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PlanConfig"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "type"
+                      ],
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
                             "Starter"
                           ]
                         }
@@ -11854,6 +11872,27 @@
                   "type": {
                     "type": "string",
                     "enum": [
+                      "Free"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanConfig"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
                       "Starter"
                     ]
                   }
@@ -12029,14 +12068,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-02-04T00:49:07.083301Z",
-          "id": "7852bee4-4fe3-4209-bb51-01cf8efb2aed",
+          "created_at": "2026-02-10T02:29:34.873082Z",
+          "id": "95f9056c-7bdf-43fe-92f2-3a352bd31797",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-02-04T00:49:07.083301Z"
+          "updated_at": "2026-02-10T02:29:34.873082Z"
         }
       },
       "BindingBase": {
@@ -12243,6 +12282,46 @@
             "type": "integer",
             "description": "Number of entities affected",
             "minimum": 0
+          }
+        }
+      },
+      "ChangePlanPreview": {
+        "type": "object",
+        "required": [
+          "excess_hosts",
+          "excess_networks",
+          "excess_seats"
+        ],
+        "properties": {
+          "excess_hosts": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "excess_networks": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "excess_seats": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "ChangePlanRequest": {
+        "type": "object",
+        "required": [
+          "plan",
+          "rate"
+        ],
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/BillingPlan"
+          },
+          "rate": {
+            "$ref": "#/components/schemas/BillingRate"
           }
         }
       },
@@ -12490,7 +12569,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Caddy",
+              "service_definition": "Google Nest repeater",
               "tags": [],
               "virtualization": null
             }
@@ -12777,6 +12856,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "standby": {
+            "type": "boolean",
+            "description": "Whether the daemon is on standby due to plan restrictions (DaemonPoll on Free plan).",
+            "readOnly": true
+          },
           "tags": {
             "type": "array",
             "items": {
@@ -12971,38 +13055,6 @@
           }
         ],
         "description": "Daemon response for UI including computed version status"
-      },
-      "DaemonSetupRequest": {
-        "type": "object",
-        "description": "Daemon setup request for pre-registration daemon configuration",
-        "required": [
-          "daemon_name",
-          "network_id"
-        ],
-        "properties": {
-          "daemon_name": {
-            "type": "string"
-          },
-          "install_later": {
-            "type": "boolean"
-          },
-          "network_id": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
-      },
-      "DaemonSetupResponse": {
-        "type": "object",
-        "description": "Response from daemon setup endpoint",
-        "properties": {
-          "api_key": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
       },
       "DaemonStartupRequest": {
         "type": "object",
@@ -13296,6 +13348,10 @@
             "properties": {
               "host_naming_fallback": {
                 "$ref": "#/components/schemas/HostNamingFallback"
+              },
+              "probe_raw_socket_ports": {
+                "type": "boolean",
+                "description": "Whether to probe raw-socket ports (9100-9107) during endpoint scanning.\nDisabled by default to prevent ghost printing on JetDirect printers."
               },
               "snmp_credentials": {
                 "$ref": "#/components/schemas/SnmpCredentialMapping",
@@ -13676,16 +13732,9 @@
             "type": "string",
             "description": "Contact email"
           },
-          "hutk": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "HubSpot tracking cookie (hutk) for linking form submission to visitor"
-          },
           "message": {
             "type": "string",
-            "description": "Message/use case description (maps to HubSpot \"message\" field)"
+            "description": "Message/use case description"
           },
           "name": {
             "type": "string",
@@ -14376,14 +14425,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-02-04T00:49:07.082717Z",
-                  "id": "187fb091-69bd-4872-9aac-27a1012e90c6",
+                  "created_at": "2026-02-10T02:29:34.872521Z",
+                  "id": "061554eb-46c1-4b07-8932-29a099070487",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-04T00:49:07.082717Z"
+                  "updated_at": "2026-02-10T02:29:34.872521Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -14392,7 +14441,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Caddy",
+              "service_definition": "Google Nest repeater",
               "source": {
                 "type": "Manual"
               },
@@ -15674,32 +15723,6 @@
           }
         }
       },
-      "OnboardingDaemonSetupState": {
-        "type": "object",
-        "description": "Daemon setup data in onboarding state response",
-        "required": [
-          "network_id",
-          "daemon_name"
-        ],
-        "properties": {
-          "api_key": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "API key (only returned if user chose to install now)"
-          },
-          "daemon_name": {
-            "type": "string",
-            "description": "Daemon name"
-          },
-          "network_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Network ID this daemon is for"
-          }
-        }
-      },
       "OnboardingNetworkState": {
         "type": "object",
         "description": "Network data in onboarding state response",
@@ -15742,32 +15765,25 @@
       "OnboardingStateResponse": {
         "type": "object",
         "description": "Response from onboarding state endpoint",
-        "required": [
-          "networks",
-          "network_ids"
-        ],
         "properties": {
-          "daemon_setups": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OnboardingDaemonSetupState"
-            },
-            "description": "Daemon setups (if any)"
+          "network": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OnboardingNetworkState",
+                "description": "Network from pending setup (with name and ID)"
+              }
+            ]
           },
-          "network_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Network IDs from pending setup (if any) - kept for backwards compatibility"
-          },
-          "networks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OnboardingNetworkState"
-            },
-            "description": "Networks from pending setup (with names and IDs)"
+          "network_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Network ID from pending setup (if any)"
           },
           "org_name": {
             "type": [
@@ -15799,6 +15815,34 @@
           "step"
         ],
         "properties": {
+          "company_size": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Company size"
+          },
+          "job_title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Job title/role"
+          },
+          "referral_source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Referral source (how they heard about Scanopy)"
+          },
+          "referral_source_other": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Free-text referral source (when \"other\" is selected)"
+          },
           "step": {
             "type": "string"
           },
@@ -15860,6 +15904,10 @@
           "onboarding"
         ],
         "properties": {
+          "has_payment_method": {
+            "type": "boolean",
+            "readOnly": true
+          },
           "name": {
             "type": "string"
           },
@@ -15884,6 +15932,14 @@
               "string",
               "null"
             ],
+            "readOnly": true
+          },
+          "trial_end_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
             "readOnly": true
           }
         }
@@ -16278,14 +16334,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-02-04T00:49:07.072807Z",
-                        "id": "09a53020-71bd-44eb-832f-f34e3d122bd0",
+                        "created_at": "2026-02-10T02:29:34.862909Z",
+                        "id": "e2f0a993-7782-44a2-9175-963731eafb8c",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-02-04T00:49:07.072807Z"
+                        "updated_at": "2026-02-10T02:29:34.862909Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -16294,7 +16350,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Caddy",
+                    "service_definition": "Google Nest repeater",
                     "source": {
                       "type": "Manual"
                     },
@@ -16371,14 +16427,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-02-04T00:49:07.091215Z",
-                    "id": "ad3e9aba-d574-492a-9fb7-8355361a073b",
+                    "created_at": "2026-02-10T02:29:34.880231Z",
+                    "id": "9e44f970-2d61-441d-a4a9-86b67c85d395",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-02-04T00:49:07.091215Z"
+                    "updated_at": "2026-02-10T02:29:34.880231Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -16387,7 +16443,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Caddy",
+                "service_definition": "Google Nest repeater",
                 "source": {
                   "type": "Manual"
                 },
@@ -16858,6 +16914,21 @@
             "type": "integer",
             "format": "int64"
           },
+          "host_cents": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "included_hosts": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
           "included_networks": {
             "type": [
               "integer",
@@ -17124,12 +17195,6 @@
               "$ref": "#/components/schemas/OidcProviderMetadata"
             }
           },
-          "plunk_key": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "posthog_key": {
             "type": [
               "string",
@@ -17360,14 +17425,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-02-04T00:49:07.083221Z",
-              "id": "d9e1883e-0518-4047-a3ef-e15f51babe36",
+              "created_at": "2026-02-10T02:29:34.872999Z",
+              "id": "80276490-9839-4239-b4a2-4b239a8473a2",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-04T00:49:07.083221Z"
+              "updated_at": "2026-02-10T02:29:34.872999Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -17376,7 +17441,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Caddy",
+          "service_definition": "Google Nest repeater",
           "source": {
             "type": "Manual"
           },
@@ -17607,19 +17672,27 @@
           }
         }
       },
+      "SetupPaymentMethodRequest": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      },
       "SetupRequest": {
         "type": "object",
         "description": "Setup request for pre-registration org/network configuration",
         "required": [
           "organization_name",
-          "networks"
+          "network"
         ],
         "properties": {
-          "networks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NetworkSetup"
-            }
+          "network": {
+            "$ref": "#/components/schemas/NetworkSetup"
           },
           "organization_name": {
             "type": "string"
@@ -17630,15 +17703,12 @@
         "type": "object",
         "description": "Response from setup endpoint",
         "required": [
-          "network_ids"
+          "network_id"
         ],
         "properties": {
-          "network_ids": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
+          "network_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -18094,15 +18164,18 @@
           "PlanSelected",
           "PersonalPlanSelected",
           "CommercialPlanSelected",
-          "FirstApiKeyCreated",
-          "FirstDaemonRegistered",
-          "FirstTopologyRebuild",
           "CheckoutStarted",
           "CheckoutCompleted",
           "TrialStarted",
           "TrialEnded",
+          "TrialWillEnd",
           "SubscriptionCancelled",
-          "FirstNetworkCreated",
+          "PlanChanged",
+          "PaymentFailed",
+          "PaymentActionRequired",
+          "PaymentRecovered",
+          "FirstDaemonRegistered",
+          "FirstTopologyRebuild",
           "FirstDiscoveryCompleted",
           "FirstHostDiscovered",
           "SecondNetworkCreated",
@@ -18110,7 +18183,9 @@
           "FirstUserApiKeyCreated",
           "FirstSnmpCredentialCreated",
           "InviteSent",
-          "InviteAccepted"
+          "InviteAccepted",
+          "FirstApiKeyCreated",
+          "FirstNetworkCreated"
         ]
       },
       "Topology": {

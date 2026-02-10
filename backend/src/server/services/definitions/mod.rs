@@ -315,6 +315,7 @@ pub mod tasmota;
 // Printer
 pub mod cups;
 pub mod hp_printer;
+pub mod jetdirect;
 pub mod print_server;
 
 // ============= UTILITIES & MISC =============

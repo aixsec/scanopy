@@ -102,28 +102,13 @@ pub struct NetworkSetup {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SetupRequest {
     pub organization_name: String,
-    pub networks: Vec<NetworkSetup>,
+    pub network: NetworkSetup,
 }
 
 /// Response from setup endpoint
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SetupResponse {
-    pub network_ids: Vec<Uuid>,
-}
-
-/// Daemon setup request for pre-registration daemon configuration
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct DaemonSetupRequest {
-    pub daemon_name: String,
     pub network_id: Uuid,
-    #[serde(default)]
-    pub install_later: bool,
-}
-
-/// Response from daemon setup endpoint
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct DaemonSetupResponse {
-    pub api_key: Option<String>,
 }
 
 /// Request to verify email using token
@@ -146,6 +131,18 @@ pub struct OnboardingStepRequest {
     /// Use case selection (homelab, company, msp)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub use_case: Option<String>,
+    /// Job title/role
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub job_title: Option<String>,
+    /// Company size
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub company_size: Option<String>,
+    /// Referral source (how they heard about Scanopy)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub referral_source: Option<String>,
+    /// Free-text referral source (when "other" is selected)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub referral_source_other: Option<String>,
 }
 
 /// Network data in onboarding state response
@@ -166,18 +163,6 @@ pub struct OnboardingNetworkState {
     pub snmp_community: Option<String>,
 }
 
-/// Daemon setup data in onboarding state response
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct OnboardingDaemonSetupState {
-    /// Network ID this daemon is for
-    pub network_id: Uuid,
-    /// Daemon name
-    pub daemon_name: String,
-    /// API key (only returned if user chose to install now)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub api_key: Option<String>,
-}
-
 /// Response from onboarding state endpoint
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct OnboardingStateResponse {
@@ -187,11 +172,8 @@ pub struct OnboardingStateResponse {
     pub use_case: Option<String>,
     /// Organization name from pending setup
     pub org_name: Option<String>,
-    /// Networks from pending setup (with names and IDs)
-    pub networks: Vec<OnboardingNetworkState>,
-    /// Network IDs from pending setup (if any) - kept for backwards compatibility
-    pub network_ids: Vec<Uuid>,
-    /// Daemon setups (if any)
-    #[serde(default)]
-    pub daemon_setups: Vec<OnboardingDaemonSetupState>,
+    /// Network from pending setup (with name and ID)
+    pub network: Option<OnboardingNetworkState>,
+    /// Network ID from pending setup (if any)
+    pub network_id: Option<Uuid>,
 }

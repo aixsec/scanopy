@@ -11,10 +11,8 @@
 	import TextInput from '$lib/shared/components/forms/input/TextInput.svelte';
 	import Password from '$lib/shared/components/forms/input/Password.svelte';
 	import InlineInfo from '$lib/shared/components/feedback/InlineInfo.svelte';
-	import InlineSuccess from '$lib/shared/components/feedback/InlineSuccess.svelte';
 	import Checkbox from '$lib/shared/components/forms/input/Checkbox.svelte';
 	import { useConfigQuery } from '$lib/shared/stores/config-query';
-	import { onboardingStore } from '../stores/onboarding';
 	import type { RegisterRequest } from '../types/base';
 	import {
 		auth_createAccountWith,
@@ -25,9 +23,6 @@
 		auth_scanopyLogo,
 		auth_signUpForUpdates,
 		auth_termsAndPrivacy,
-		auth_youreAllSetBodyMultiple,
-		auth_youreAllSetBodySingle,
-		auth_youreAllSetTitle,
 		auth_youreInvitedBody,
 		auth_youreInvitedTitle,
 		common_email,
@@ -57,21 +52,6 @@
 	let hasOidcProviders = $derived(oidcProviders.length > 0);
 	let enableEmailOptIn = $derived(configData?.has_email_opt_in ?? false);
 	let enableTermsCheckbox = $derived(configData?.billing_enabled ?? false);
-
-	// Get networks with daemon setups that will scan after registration
-	let networksWithDaemons = $derived.by(() => {
-		const networks = $onboardingStore.networks;
-		const daemonSetups = $onboardingStore.daemonSetups;
-
-		return networks.filter((n) => {
-			if (!n.id) return false;
-			const setup = daemonSetups.get(n.id);
-			return setup?.installNow === true;
-		});
-	});
-
-	let hasPendingDaemons = $derived(networksWithDaemons.length > 0);
-	let pendingNetworkNames = $derived(networksWithDaemons.map((n) => n.name).join(', '));
 
 	// Create form
 	const form = createForm(() => ({
@@ -111,11 +91,6 @@
 	}
 
 	function handleOidcRegister(providerSlug: string) {
-		// Store subscribed preference for post-registration Plunk tracking
-		if (form.state.values.subscribed) {
-			sessionStorage.setItem('pendingPlunkRegistration', 'true');
-		}
-
 		const returnUrl = encodeURIComponent(window.location.origin);
 		window.location.href = `/api/auth/oidc/${providerSlug}/authorize?flow=register&return_url=${returnUrl}&terms_accepted=${enableTermsCheckbox && form.state.values.terms_accepted}&marketing_opt_in=${form.state.values.subscribed}`;
 	}
@@ -154,17 +129,6 @@
 					<InlineInfo
 						title={auth_youreInvitedTitle()}
 						body={auth_youreInvitedBody({ orgName, invitedBy })}
-					/>
-				</div>
-			{/if}
-
-			{#if hasPendingDaemons}
-				<div class="mb-6">
-					<InlineSuccess
-						title={auth_youreAllSetTitle()}
-						body={networksWithDaemons.length === 1
-							? auth_youreAllSetBodySingle({ networkNames: pendingNetworkNames })
-							: auth_youreAllSetBodyMultiple({ networkNames: pendingNetworkNames })}
 					/>
 				</div>
 			{/if}

@@ -4,12 +4,12 @@
 	import type { Snippet } from 'svelte';
 	import { queryClient, queryKeys } from '$lib/api/query-client';
 	import { useCurrentUserQuery } from '$lib/features/auth/queries';
-	import { useOrganizationQuery } from '$lib/features/organizations/queries';
+	import { useOrganizationQuery, fetchOrganization } from '$lib/features/organizations/queries';
 	import {
 		identifyUser,
-		trackPlunkEvent,
 		trackEvent,
-		flushEventQueue
+		flushEventQueue,
+		flushStoredEvents
 	} from '$lib/shared/utils/analytics';
 	import Loading from '$lib/shared/components/feedback/Loading.svelte';
 	import { resolve } from '$app/paths';
@@ -21,8 +21,7 @@
 	import type { PostHog } from 'posthog-js';
 	import { browser } from '$app/environment';
 	import CookieConsent, {
-		hasAnalyticsConsent,
-		hasMarketingConsent
+		hasAnalyticsConsent
 	} from '$lib/shared/components/feedback/CookieConsent.svelte';
 	import {
 		billing_subscriptionActivated,
@@ -49,6 +48,7 @@
 	// Track if we've done initial setup
 	let hasInitialized = $state(false);
 	let previouslyAuthenticated = $state<boolean | null>(null);
+	let handlingStripeReturn = $state(false);
 
 	// Effect to handle logout (clear data when user goes from authenticated to not)
 	$effect(() => {
@@ -64,7 +64,6 @@
 
 	let posthogInstance = $state<PostHog | null>(null);
 	let posthogInitStarted = false;
-	let hubspotInitStarted = false;
 
 	$effect(() => {
 		if (!configData) return;
@@ -92,51 +91,32 @@
 					loaded: () => {
 						posthogInstance = posthog;
 						flushEventQueue();
+						flushStoredEvents();
 					}
 				});
 			});
-		}
-
-		// Load HubSpot tracking script if marketing consent is given
-		if (browser && hasMarketingConsent() && !hubspotInitStarted) {
-			hubspotInitStarted = true;
-
-			// Disable HubSpot's automatic form collection ("Collected Forms" feature)
-			// This prevents HubSpot from scraping login/registration forms
-			const hsq = ((window as unknown as { _hsq: unknown[] })._hsq =
-				(window as unknown as { _hsq: unknown[] })._hsq || []);
-			hsq.push(['setContentType', 'standard-page']);
-			hsq.push(['setCollectedForms', { enabled: false }]);
-
-			const script = document.createElement('script');
-			script.id = 'hs-script-loader';
-			script.src = 'https://js.hs-scripts.com/50956550.js';
-			script.async = true;
-			script.defer = true;
-			document.body.appendChild(script);
 		}
 	});
 
 	// Identify user in PostHog when authenticated (skipped in demo mode by identifyUser)
 	$effect(() => {
 		if (posthogInstance && currentUser && organization !== undefined) {
-			identifyUser(currentUser.id, currentUser.email, currentUser.organization_id);
+			identifyUser(currentUser.id, currentUser.email, organization);
 		}
 	});
 
 	async function waitForBillingActivation(maxAttempts = 10) {
 		for (let i = 0; i < maxAttempts; i++) {
-			// Invalidate and refetch organization data
+			// Invalidate cache then fetch fresh organization data
 			await queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
-			const orgData = queryClient.getQueryData<typeof organization>(
-				queryKeys.organizations.current()
-			);
+			const orgData = await fetchOrganization();
 
 			if (orgData && isBillingPlanActive(orgData)) {
 				// Track billing completion for funnel analytics
 				trackEvent('billing_completed', {
 					plan: orgData.plan?.type ?? 'unknown',
-					amount: orgData.plan?.base_cents ?? 0
+					amount: orgData.plan?.base_cents ?? 0,
+					plan_status: orgData.plan_status
 				});
 
 				pushSuccess(billing_subscriptionActivated());
@@ -202,13 +182,6 @@
 				}
 				return;
 			}
-
-			// Handle Plunk tracking
-			const pendingPlunk = sessionStorage.getItem('pendingPlunkRegistration');
-			if (pendingPlunk && currentUser) {
-				sessionStorage.removeItem('pendingPlunkRegistration');
-				trackPlunkEvent('register', currentUser.email, pendingPlunk === 'true');
-			}
 		}
 	});
 
@@ -216,23 +189,51 @@
 	$effect(() => {
 		if (!authCheckComplete || !isAuthenticated || !browser) return;
 		if (!organization) return;
+		if (handlingStripeReturn) return;
 
-		const sessionId = $page.url.searchParams.get('session_id');
+		const billingFlow = $page.url.searchParams.get('billing_flow');
 
-		// Handle Stripe session callback (billing activation)
-		if (sessionId && !isBillingPlanActive(organization)) {
+		// Handle Stripe checkout callback (new subscription activation)
+		if (billingFlow === 'checkout') {
 			const cleanUrl = new URL($page.url);
-			cleanUrl.searchParams.delete('session_id');
+			cleanUrl.searchParams.delete('billing_flow');
 			window.history.replaceState({}, '', cleanUrl.toString());
 
-			waitForBillingActivation().then((activated) => {
-				if (activated) {
-					const correctRoute = getRoute();
-					// eslint-disable-next-line svelte/no-navigation-without-resolve
-					goto(correctRoute);
-				}
+			if (isBillingPlanActive(organization)) {
+				// Webhook already processed — fire event directly
+				trackEvent('billing_completed', {
+					plan: organization.plan?.type ?? 'unknown',
+					amount: organization.plan?.base_cents ?? 0,
+					plan_status: organization.plan_status
+				});
+				pushSuccess(billing_subscriptionActivated());
+			} else {
+				// Webhook hasn't processed yet — poll until activation
+				handlingStripeReturn = true;
+				waitForBillingActivation()
+					.then((activated) => {
+						if (activated) {
+							// eslint-disable-next-line svelte/no-navigation-without-resolve
+							goto(getRoute());
+						}
+					})
+					.finally(() => {
+						handlingStripeReturn = false;
+					});
+				return;
+			}
+		} else if (billingFlow === 'payment_setup') {
+			trackEvent('payment_method_setup_completed', {
+				plan_type: organization.plan?.type,
+				plan_status: organization.plan_status
 			});
-			return;
+
+			const cleanUrl = new URL($page.url);
+			cleanUrl.searchParams.delete('billing_flow');
+			window.history.replaceState({}, '', cleanUrl.toString());
+
+			// Refresh org data to update has_payment_method
+			queryClient.invalidateQueries({ queryKey: queryKeys.organizations.current() });
 		}
 
 		// Check if current page matches where user should be

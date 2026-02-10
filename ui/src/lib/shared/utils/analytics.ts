@@ -1,7 +1,6 @@
 import posthog from 'posthog-js';
 import { queryClient, queryKeys } from '$lib/api/query-client';
 import type { Organization } from '$lib/features/organizations/types';
-import type { PublicServerConfig } from '$lib/shared/stores/config-query';
 import type { components } from '$lib/api/schema';
 
 type TelemetryOperation = components['schemas']['TelemetryOperation'];
@@ -97,19 +96,23 @@ export function trackEventOnce(event: string, properties?: Record<string, unknow
  * Safe to call multiple times - PostHog deduplicates.
  * Skips identification in demo mode.
  */
-export function identifyUser(userId: string, email: string, organizationId: string) {
+export function identifyUser(
+	userId: string,
+	email: string,
+	organization: Organization | null | undefined
+) {
 	if (isDemo()) return;
+	const traits: Record<string, unknown> = {
+		email,
+		organization_id: organization?.id ?? null,
+		plan_type: organization?.plan?.type ?? null,
+		plan_status: organization?.plan_status ?? null,
+		has_payment_method: organization?.has_payment_method ?? null
+	};
 	if (posthog.__loaded) {
-		posthog.identify(userId, {
-			email,
-			organization_id: organizationId
-		});
+		posthog.identify(userId, traits);
 	} else {
-		eventQueue.push({
-			type: 'identify',
-			userId,
-			traits: { email, organization_id: organizationId }
-		});
+		eventQueue.push({ type: 'identify', userId, traits });
 	}
 }
 
@@ -126,6 +129,32 @@ export function resetIdentity() {
 }
 
 /**
+ * Store an event in sessionStorage to be flushed after a page redirect.
+ * Use this instead of trackEvent() when a hard navigation (window.location.href)
+ * follows immediately — PostHog batches capture() calls, and the redirect
+ * kills the pending request before it flushes.
+ */
+export function storeEventForAfterRedirect(event: string, properties?: Record<string, unknown>) {
+	const events = JSON.parse(sessionStorage.getItem('pendingAnalyticsEvents') || '[]');
+	events.push({ event, properties });
+	sessionStorage.setItem('pendingAnalyticsEvents', JSON.stringify(events));
+}
+
+/**
+ * Flush events stored by storeEventForAfterRedirect().
+ * Called from AppShell when PostHog finishes loading after a redirect.
+ */
+export function flushStoredEvents() {
+	const raw = sessionStorage.getItem('pendingAnalyticsEvents');
+	if (!raw) return;
+	sessionStorage.removeItem('pendingAnalyticsEvents');
+	const events: { event: string; properties?: Record<string, unknown> }[] = JSON.parse(raw);
+	for (const { event, properties } of events) {
+		trackEvent(event, properties);
+	}
+}
+
+/**
  * Get PostHog distinct ID if available.
  * Safe to call even if PostHog hasn't loaded yet (e.g., with lazy loading).
  * Uses window.posthog which is set by posthog-js when initialized.
@@ -135,42 +164,4 @@ export function getPosthogDistinctId(): string | null {
 		return (window as { posthog?: typeof posthog }).posthog?.get_distinct_id?.() ?? null;
 	}
 	return null;
-}
-
-/**
- * Track a user event in Plunk for email marketing.
- * Uses the public key from server config.
- * Skips tracking in demo mode.
- */
-export async function trackPlunkEvent(
-	event: string,
-	email: string,
-	subscribed: boolean
-): Promise<void> {
-	if (isDemo()) return;
-
-	const cfg = queryClient.getQueryData<PublicServerConfig>(queryKeys.config.all);
-	const plunkKey = cfg?.plunk_key;
-
-	if (!plunkKey) {
-		return;
-	}
-
-	try {
-		await fetch('https://next-api.useplunk.com/v1/track', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${plunkKey}`
-			},
-			body: JSON.stringify({
-				event,
-				email,
-				subscribed
-			})
-		});
-	} catch (error) {
-		// Silently fail - email tracking is not critical
-		console.warn('Failed to track Plunk event:', error);
-	}
 }

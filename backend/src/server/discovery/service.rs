@@ -4,9 +4,12 @@ use crate::server::auth::middleware::auth::AuthenticatedEntity;
 use crate::server::daemons::r#impl::api::DiscoveryUpdatePayload;
 use crate::server::discovery::r#impl::base::Discovery;
 use crate::server::discovery::r#impl::types::{DiscoveryType, RunType};
+use crate::server::networks::service::NetworkService;
+use crate::server::organizations::service::OrganizationService;
 use crate::server::shared::entities::{ChangeTriggersTopologyStaleness, EntityDiscriminants};
 use crate::server::shared::events::bus::EventBus;
 use crate::server::shared::events::types::{EntityEvent, EntityOperation};
+use crate::server::shared::events::types::{TelemetryEvent, TelemetryOperation};
 use crate::server::shared::services::traits::{CrudService, EventBusService};
 use crate::server::shared::storage::filter::StorableFilter;
 use crate::server::shared::storage::generic::GenericPostgresStorage;
@@ -35,6 +38,8 @@ pub struct DiscoveryService {
     event_bus: Arc<EventBus>,
     entity_tag_service: Arc<EntityTagService>,
     snmp_credential_service: Arc<SnmpCredentialService>,
+    network_service: Arc<NetworkService>,
+    organization_service: Arc<OrganizationService>,
 }
 
 impl EventBusService<Discovery> for DiscoveryService {
@@ -67,6 +72,8 @@ impl DiscoveryService {
         event_bus: Arc<EventBus>,
         entity_tag_service: Arc<EntityTagService>,
         snmp_credential_service: Arc<SnmpCredentialService>,
+        network_service: Arc<NetworkService>,
+        organization_service: Arc<OrganizationService>,
     ) -> Result<Arc<Self>> {
         let (tx, _rx) = broadcast::channel(100); // Buffer 100 messages
         let scheduler = JobScheduler::new().await?;
@@ -83,6 +90,8 @@ impl DiscoveryService {
             event_bus,
             entity_tag_service,
             snmp_credential_service,
+            network_service,
+            organization_service,
         }))
     }
 
@@ -555,6 +564,7 @@ impl DiscoveryService {
         let discovery_type = if let DiscoveryType::Network {
             host_naming_fallback,
             subnet_ids,
+            probe_raw_socket_ports,
             ..
         } = discovery.base.discovery_type
         {
@@ -565,6 +575,7 @@ impl DiscoveryService {
                     .snmp_credential_service
                     .build_credentials_for_discovery(discovery.base.network_id)
                     .await?,
+                probe_raw_socket_ports,
             }
         } else {
             discovery.base.discovery_type
@@ -625,11 +636,25 @@ impl DiscoveryService {
         let mut sessions = self.sessions.write().await;
 
         let mut last_updated = self.session_last_updated.write().await;
+        // Check if we've seen this session before (used as tombstone for completed sessions)
+        let already_seen = last_updated.contains_key(&update.session_id);
         // Track last update time
         last_updated.insert(update.session_id, Utc::now());
 
         // Auto-create session if it doesn't exist (handles server restarts during discovery)
         if let std::collections::hash_map::Entry::Vacant(e) = sessions.entry(update.session_id) {
+            // If we already tracked this session but it's no longer in the sessions map,
+            // it was already processed and removed. Skip redundant terminal updates from
+            // old daemons that don't clear their terminal payload after serving it.
+            if update.phase.is_terminal() && already_seen {
+                tracing::debug!(
+                    session_id = %update.session_id,
+                    phase = %update.phase,
+                    "Ignoring redundant terminal update (already processed)"
+                );
+                return Ok(());
+            }
+
             tracing::info!(
                 session_id = %update.session_id,
                 daemon_id = %update.daemon_id,
@@ -669,6 +694,28 @@ impl DiscoveryService {
             self.event_bus()
                 .publish_discovery(session.into_discovery_event())
                 .await?;
+
+            // Emit FirstDiscoveryCompleted telemetry if this is the org's first completed discovery
+            if session.phase == DiscoveryPhase::Complete
+                && let Ok(Some(network)) = self.network_service.get_by_id(&network_id).await
+                && let Ok(Some(org)) = self
+                    .organization_service
+                    .get_by_id(&network.base.organization_id)
+                    .await
+                && org.not_onboarded(&TelemetryOperation::FirstDiscoveryCompleted)
+            {
+                let _ = self
+                    .event_bus
+                    .publish_telemetry(TelemetryEvent::new(
+                        Uuid::new_v4(),
+                        org.id,
+                        TelemetryOperation::FirstDiscoveryCompleted,
+                        Utc::now(),
+                        AuthenticatedEntity::System,
+                        serde_json::json!({}),
+                    ))
+                    .await;
+            }
 
             // If user cancelled session, but it finished before we could send cancellation, remove key so it doesn't cancel upcoming sessions
             self.pull_cancellation_for_daemon(&session.daemon_id).await;
@@ -1049,6 +1096,14 @@ impl DiscoveryService {
                 stalled_count += 1;
             }
         }
+
+        // Evict tombstones: last_updated entries for sessions that no longer exist
+        // in the sessions map and are older than the stall threshold. These are left
+        // behind after terminal processing to guard against redundant polls from old
+        // daemons (see update_session). Safe to clean up once enough time has passed.
+        last_updated.retain(|id, ts| {
+            sessions.contains_key(id) || now.signed_duration_since(*ts) < stall_threshold
+        });
 
         if stalled_count > 0 {
             tracing::info!("Cleaned up {} stalled discovery sessions", stalled_count);

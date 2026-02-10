@@ -1,24 +1,4 @@
 export interface paths {
-    "/api/auth/daemon-setup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Store pre-registration daemon setup data in session and generate provisional API key
-         *     Supports multiple calls to configure daemons for different networks
-         */
-        post: operations["daemon_setup"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/auth/forgot-password": {
         parameters: {
             query?: never;
@@ -230,6 +210,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/billing/change-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change billing plan
+         * @description Upgrades or downgrades the organization's billing plan.
+         */
+        post: operations["change_plan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/change-plan/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview plan change (shows overage counts) */
+        get: operations["preview_plan_change"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/billing/checkout": {
         parameters: {
             query?: never;
@@ -258,8 +275,9 @@ export interface paths {
         put?: never;
         /**
          * Submit enterprise plan inquiry
-         * @description Dual submission: Form API (for notifications) + CRM API (for Company properties).
-         *     Requires authentication to link the inquiry to an organization.
+         * @description Updates Brevo contact/company with inquiry data, creates a deal, and
+         *     tracks an event for automation triggers. Requires authentication to
+         *     link the inquiry to an organization.
          */
         post: operations["submit_enterprise_inquiry"];
         delete?: never;
@@ -296,6 +314,23 @@ export interface paths {
         put?: never;
         /** Create a billing portal session */
         post: operations["create_portal_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/setup-payment-method": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Setup payment method (collect card without charging) */
+        post: operations["setup_payment_method"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2662,14 +2697,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-02-04T00:43:18.244861Z",
-             *       "id": "d3b7aac5-4eb0-4819-b266-2d98d0bff490",
+             *       "created_at": "2026-02-09T22:04:58.904735Z",
+             *       "id": "f4490466-8f29-4f6d-b414-8309130772f6",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-02-04T00:43:18.244861Z"
+             *       "updated_at": "2026-02-09T22:04:58.904735Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2698,6 +2733,19 @@ export interface components {
             data?: {
                 /** @description Number of entities affected */
                 affected_count: number;
+            };
+            error?: string | null;
+            meta: components["schemas"]["ApiMeta"];
+            success: boolean;
+        };
+        ApiResponse_ChangePlanPreview: {
+            data?: {
+                /** Format: int64 */
+                excess_hosts: number;
+                /** Format: int64 */
+                excess_networks: number;
+                /** Format: int64 */
+                excess_seats: number;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -2748,15 +2796,6 @@ export interface components {
                 updated_at: string;
                 /** @description Computed version status including health and warnings */
                 version_status: components["schemas"]["DaemonVersionStatus"];
-            };
-            error?: string | null;
-            meta: components["schemas"]["ApiMeta"];
-            success: boolean;
-        };
-        ApiResponse_DaemonSetupResponse: {
-            /** @description Response from daemon setup endpoint */
-            data?: {
-                api_key?: string | null;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -2900,14 +2939,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-02-04T00:43:18.229742Z",
-             *               "id": "36a5ea72-5869-4593-bae1-27ea182774e8",
+             *               "created_at": "2026-02-09T22:04:58.887244Z",
+             *               "id": "1af824f5-6498-42b3-8091-756beac58eea",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-02-04T00:43:18.229742Z"
+             *               "updated_at": "2026-02-09T22:04:58.887244Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -2916,7 +2955,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "NextCloud",
+             *           "service_definition": "BookLore",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3064,12 +3103,12 @@ export interface components {
         ApiResponse_OnboardingStateResponse: {
             /** @description Response from onboarding state endpoint */
             data?: {
-                /** @description Daemon setups (if any) */
-                daemon_setups?: components["schemas"]["OnboardingDaemonSetupState"][];
-                /** @description Network IDs from pending setup (if any) - kept for backwards compatibility */
-                network_ids: string[];
-                /** @description Networks from pending setup (with names and IDs) */
-                networks: components["schemas"]["OnboardingNetworkState"][];
+                network?: null | components["schemas"]["OnboardingNetworkState"];
+                /**
+                 * Format: uuid
+                 * @description Network ID from pending setup (if any)
+                 */
+                network_id?: string | null;
                 /** @description Organization name from pending setup */
                 org_name?: string | null;
                 /** @description Current onboarding step (if any) */
@@ -3148,7 +3187,6 @@ export interface components {
                 has_integrated_daemon: boolean;
                 needs_cookie_consent: boolean;
                 oidc_providers: components["schemas"]["OidcProviderMetadata"][];
-                plunk_key?: string | null;
                 posthog_key?: string | null;
                 public_url: string;
                 /** Format: int32 */
@@ -3190,14 +3228,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-02-04T00:43:18.240132Z",
-             *           "id": "2b978448-db5a-4cd1-bf4c-bd507cf83e2f",
+             *           "created_at": "2026-02-09T22:04:58.899764Z",
+             *           "id": "35abf46e-0db0-4319-82d3-acd42c1201b6",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-02-04T00:43:18.240132Z"
+             *           "updated_at": "2026-02-09T22:04:58.899764Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3206,7 +3244,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "NextCloud",
+             *       "service_definition": "BookLore",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3230,7 +3268,8 @@ export interface components {
         ApiResponse_SetupResponse: {
             /** @description Response from setup endpoint */
             data?: {
-                network_ids: string[];
+                /** Format: uuid */
+                network_id: string;
             };
             error?: string | null;
             meta: components["schemas"]["ApiMeta"];
@@ -3380,6 +3419,9 @@ export interface components {
                 type: "Community";
             }) | (components["schemas"]["PlanConfig"] & {
                 /** @enum {string} */
+                type: "Free";
+            }) | (components["schemas"]["PlanConfig"] & {
+                /** @enum {string} */
                 type: "Starter";
             }) | (components["schemas"]["PlanConfig"] & {
                 /** @enum {string} */
@@ -3477,6 +3519,9 @@ export interface components {
             type: "Community";
         }) | (components["schemas"]["PlanConfig"] & {
             /** @enum {string} */
+            type: "Free";
+        }) | (components["schemas"]["PlanConfig"] & {
+            /** @enum {string} */
             type: "Starter";
         }) | (components["schemas"]["PlanConfig"] & {
             /** @enum {string} */
@@ -3502,14 +3547,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-02-04T00:43:18.229976Z",
-         *       "id": "96ac1253-fdba-4ab5-a63c-291b118954e2",
+         *       "created_at": "2026-02-09T22:04:58.887600Z",
+         *       "id": "2c65820e-f6d9-4aab-b4ec-0ccf927bdd4a",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-02-04T00:43:18.229976Z"
+         *       "updated_at": "2026-02-09T22:04:58.887600Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3609,6 +3654,18 @@ export interface components {
             /** @description Number of entities affected */
             affected_count: number;
         };
+        ChangePlanPreview: {
+            /** Format: int64 */
+            excess_hosts: number;
+            /** Format: int64 */
+            excess_networks: number;
+            /** Format: int64 */
+            excess_seats: number;
+        };
+        ChangePlanRequest: {
+            plan: components["schemas"]["BillingPlan"];
+            rate: components["schemas"]["BillingRate"];
+        };
         /** @enum {string} */
         Color: "Pink" | "Rose" | "Red" | "Orange" | "Green" | "Emerald" | "Teal" | "Cyan" | "Blue" | "Indigo" | "Purple" | "Gray" | "Yellow";
         /**
@@ -3674,7 +3731,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "NextCloud",
+         *           "service_definition": "BookLore",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -3797,6 +3854,8 @@ export interface components {
             name: string;
             /** Format: uuid */
             network_id: string;
+            /** @description Whether the daemon is on standby due to plan restrictions (DaemonPoll on Free plan). */
+            readonly standby?: boolean;
             tags: string[];
             readonly url: string;
             /**
@@ -3878,17 +3937,6 @@ export interface components {
             updated_at: string;
             /** @description Computed version status including health and warnings */
             version_status: components["schemas"]["DaemonVersionStatus"];
-        };
-        /** @description Daemon setup request for pre-registration daemon configuration */
-        DaemonSetupRequest: {
-            daemon_name: string;
-            install_later?: boolean;
-            /** Format: uuid */
-            network_id: string;
-        };
-        /** @description Response from daemon setup endpoint */
-        DaemonSetupResponse: {
-            api_key?: string | null;
         };
         /** @description Sent by daemon on startup to report version */
         DaemonStartupRequest: {
@@ -3978,6 +4026,11 @@ export interface components {
             type: "SelfReport";
         } | {
             host_naming_fallback: components["schemas"]["HostNamingFallback"];
+            /**
+             * @description Whether to probe raw-socket ports (9100-9107) during endpoint scanning.
+             *     Disabled by default to prevent ghost printing on JetDirect printers.
+             */
+            probe_raw_socket_ports?: boolean;
             /**
              * @description SNMP credentials for querying devices during discovery
              *     Server builds this mapping before initiating discovery
@@ -4085,9 +4138,7 @@ export interface components {
             company: string;
             /** @description Contact email */
             email: string;
-            /** @description HubSpot tracking cookie (hutk) for linking form submission to visitor */
-            hutk?: string | null;
-            /** @description Message/use case description (maps to HubSpot "message" field) */
+            /** @description Message/use case description */
             message: string;
             /** @description Contact name */
             name: string;
@@ -4315,14 +4366,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-02-04T00:43:18.229404Z",
-         *               "id": "dd65e20e-1d69-466f-ba69-2a5afc4e5f3f",
+         *               "created_at": "2026-02-09T22:04:58.886779Z",
+         *               "id": "40316d7e-6d4e-4805-880a-6c4d53584d0c",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-02-04T00:43:18.229404Z"
+         *               "updated_at": "2026-02-09T22:04:58.886779Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4331,7 +4382,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "NextCloud",
+         *           "service_definition": "BookLore",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -4790,18 +4841,6 @@ export interface components {
             name: string;
             slug: string;
         };
-        /** @description Daemon setup data in onboarding state response */
-        OnboardingDaemonSetupState: {
-            /** @description API key (only returned if user chose to install now) */
-            api_key?: string | null;
-            /** @description Daemon name */
-            daemon_name: string;
-            /**
-             * Format: uuid
-             * @description Network ID this daemon is for
-             */
-            network_id: string;
-        };
         /** @description Network data in onboarding state response */
         OnboardingNetworkState: {
             /**
@@ -4820,12 +4859,12 @@ export interface components {
         };
         /** @description Response from onboarding state endpoint */
         OnboardingStateResponse: {
-            /** @description Daemon setups (if any) */
-            daemon_setups?: components["schemas"]["OnboardingDaemonSetupState"][];
-            /** @description Network IDs from pending setup (if any) - kept for backwards compatibility */
-            network_ids: string[];
-            /** @description Networks from pending setup (with names and IDs) */
-            networks: components["schemas"]["OnboardingNetworkState"][];
+            network?: null | components["schemas"]["OnboardingNetworkState"];
+            /**
+             * Format: uuid
+             * @description Network ID from pending setup (if any)
+             */
+            network_id?: string | null;
             /** @description Organization name from pending setup */
             org_name?: string | null;
             /** @description Current onboarding step (if any) */
@@ -4835,6 +4874,14 @@ export interface components {
         };
         /** @description Request to save onboarding step */
         OnboardingStepRequest: {
+            /** @description Company size */
+            company_size?: string | null;
+            /** @description Job title/role */
+            job_title?: string | null;
+            /** @description Referral source (how they heard about Scanopy) */
+            referral_source?: string | null;
+            /** @description Free-text referral source (when "other" is selected) */
+            referral_source_other?: string | null;
             step: string;
             /** @description Use case selection (homelab, company, msp) */
             use_case?: string | null;
@@ -4853,10 +4900,13 @@ export interface components {
             readonly updated_at: string;
         };
         OrganizationBase: {
+            readonly has_payment_method?: boolean;
             name: string;
             onboarding: components["schemas"]["TelemetryOperation"][];
             plan: null | components["schemas"]["BillingPlan"];
             readonly plan_status: string | null;
+            /** Format: date-time */
+            readonly trial_end_date?: string | null;
         };
         /**
          * @description API metadata for paginated list responses (pagination is always present)
@@ -5102,6 +5152,10 @@ export interface components {
             /** Format: int64 */
             base_cents: number;
             /** Format: int64 */
+            host_cents?: number | null;
+            /** Format: int64 */
+            included_hosts?: number | null;
+            /** Format: int64 */
             included_networks?: number | null;
             /** Format: int64 */
             included_seats?: number | null;
@@ -5211,7 +5265,6 @@ export interface components {
             has_integrated_daemon: boolean;
             needs_cookie_consent: boolean;
             oidc_providers: components["schemas"]["OidcProviderMetadata"][];
-            plunk_key?: string | null;
             posthog_key?: string | null;
             public_url: string;
             /** Format: int32 */
@@ -5272,14 +5325,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-02-04T00:43:18.229895Z",
-         *           "id": "18da2340-86a9-4bbf-a408-855bdc20dea9",
+         *           "created_at": "2026-02-09T22:04:58.887482Z",
+         *           "id": "0d7ed1f5-43be-4271-b13f-a8ac79fb1fce",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-02-04T00:43:18.229895Z"
+         *           "updated_at": "2026-02-09T22:04:58.887482Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5288,7 +5341,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "NextCloud",
+         *       "service_definition": "BookLore",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5377,14 +5430,18 @@ export interface components {
             /** @description The new list of tag IDs */
             tag_ids: string[];
         };
+        SetupPaymentMethodRequest: {
+            url: string;
+        };
         /** @description Setup request for pre-registration org/network configuration */
         SetupRequest: {
-            networks: components["schemas"]["NetworkSetup"][];
+            network: components["schemas"]["NetworkSetup"];
             organization_name: string;
         };
         /** @description Response from setup endpoint */
         SetupResponse: {
-            network_ids: string[];
+            /** Format: uuid */
+            network_id: string;
         };
         Share: components["schemas"]["ShareBase"] & {
             /** Format: date-time */
@@ -5543,7 +5600,7 @@ export interface components {
          */
         TagOrderField: "created_at" | "name" | "color" | "updated_at";
         /** @enum {string} */
-        TelemetryOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "PersonalPlanSelected" | "CommercialPlanSelected" | "FirstApiKeyCreated" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "CheckoutStarted" | "CheckoutCompleted" | "TrialStarted" | "TrialEnded" | "SubscriptionCancelled" | "FirstNetworkCreated" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "InviteSent" | "InviteAccepted";
+        TelemetryOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "PersonalPlanSelected" | "CommercialPlanSelected" | "CheckoutStarted" | "CheckoutCompleted" | "TrialStarted" | "TrialEnded" | "TrialWillEnd" | "SubscriptionCancelled" | "PlanChanged" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "InviteSent" | "InviteAccepted" | "FirstApiKeyCreated" | "FirstNetworkCreated";
         Topology: components["schemas"]["TopologyBase"] & {
             /** Format: date-time */
             readonly created_at: string;
@@ -5875,39 +5932,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    daemon_setup: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DaemonSetupRequest"];
-            };
-        };
-        responses: {
-            /** @description Daemon setup data stored */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_DaemonSetupResponse"];
-                };
-            };
-            /** @description Invalid request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
     forgot_password: {
         parameters: {
             query?: never;
@@ -6351,6 +6375,71 @@ export interface operations {
             };
         };
     };
+    change_plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Plan change initiated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+            /** @description Invalid plan or billing not enabled */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_plan_change: {
+        parameters: {
+            query: {
+                /** @description Target plan (JSON) */
+                plan: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plan change preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ChangePlanPreview"];
+                };
+            };
+            /** @description Billing not enabled */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     create_checkout_session: {
         parameters: {
             query?: never;
@@ -6406,7 +6495,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiResponse"];
                 };
             };
-            /** @description Invalid request or HubSpot not configured */
+            /** @description Invalid request or Brevo not configured */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6469,6 +6558,39 @@ export interface operations {
         };
         responses: {
             /** @description Portal session URL */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_String"];
+                };
+            };
+            /** @description Billing not enabled */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    setup_payment_method: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupPaymentMethodRequest"];
+            };
+        };
+        responses: {
+            /** @description Setup session URL */
             200: {
                 headers: {
                     [name: string]: unknown;
