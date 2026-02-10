@@ -2,13 +2,54 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Scanopy API",
-    "description": "\nNetwork topology discovery and visualization API.\n\n## Authentication\n\nTwo authentication methods are supported:\n\n| Method | Header | Use Case |\n|--------|--------|----------|\n| User API key | `Authorization: Bearer scp_u_...` | Programmatic access, integrations |\n| Session cookie | `Cookie: session_id=...` | Web UI (via `/api/auth/login`) |\n\nUser API keys require your organization to have API access enabled. Create keys at **Platform > API Keys**.\n\n## Rate Limiting\n\nLimit: 300 requests/minute\n\nBurst: 150\n\nResponse headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`\n\nWhen rate limited, you'll receive HTTP `429 Too Many Requests` with a `Retry-After` header.\n\n## Pagination\n\nList endpoints support pagination via query parameters:\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `limit` | integer | 50 | Maximum results to return (1-1000). Use 0 for no limit. |\n| `offset` | integer | 0 | Number of results to skip |\n\nExample: `GET /api/v1/hosts?limit=10&offset=20`\n\n## Response Format\n\nAll responses use a standard envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.14.2\"\n  }\n}\n```\n\n**Paginated list responses** include pagination metadata:\n\n```json\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.14.2\",\n    \"pagination\": {\n      \"total_count\": 142,\n      \"limit\": 50,\n      \"offset\": 0,\n      \"has_more\": true\n    }\n  }\n}\n```\n\n| Field | Description |\n|-------|-------------|\n| `total_count` | Total items matching your query (ignoring pagination) |\n| `limit` | Applied limit (your request or default) |\n| `offset` | Applied offset |\n| `has_more` | `true` if more results exist beyond this page |\n\n**Error responses** include an `error` field instead of `data`:\n\n```json\n{\n  \"success\": false,\n  \"error\": \"Resource not found\",\n  \"meta\": { ... }\n}\n```\n\n**Common status codes:** `400` validation error, `401` unauthorized, `403` forbidden, `404` not found, `409` conflict, `429` rate limited.\n\n## Versioning\n\nThe API version is an integer (`api_version: 1`) incremented only on breaking changes. API is versioned independently from the application. Endpoints are prefixed with `/api/v1/`. Check `GET /api/version` for current versions.\n\n## Multi-Tenancy\n\nResources are scoped to your **organization** and **network(s)**:\n\n- You can only access entities within your organization\n- Network-level entities (hosts, services, etc.) are filtered to networks you have access to\n- Use `?network_id=<UUID>` to filter list endpoints to a specific network\n- API keys can be scoped to a subset of your accessible networks\n",
+    "description": "\nNetwork topology discovery and visualization API.\n\n## Authentication\n\nTwo authentication methods are supported:\n\n| Method | Header | Use Case |\n|--------|--------|----------|\n| User API key | `Authorization: Bearer scp_u_...` | Programmatic access, integrations |\n| Session cookie | `Cookie: session_id=...` | Web UI (via `/api/auth/login`) |\n\nUser API keys require your organization to have API access enabled. Create keys at **Platform > API Keys**.\n\n## Rate Limiting\n\nLimit: 300 requests/minute\n\nBurst: 150\n\nResponse headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`\n\nWhen rate limited, you'll receive HTTP `429 Too Many Requests` with a `Retry-After` header.\n\n## Pagination\n\nList endpoints support pagination via query parameters:\n\n| Parameter | Type | Default | Description |\n|-----------|------|---------|-------------|\n| `limit` | integer | 50 | Maximum results to return (1-1000). Use 0 for no limit. |\n| `offset` | integer | 0 | Number of results to skip |\n\nExample: `GET /api/v1/hosts?limit=10&offset=20`\n\n## Response Format\n\nAll responses use a standard envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.14.4\"\n  }\n}\n```\n\n**Paginated list responses** include pagination metadata:\n\n```json\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"meta\": {\n    \"api_version\": 1,\n    \"server_version\": \"0.14.4\",\n    \"pagination\": {\n      \"total_count\": 142,\n      \"limit\": 50,\n      \"offset\": 0,\n      \"has_more\": true\n    }\n  }\n}\n```\n\n| Field | Description |\n|-------|-------------|\n| `total_count` | Total items matching your query (ignoring pagination) |\n| `limit` | Applied limit (your request or default) |\n| `offset` | Applied offset |\n| `has_more` | `true` if more results exist beyond this page |\n\n**Error responses** include an `error` field instead of `data`:\n\n```json\n{\n  \"success\": false,\n  \"error\": \"Resource not found\",\n  \"meta\": { ... }\n}\n```\n\n**Common status codes:** `400` validation error, `401` unauthorized, `403` forbidden, `404` not found, `409` conflict, `429` rate limited.\n\n## Versioning\n\nThe API version is an integer (`api_version: 1`) incremented only on breaking changes. API is versioned independently from the application. Endpoints are prefixed with `/api/v1/`. Check `GET /api/version` for current versions.\n\n## Multi-Tenancy\n\nResources are scoped to your **organization** and **network(s)**:\n\n- You can only access entities within your organization\n- Network-level entities (hosts, services, etc.) are filtered to networks you have access to\n- Use `?network_id=<UUID>` to filter list endpoints to a specific network\n- API keys can be scoped to a subset of your accessible networks\n",
     "license": {
       "name": "Dual (AGPL3.0, Commercial License Available)"
     },
     "version": "1"
   },
   "paths": {
+    "/api/auth/check-email": {
+      "post": {
+        "tags": [
+          "auth",
+          "internal"
+        ],
+        "operationId": "check_email",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Email is available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/forgot-password": {
       "post": {
         "tags": [
@@ -11845,12 +11886,12 @@
           "server_version": {
             "type": "string",
             "description": "Server version (semver)",
-            "example": "0.14.2"
+            "example": "0.14.4"
           }
         },
         "example": {
           "api_version": 1,
-          "server_version": "0.14.2"
+          "server_version": "0.14.4"
         }
       },
       "ApiResponse": {
@@ -11924,14 +11965,14 @@
             ],
             "description": "Association between a service and a port / interface that the service is listening on",
             "example": {
-              "created_at": "2026-02-10T02:29:34.886088Z",
-              "id": "64689cb1-f588-4dfa-99f4-dcaa8762b5fe",
+              "created_at": "2026-02-10T17:35:56.896659Z",
+              "id": "fed06837-4724-4cba-a4cf-8842758fc602",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-10T02:29:34.886088Z"
+              "updated_at": "2026-02-10T17:35:56.896659Z"
             }
           },
           "error": {
@@ -12676,14 +12717,14 @@
                 {
                   "bindings": [
                     {
-                      "created_at": "2026-02-10T02:29:34.872798Z",
-                      "id": "f5647fe7-4055-4e26-b1fc-a69ff6bb8b44",
+                      "created_at": "2026-02-10T17:35:56.882048Z",
+                      "id": "60c71669-1a50-4ca9-b425-c4d661278809",
                       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                       "network_id": "550e8400-e29b-41d4-a716-446655440002",
                       "port_id": "550e8400-e29b-41d4-a716-446655440006",
                       "service_id": "550e8400-e29b-41d4-a716-446655440007",
                       "type": "Port",
-                      "updated_at": "2026-02-10T02:29:34.872798Z"
+                      "updated_at": "2026-02-10T17:35:56.882048Z"
                     }
                   ],
                   "created_at": "2026-01-15T10:30:00Z",
@@ -12692,7 +12733,7 @@
                   "name": "nginx",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "position": 0,
-                  "service_definition": "Google Nest repeater",
+                  "service_definition": "ESPHome",
                   "source": {
                     "type": "Manual"
                   },
@@ -13495,14 +13536,14 @@
             "example": {
               "bindings": [
                 {
-                  "created_at": "2026-02-10T02:29:34.881396Z",
-                  "id": "f608b502-9819-4a5b-ab81-727ea63c5d50",
+                  "created_at": "2026-02-10T17:35:56.892240Z",
+                  "id": "a7870fc9-787b-4e1d-bd10-eebcb498dd58",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-10T02:29:34.881396Z"
+                  "updated_at": "2026-02-10T17:35:56.892240Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -13511,7 +13552,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Google Nest repeater",
+              "service_definition": "ESPHome",
               "source": {
                 "type": "Manual"
               },
@@ -14710,14 +14751,14 @@
         ],
         "description": "Association between a service and a port / interface that the service is listening on",
         "example": {
-          "created_at": "2026-02-10T02:29:34.873010Z",
-          "id": "275b8eb7-ab13-43a7-a80f-022d2e36d5f0",
+          "created_at": "2026-02-10T17:35:56.882351Z",
+          "id": "c90795f5-1c4e-4cbf-aead-1e8ef2cc3158",
           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "port_id": "550e8400-e29b-41d4-a716-446655440006",
           "service_id": "550e8400-e29b-41d4-a716-446655440007",
           "type": "Port",
-          "updated_at": "2026-02-10T02:29:34.873010Z"
+          "updated_at": "2026-02-10T17:35:56.882351Z"
         }
       },
       "BindingBase": {
@@ -14967,6 +15008,19 @@
           }
         }
       },
+      "CheckEmailRequest": {
+        "type": "object",
+        "description": "Check email availability request",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
       "Color": {
         "type": "string",
         "enum": [
@@ -15211,7 +15265,7 @@
               "id": "550e8400-e29b-41d4-a716-446655440007",
               "name": "nginx",
               "position": 0,
-              "service_definition": "Google Nest repeater",
+              "service_definition": "ESPHome",
               "tags": [],
               "virtualization": null
             }
@@ -17067,14 +17121,14 @@
             {
               "bindings": [
                 {
-                  "created_at": "2026-02-10T02:29:34.872492Z",
-                  "id": "84eff514-64d0-4582-b32f-9acc41b6dbe6",
+                  "created_at": "2026-02-10T17:35:56.881692Z",
+                  "id": "077a0724-1d36-421d-8b85-0ed4344263dc",
                   "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                   "network_id": "550e8400-e29b-41d4-a716-446655440002",
                   "port_id": "550e8400-e29b-41d4-a716-446655440006",
                   "service_id": "550e8400-e29b-41d4-a716-446655440007",
                   "type": "Port",
-                  "updated_at": "2026-02-10T02:29:34.872492Z"
+                  "updated_at": "2026-02-10T17:35:56.881692Z"
                 }
               ],
               "created_at": "2026-01-15T10:30:00Z",
@@ -17083,7 +17137,7 @@
               "name": "nginx",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "position": 0,
-              "service_definition": "Google Nest repeater",
+              "service_definition": "ESPHome",
               "source": {
                 "type": "Manual"
               },
@@ -18608,7 +18662,7 @@
           "server_version": {
             "type": "string",
             "description": "Server version (semver)",
-            "example": "0.14.2"
+            "example": "0.14.4"
           }
         },
         "example": {
@@ -18619,7 +18673,7 @@
             "offset": 0,
             "total_count": 142
           },
-          "server_version": "0.14.2"
+          "server_version": "0.14.4"
         }
       },
       "PaginatedApiResponse_DaemonResponse": {
@@ -18976,14 +19030,14 @@
                   {
                     "bindings": [
                       {
-                        "created_at": "2026-02-10T02:29:34.862918Z",
-                        "id": "d0b212af-f587-4365-8f77-d93e28f4945f",
+                        "created_at": "2026-02-10T17:35:56.873903Z",
+                        "id": "800e9109-88c7-4573-aef6-ca8ddfda207b",
                         "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                         "network_id": "550e8400-e29b-41d4-a716-446655440002",
                         "port_id": "550e8400-e29b-41d4-a716-446655440006",
                         "service_id": "550e8400-e29b-41d4-a716-446655440007",
                         "type": "Port",
-                        "updated_at": "2026-02-10T02:29:34.862918Z"
+                        "updated_at": "2026-02-10T17:35:56.873903Z"
                       }
                     ],
                     "created_at": "2026-01-15T10:30:00Z",
@@ -18992,7 +19046,7 @@
                     "name": "nginx",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "position": 0,
-                    "service_definition": "Google Nest repeater",
+                    "service_definition": "ESPHome",
                     "source": {
                       "type": "Manual"
                     },
@@ -19069,14 +19123,14 @@
               "example": {
                 "bindings": [
                   {
-                    "created_at": "2026-02-10T02:29:34.880233Z",
-                    "id": "9e5470bd-0ced-4cbe-bfe0-bbb78385e93e",
+                    "created_at": "2026-02-10T17:35:56.891092Z",
+                    "id": "23af204e-d5c9-492d-9075-ec6e3d9da790",
                     "interface_id": "550e8400-e29b-41d4-a716-446655440005",
                     "network_id": "550e8400-e29b-41d4-a716-446655440002",
                     "port_id": "550e8400-e29b-41d4-a716-446655440006",
                     "service_id": "550e8400-e29b-41d4-a716-446655440007",
                     "type": "Port",
-                    "updated_at": "2026-02-10T02:29:34.880233Z"
+                    "updated_at": "2026-02-10T17:35:56.891092Z"
                   }
                 ],
                 "created_at": "2026-01-15T10:30:00Z",
@@ -19085,7 +19139,7 @@
                 "name": "nginx",
                 "network_id": "550e8400-e29b-41d4-a716-446655440002",
                 "position": 0,
-                "service_definition": "Google Nest repeater",
+                "service_definition": "ESPHome",
                 "source": {
                   "type": "Manual"
                 },
@@ -20067,14 +20121,14 @@
         "example": {
           "bindings": [
             {
-              "created_at": "2026-02-10T02:29:34.872936Z",
-              "id": "dfa13289-ed87-4aa1-9a6d-c1dbc2abe944",
+              "created_at": "2026-02-10T17:35:56.882211Z",
+              "id": "a4ce273f-10d5-4fab-9215-2df40837d315",
               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
               "network_id": "550e8400-e29b-41d4-a716-446655440002",
               "port_id": "550e8400-e29b-41d4-a716-446655440006",
               "service_id": "550e8400-e29b-41d4-a716-446655440007",
               "type": "Port",
-              "updated_at": "2026-02-10T02:29:34.872936Z"
+              "updated_at": "2026-02-10T17:35:56.882211Z"
             }
           ],
           "created_at": "2026-01-15T10:30:00Z",
@@ -20083,7 +20137,7 @@
           "name": "nginx",
           "network_id": "550e8400-e29b-41d4-a716-446655440002",
           "position": 0,
-          "service_definition": "Google Nest repeater",
+          "service_definition": "ESPHome",
           "source": {
             "type": "Manual"
           },

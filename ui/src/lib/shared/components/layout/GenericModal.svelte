@@ -143,8 +143,8 @@
 		<!-- Modal content -->
 		<div
 			class="{borderless ? '' : 'modal-container'} {sizeClasses[size]} {size === 'full'
-				? 'h-[calc(100vh-8rem)]'
-				: 'max-h-[calc(100vh-8rem)]'} flex w-full flex-col"
+				? 'h-[calc(100vh-2rem)] sm:h-[calc(100vh-8rem)]'
+				: 'max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-8rem)]'} flex w-full flex-col"
 		>
 			<!-- Header (hidden when no title, no close button, and no tabs) -->
 			{#if title || showCloseButton || tabs.length > 0}

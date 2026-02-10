@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { ChevronLeft } from 'lucide-svelte';
 	import Toast from '$lib/shared/components/feedback/Toast.svelte';
 	import OrgNetworksModal from '$lib/features/auth/components/onboarding/OrgNetworksModal.svelte';
@@ -19,6 +20,27 @@
 	import { resolve } from '$app/paths';
 	import { onboardingStore } from '$lib/features/auth/stores/onboarding';
 	import { trackEvent } from '$lib/shared/utils/analytics';
+	import { pushError } from '$lib/shared/stores/feedback';
+	import { auth_emailAlreadyInUse } from '$lib/paraglide/messages';
+
+	// Show OIDC error from redirect if present
+	onMount(() => {
+		const error = $page.url.searchParams.get('error');
+		const errorCode = $page.url.searchParams.get('error_code');
+		if (error) {
+			// If the error indicates a duplicate email, redirect to login
+			if (errorCode === 'user_email_in_use') {
+				pushError(auth_emailAlreadyInUse());
+				setTimeout(() => goto(resolve('/login')), 1500);
+			} else {
+				pushError(error);
+			}
+			const url = new URL(window.location.href);
+			url.searchParams.delete('error');
+			url.searchParams.delete('error_code');
+			window.history.replaceState({}, '', url.toString());
+		}
+	});
 
 	// TanStack Query mutations and queries
 	const setupMutation = useSetupMutation();
@@ -244,7 +266,7 @@
 
 	<!-- Progress Indicator - fixed position above modal (hidden for invite flow) -->
 	{#if !isInviteFlow}
-		<div class="fixed left-1/2 top-6 z-[200] -translate-x-1/2">
+		<div class="fixed left-1/2 top-2 z-[200] -translate-x-1/2 sm:top-6">
 			<div
 				class="flex items-center gap-2 rounded-full bg-gray-800/90 px-4 py-2 shadow-lg backdrop-blur-sm"
 			>
@@ -309,6 +331,7 @@
 					isOpen={true}
 					onRegister={handleRegister}
 					onClose={handleClose}
+					onSwitchToLogin={handleSwitchToLogin}
 					{orgName}
 					{invitedBy}
 				/>

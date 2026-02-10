@@ -68,6 +68,27 @@ export function useLoginMutation() {
 }
 
 /**
+ * Mutation hook for checking email availability
+ */
+export function useCheckEmailMutation() {
+	return createMutation(() => ({
+		mutationFn: async (request: { email: string }) => {
+			const { error } = await apiClient.POST('/api/auth/check-email', {
+				body: request,
+				silenceErrors: true
+			} as never);
+			if (error) {
+				const apiErr = error as unknown as Record<string, string>;
+				const err = new Error(apiErr?.error || 'Email check failed');
+				(err as Error & { code?: string }).code = apiErr?.code;
+				throw err;
+			}
+			return true;
+		}
+	}));
+}
+
+/**
  * Mutation hook for registering
  */
 export function useRegisterMutation() {
@@ -75,9 +96,19 @@ export function useRegisterMutation() {
 
 	return createMutation(() => ({
 		mutationFn: async (request: RegisterRequest) => {
-			const { data } = await apiClient.POST('/api/auth/register', { body: request });
+			const { data, error: apiError } = await apiClient.POST('/api/auth/register', {
+				body: request
+			});
 			if (!data?.success || !data.data) {
-				throw new Error(data?.error || 'Registration failed. Please try again.');
+				const err = new Error(
+					(apiError as Record<string, string> | undefined)?.error ||
+						data?.error ||
+						'Registration failed. Please try again.'
+				);
+				(err as Error & { code?: string }).code = (
+					apiError as Record<string, string> | undefined
+				)?.code;
+				throw err;
 			}
 			return data.data;
 		},
@@ -88,9 +119,6 @@ export function useRegisterMutation() {
 				localStorage.setItem('hasAccount', 'true');
 			}
 			pushSuccess(`Welcome, ${user.email}!`);
-		},
-		onError: (error: Error) => {
-			pushError(error.message);
 		}
 	}));
 }

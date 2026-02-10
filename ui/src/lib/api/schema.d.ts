@@ -1,4 +1,20 @@
 export interface paths {
+    "/api/auth/check-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["check_email"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/forgot-password": {
         parameters: {
             query?: never;
@@ -2672,7 +2688,7 @@ export interface components {
          * @description API metadata included in all responses
          * @example {
          *       "api_version": 1,
-         *       "server_version": "0.14.2"
+         *       "server_version": "0.14.4"
          *     }
          */
         ApiMeta: {
@@ -2683,7 +2699,7 @@ export interface components {
             api_version: number;
             /**
              * @description Server version (semver)
-             * @example 0.14.2
+             * @example 0.14.4
              */
             server_version: string;
         };
@@ -2697,14 +2713,14 @@ export interface components {
             /**
              * @description Association between a service and a port / interface that the service is listening on
              * @example {
-             *       "created_at": "2026-02-09T22:04:58.904735Z",
-             *       "id": "f4490466-8f29-4f6d-b414-8309130772f6",
+             *       "created_at": "2026-02-10T16:23:59.217459Z",
+             *       "id": "0a54ebd3-ca95-41c3-94c8-6ea83edff654",
              *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *       "type": "Port",
-             *       "updated_at": "2026-02-09T22:04:58.904735Z"
+             *       "updated_at": "2026-02-10T16:23:59.217459Z"
              *     }
              */
             data?: components["schemas"]["BindingBase"] & {
@@ -2939,14 +2955,14 @@ export interface components {
              *         {
              *           "bindings": [
              *             {
-             *               "created_at": "2026-02-09T22:04:58.887244Z",
-             *               "id": "1af824f5-6498-42b3-8091-756beac58eea",
+             *               "created_at": "2026-02-10T16:23:59.196981Z",
+             *               "id": "3d5a7810-e4b4-4ce5-bd9e-fa263999c7b4",
              *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *               "type": "Port",
-             *               "updated_at": "2026-02-09T22:04:58.887244Z"
+             *               "updated_at": "2026-02-10T16:23:59.196981Z"
              *             }
              *           ],
              *           "created_at": "2026-01-15T10:30:00Z",
@@ -2955,7 +2971,7 @@ export interface components {
              *           "name": "nginx",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "position": 0,
-             *           "service_definition": "BookLore",
+             *           "service_definition": "NATS",
              *           "source": {
              *             "type": "Manual"
              *           },
@@ -3228,14 +3244,14 @@ export interface components {
              * @example {
              *       "bindings": [
              *         {
-             *           "created_at": "2026-02-09T22:04:58.899764Z",
-             *           "id": "35abf46e-0db0-4319-82d3-acd42c1201b6",
+             *           "created_at": "2026-02-10T16:23:59.213102Z",
+             *           "id": "4652f742-34cb-4359-a01f-ee44894f3fc3",
              *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
              *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
              *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
              *           "type": "Port",
-             *           "updated_at": "2026-02-09T22:04:58.899764Z"
+             *           "updated_at": "2026-02-10T16:23:59.213102Z"
              *         }
              *       ],
              *       "created_at": "2026-01-15T10:30:00Z",
@@ -3244,7 +3260,7 @@ export interface components {
              *       "name": "nginx",
              *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
              *       "position": 0,
-             *       "service_definition": "BookLore",
+             *       "service_definition": "NATS",
              *       "source": {
              *         "type": "Manual"
              *       },
@@ -3547,14 +3563,14 @@ export interface components {
         /**
          * @description Association between a service and a port / interface that the service is listening on
          * @example {
-         *       "created_at": "2026-02-09T22:04:58.887600Z",
-         *       "id": "2c65820e-f6d9-4aab-b4ec-0ccf927bdd4a",
+         *       "created_at": "2026-02-10T16:23:59.197187Z",
+         *       "id": "2133bb44-e4fe-4c74-a062-5590c4d658af",
          *       "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *       "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *       "type": "Port",
-         *       "updated_at": "2026-02-09T22:04:58.887600Z"
+         *       "updated_at": "2026-02-10T16:23:59.197187Z"
          *     }
          */
         Binding: components["schemas"]["BindingBase"] & {
@@ -3666,6 +3682,11 @@ export interface components {
             plan: components["schemas"]["BillingPlan"];
             rate: components["schemas"]["BillingRate"];
         };
+        /** @description Check email availability request */
+        CheckEmailRequest: {
+            /** Format: email */
+            email: string;
+        };
         /** @enum {string} */
         Color: "Pink" | "Rose" | "Red" | "Orange" | "Green" | "Emerald" | "Teal" | "Cyan" | "Blue" | "Indigo" | "Purple" | "Gray" | "Yellow";
         /**
@@ -3731,7 +3752,7 @@ export interface components {
          *           "id": "550e8400-e29b-41d4-a716-446655440007",
          *           "name": "nginx",
          *           "position": 0,
-         *           "service_definition": "BookLore",
+         *           "service_definition": "NATS",
          *           "tags": [],
          *           "virtualization": null
          *         }
@@ -4366,14 +4387,14 @@ export interface components {
          *         {
          *           "bindings": [
          *             {
-         *               "created_at": "2026-02-09T22:04:58.886779Z",
-         *               "id": "40316d7e-6d4e-4805-880a-6c4d53584d0c",
+         *               "created_at": "2026-02-10T16:23:59.196697Z",
+         *               "id": "c4f88351-a1ff-4c40-9597-39037f0959f9",
          *               "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *               "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *               "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *               "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *               "type": "Port",
-         *               "updated_at": "2026-02-09T22:04:58.886779Z"
+         *               "updated_at": "2026-02-10T16:23:59.196697Z"
          *             }
          *           ],
          *           "created_at": "2026-01-15T10:30:00Z",
@@ -4382,7 +4403,7 @@ export interface components {
          *           "name": "nginx",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "position": 0,
-         *           "service_definition": "BookLore",
+         *           "service_definition": "NATS",
          *           "source": {
          *             "type": "Manual"
          *           },
@@ -4918,7 +4939,7 @@ export interface components {
          *         "offset": 0,
          *         "total_count": 142
          *       },
-         *       "server_version": "0.14.2"
+         *       "server_version": "0.14.4"
          *     }
          */
         PaginatedApiMeta: {
@@ -4931,7 +4952,7 @@ export interface components {
             pagination: components["schemas"]["PaginationMeta"];
             /**
              * @description Server version (semver)
-             * @example 0.14.2
+             * @example 0.14.4
              */
             server_version: string;
         };
@@ -5325,14 +5346,14 @@ export interface components {
          * @example {
          *       "bindings": [
          *         {
-         *           "created_at": "2026-02-09T22:04:58.887482Z",
-         *           "id": "0d7ed1f5-43be-4271-b13f-a8ac79fb1fce",
+         *           "created_at": "2026-02-10T16:23:59.197117Z",
+         *           "id": "ac39c9fd-6f29-4b26-bb5a-76c1b15de413",
          *           "interface_id": "550e8400-e29b-41d4-a716-446655440005",
          *           "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *           "port_id": "550e8400-e29b-41d4-a716-446655440006",
          *           "service_id": "550e8400-e29b-41d4-a716-446655440007",
          *           "type": "Port",
-         *           "updated_at": "2026-02-09T22:04:58.887482Z"
+         *           "updated_at": "2026-02-10T16:23:59.197117Z"
          *         }
          *       ],
          *       "created_at": "2026-01-15T10:30:00Z",
@@ -5341,7 +5362,7 @@ export interface components {
          *       "name": "nginx",
          *       "network_id": "550e8400-e29b-41d4-a716-446655440002",
          *       "position": 0,
-         *       "service_definition": "BookLore",
+         *       "service_definition": "NATS",
          *       "source": {
          *         "type": "Manual"
          *       },
@@ -5600,7 +5621,7 @@ export interface components {
          */
         TagOrderField: "created_at" | "name" | "color" | "updated_at";
         /** @enum {string} */
-        TelemetryOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "PersonalPlanSelected" | "CommercialPlanSelected" | "CheckoutStarted" | "CheckoutCompleted" | "TrialStarted" | "TrialEnded" | "TrialWillEnd" | "SubscriptionCancelled" | "PlanChanged" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "InviteSent" | "InviteAccepted" | "FirstApiKeyCreated" | "FirstNetworkCreated";
+        TelemetryOperation: "OrgCreated" | "OnboardingModalCompleted" | "PlanSelected" | "PersonalPlanSelected" | "CommercialPlanSelected" | "CheckoutStarted" | "CheckoutCompleted" | "TrialStarted" | "TrialEnded" | "TrialWillEnd" | "SubscriptionCancelled" | "PlanChanged" | "PaymentFailed" | "PaymentActionRequired" | "PaymentRecovered" | "FirstDaemonRegistered" | "FirstTopologyRebuild" | "FirstDiscoveryCompleted" | "FirstHostDiscovered" | "SecondNetworkCreated" | "FirstTagCreated" | "FirstUserApiKeyCreated" | "FirstSnmpCredentialCreated" | "InviteSent" | "InviteAccepted" | "FirstApiKeyCreated" | "FirstNetworkCreated";
         Topology: components["schemas"]["TopologyBase"] & {
             /** Format: date-time */
             readonly created_at: string;
@@ -5932,6 +5953,39 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    check_email: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckEmailRequest"];
+            };
+        };
+        responses: {
+            /** @description Email is available */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse"];
+                };
+            };
+            /** @description Email already in use */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     forgot_password: {
         parameters: {
             query?: never;

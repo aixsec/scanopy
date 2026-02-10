@@ -174,6 +174,14 @@
 	function handleContinue() {
 		if (!selectedUseCase) return;
 		saveBusinessFields();
+		const values = form.state.values;
+		trackEvent('onboarding_use_case_selected', {
+			use_case: selectedUseCase,
+			role: values.role || undefined,
+			company_size: values.companySize || undefined,
+			referral_source: values.referralSource || undefined,
+			referral_source_other: values.referralSourceOther || undefined
+		});
 		onboardingStore.setUseCase(selectedUseCase);
 		onNext();
 	}

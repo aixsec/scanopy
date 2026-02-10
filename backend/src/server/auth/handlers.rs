@@ -2,10 +2,11 @@ use crate::server::{
     auth::{
         r#impl::{
             api::{
-                ForgotPasswordRequest, LoginRequest, OidcAuthorizeParams, OidcCallbackParams,
-                OnboardingNetworkState, OnboardingStateResponse, OnboardingStepRequest,
-                RegisterRequest, ResendVerificationRequest, ResetPasswordRequest, SetupRequest,
-                SetupResponse, UpdateEmailPasswordRequest, VerifyEmailRequest,
+                CheckEmailRequest, ForgotPasswordRequest, LoginRequest, OidcAuthorizeParams,
+                OidcCallbackParams, OnboardingNetworkState, OnboardingStateResponse,
+                OnboardingStepRequest, RegisterRequest, ResendVerificationRequest,
+                ResetPasswordRequest, SetupRequest, SetupResponse, UpdateEmailPasswordRequest,
+                VerifyEmailRequest,
             },
             base::{LoginRegisterParams, PendingNetworkSetup, PendingSetup},
             oidc::{OidcFlow, OidcPendingAuth, OidcProviderMetadata, OidcRegisterParams},
@@ -14,7 +15,7 @@ use crate::server::{
             auth::AuthenticatedEntity,
             permissions::{Authorized, IsUser},
         },
-        oidc::OidcService,
+        oidc::{OidcRegisterResult, OidcService},
     },
     config::{AppState, DeploymentType, get_deployment_type},
     daemon_api_keys::r#impl::base::{DaemonApiKey, DaemonApiKeyBase},
@@ -24,8 +25,10 @@ use crate::server::{
     shared::{
         events::types::{TelemetryEvent, TelemetryOperation},
         services::traits::CrudService,
+        storage::filter::StorableFilter,
         storage::traits::Storable,
         types::api::{ApiError, ApiErrorResponse, ApiResponse, ApiResult, EmptyApiResponse},
+        types::error_codes::ErrorCode,
     },
     snmp_credentials::r#impl::base::{SnmpCredential, SnmpCredentialBase, SnmpVersion},
     topology::types::base::{Topology, TopologyBase},
@@ -33,6 +36,7 @@ use crate::server::{
 };
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     response::{Json, Redirect},
     routing::get,
 };
@@ -51,6 +55,7 @@ pub const DEMO_HOST: &str = "demo.scanopy.net";
 
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
+        .routes(routes!(check_email))
         .routes(routes!(register))
         .routes(routes!(login))
         .routes(routes!(logout))
@@ -68,6 +73,36 @@ pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
         .routes(routes!(reset_password))
         .routes(routes!(verify_email))
         .routes(routes!(resend_verification))
+}
+
+#[utoipa::path(
+    post,
+    path = "/check-email",
+    tags = ["auth", "internal"],
+    request_body = CheckEmailRequest,
+    responses(
+        (status = 200, description = "Email is available", body = EmptyApiResponse),
+        (status = 409, description = "Email already in use", body = ApiErrorResponse),
+    )
+)]
+async fn check_email(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<CheckEmailRequest>,
+) -> ApiResult<Json<ApiResponse<()>>> {
+    let existing = state
+        .services
+        .user_service
+        .get_all(StorableFilter::<User>::new_from_email(&request.email))
+        .await?;
+    if !existing.is_empty() {
+        return Err(ApiError::coded(
+            StatusCode::CONFLICT,
+            ErrorCode::UserEmailInUse {
+                email: request.email.to_string(),
+            },
+        ));
+    }
+    Ok(Json(ApiResponse::success(())))
 }
 
 #[utoipa::path(
@@ -114,6 +149,21 @@ async fn register(
     {
         return Err(ApiError::conflict(
             "Email address uses a disposable domain. Please register with a non-disposable email address.",
+        ));
+    }
+
+    // Check if email is already in use
+    let existing = state
+        .services
+        .user_service
+        .get_all(StorableFilter::<User>::new_from_email(&request.email))
+        .await?;
+    if !existing.is_empty() {
+        return Err(ApiError::coded(
+            StatusCode::CONFLICT,
+            ErrorCode::UserEmailInUse {
+                email: request.email.to_string(),
+            },
         ));
     }
 
@@ -1388,7 +1438,12 @@ async fn handle_register_flow(
         )
         .await
     {
-        Ok(user) => {
+        Ok(result) => {
+            let (user, is_new_user) = match result {
+                OidcRegisterResult::NewUser(user) => (user, true),
+                OidcRegisterResult::ExistingUser(user) => (user, false),
+            };
+
             // Cycle session ID to prevent session fixation attacks
             if let Err(e) = session.cycle_id().await {
                 tracing::error!("Failed to cycle session ID: {}", e);
@@ -1409,8 +1464,8 @@ async fn handle_register_flow(
                 )));
             }
 
-            // If this is a new org and setup was provided, apply it
-            if is_new_org {
+            // Only apply pending setup for new users in new orgs
+            if is_new_user && is_new_org {
                 if let Some(setup) = pending_setup
                     && let Err(e) = apply_pending_setup(&state, &user, setup).await
                 {
@@ -1418,10 +1473,10 @@ async fn handle_register_flow(
                     // Don't fail registration, just log the error
                     // The user can complete onboarding manually
                 }
-
-                // Clear pending setup data from session
-                clear_pending_setup(&session).await;
             }
+
+            // Clear pending setup data from session
+            clear_pending_setup(&session).await;
 
             // Clear OIDC session data
             let _ = session.remove::<OidcPendingAuth>("oidc_pending_auth").await;
@@ -1430,14 +1485,27 @@ async fn handle_register_flow(
             let _ = session.remove::<bool>("oidc_terms_accepted").await;
             let _ = session.remove::<bool>("oidc_marketing_opt_in").await;
 
-            Ok(Redirect::to(return_url.as_str()))
+            if is_new_user {
+                Ok(Redirect::to(return_url.as_str()))
+            } else {
+                // Existing user auto-logged in — send to app root, not onboarding
+                Ok(Redirect::to("/"))
+            }
         }
         Err(e) => {
             tracing::error!("Failed to register via OIDC: {}", e);
+            let error_msg = format!("Failed to register: {}", e);
+            let err_str = e.to_string();
+            let error_code = if err_str.contains("already exists") {
+                "&error_code=user_email_in_use"
+            } else {
+                ""
+            };
             Err(Redirect::to(&format!(
-                "{}?error={}",
+                "{}?error={}{}",
                 return_url,
-                urlencoding::encode(&format!("Failed to register: {}", e))
+                urlencoding::encode(&error_msg),
+                error_code
             )))
         }
     }

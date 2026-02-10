@@ -43,6 +43,13 @@ fn validate_password_complexity(password: &str) -> Result<(), validator::Validat
     Ok(())
 }
 
+/// Check email availability request
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct CheckEmailRequest {
+    #[schema(value_type = String, format = "email")]
+    pub email: EmailAddress,
+}
+
 /// Session user info (stored in session, not in database)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionUser {
