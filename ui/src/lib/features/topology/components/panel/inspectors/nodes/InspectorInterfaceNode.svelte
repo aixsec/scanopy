@@ -101,9 +101,6 @@
 					displayComponent={HostDisplay}
 				/>
 			</div>
-			{#if host.description}
-				<div class="text-tertiary mt-2 text-sm">{host.description}</div>
-			{/if}
 		</div>
 	{/if}
 

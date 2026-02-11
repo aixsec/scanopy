@@ -112,7 +112,7 @@ impl EventSubscriber for PosthogService {
     async fn handle_events(&self, events: Vec<Event>) -> Result<(), Error> {
         for event in &events {
             // Skip events with suppress_logs metadata (heartbeat-style updates)
-            if event.metadata().get("suppress_logs").is_some() {
+            if event.metadata().get("suppress_logs") == Some(&serde_json::Value::Bool(true)) {
                 continue;
             }
 

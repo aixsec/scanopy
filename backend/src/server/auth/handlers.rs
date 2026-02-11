@@ -51,7 +51,26 @@ use url::Url;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-pub const DEMO_HOST: &str = "demo.scanopy.net";
+/// Hosts where demo org login is allowed
+const DEMO_HOSTS: &[&str] = &[
+    "demo.scanopy.net",
+    "localhost",
+    "scanopy-staging.maya.cloud",
+];
+
+/// The dedicated demo-only domain where registration is blocked
+/// and only demo accounts can log in
+const DEMO_ONLY_HOST: &str = "demo.scanopy.net";
+
+fn is_demo_host(host: &str) -> bool {
+    let hostname = host.split(':').next().unwrap_or(host);
+    DEMO_HOSTS.iter().any(|&h| h == hostname)
+}
+
+fn is_demo_only_host(host: &str) -> bool {
+    let hostname = host.split(':').next().unwrap_or(host);
+    hostname == DEMO_ONLY_HOST
+}
 
 pub fn create_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
@@ -125,8 +144,8 @@ async fn register(
     session: Session,
     Json(request): Json<RegisterRequest>,
 ) -> ApiResult<Json<ApiResponse<User>>> {
-    // Block registration on demo domain
-    if host == DEMO_HOST {
+    // Block registration on dedicated demo domain
+    if is_demo_only_host(&host) {
         return Err(ApiError::forbidden(
             "Account creation is disabled on the demo site",
         ));
@@ -658,18 +677,18 @@ async fn login(
         .await?
         && let Some(plan) = organization.base.plan
     {
-        if plan.is_demo() && host != DEMO_HOST {
+        if plan.is_demo() && !is_demo_host(&host) {
             return Err(ApiError::forbidden(
                 "You can't log in to the demo account on this instance.",
             ));
-        } else if !plan.is_demo() && host == DEMO_HOST {
+        } else if !plan.is_demo() && is_demo_only_host(&host) {
             return Err(ApiError::forbidden(
                 "You can only log in to the demo account on this instance.",
             ));
         }
 
     // Couldn't get organization for some reason and user is on demo site - block login
-    } else if host == DEMO_HOST {
+    } else if is_demo_only_host(&host) {
         return Err(ApiError::forbidden(
             "You can only log in to the demo account on this instance.",
         ));
@@ -950,8 +969,8 @@ async fn oidc_authorize(
     let flow = match params.flow.as_deref() {
         Some("login") => OidcFlow::Login,
         Some("register") => {
-            // Block registration on demo domain
-            if host == DEMO_HOST {
+            // Block registration on dedicated demo domain
+            if is_demo_only_host(&host) {
                 return Err(ApiError::forbidden(
                     "Account creation is disabled on the demo site",
                 ));
@@ -1304,7 +1323,7 @@ async fn handle_login_flow(
                 .await
                 && let Some(plan) = organization.base.plan
             {
-                if plan.is_demo() && host != DEMO_HOST {
+                if plan.is_demo() && !is_demo_host(&host) {
                     return Err(Redirect::to(&format!(
                         "{}?error={}",
                         return_url,
@@ -1312,7 +1331,7 @@ async fn handle_login_flow(
                             "You can't log in to the demo account on this instance."
                         )
                     )));
-                } else if !plan.is_demo() && host == DEMO_HOST {
+                } else if !plan.is_demo() && is_demo_only_host(&host) {
                     return Err(Redirect::to(&format!(
                         "{}?error={}",
                         return_url,
@@ -1321,7 +1340,7 @@ async fn handle_login_flow(
                         )
                     )));
                 }
-            } else if host == DEMO_HOST {
+            } else if is_demo_only_host(&host) {
                 // Couldn't get organization - block login on demo site
                 return Err(Redirect::to(&format!(
                     "{}?error={}",
@@ -1486,7 +1505,7 @@ async fn handle_register_flow(
             let _ = session.remove::<bool>("oidc_marketing_opt_in").await;
 
             if is_new_user {
-                Ok(Redirect::to(return_url.as_str()))
+                Ok(Redirect::to("/"))
             } else {
                 // Existing user auto-logged in — send to app root, not onboarding
                 Ok(Redirect::to("/"))

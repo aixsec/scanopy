@@ -116,7 +116,7 @@
 		@apply rounded-2xl p-6 shadow-xl transition-all duration-300 ease-in-out;
 	}
 
-	.card:not(.card-static) {
+	.card:not(.card-static):not(.card-selected) {
 		@apply hover:ring-1 hover:ring-gray-700;
 	}
 

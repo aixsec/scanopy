@@ -37,7 +37,7 @@ use crate::server::{
             planner::subnet_layout_planner::SubnetLayoutPlanner,
         },
         types::{
-            base::{Topology, TopologyOptions},
+            base::{SetEntitiesParams, Topology, TopologyOptions},
             edges::{Edge, EdgeHandle},
             nodes::Node,
         },
@@ -120,15 +120,19 @@ impl CrudService<Topology> for TopologyService {
 
         let (nodes, edges) = self.build_graph(params);
 
-        topology.base.edges = edges;
-        topology.base.nodes = nodes;
-        topology.base.hosts = hosts;
-        topology.base.interfaces = interfaces;
-        topology.base.services = services;
-        topology.base.subnets = subnets;
-        topology.base.groups = groups;
-        topology.base.if_entries = if_entries;
-        topology.base.entity_tags = entity_tags;
+        topology.set_entities(SetEntitiesParams {
+            hosts,
+            interfaces,
+            services,
+            subnets,
+            groups,
+            if_entries,
+            entity_tags,
+            ports,
+            bindings
+        });
+
+        topology.set_graph(nodes, edges);
         topology.clear_stale();
 
         let created = self.storage().create(&topology).await?;
